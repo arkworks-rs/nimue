@@ -10,7 +10,7 @@ impl<F: Lane + PoseidonDefaultConfigField> SpongeConfig for PoseidonSponge<F> {
     type L = F;
 
     fn new() -> Self {
-        /// XXX. the rate should be set by the user with a macro taht implements this trait.
+        /// XXX. the rate should be set by the user with a macro that implements this trait.
         let config = F::get_default_poseidon_parameters(2, false).unwrap();
         <Self as CryptographicSponge>::new(&config)
     }

@@ -11,15 +11,20 @@ trait SchnorrIOPattern {
 }
 
 impl SchnorrIOPattern for IOPattern {
+    /// A Schnorr signature's IO Pattern.
     fn schnorr_io<G, S: Duplexer>(&self) -> IOPattern
     where
         G: AffineRepr + Absorbable<S::L>,
     {
         AlgebraicIO::<S>::from(self)
+            // the statement: generator and public key
             .absorb_point::<G>(2)
+            // (optional) allow for preprocessing of the generators
             .process()
+            // absorb the commitment
             .absorb_point::<G>(1)
-            .squeeze_bytes(16)
+            // challenge in bytes
+            .squeeze_field::<G::ScalarField>(1)
             .into()
     }
 }
@@ -30,16 +35,20 @@ fn schnorr_proof<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     g: G,
     pk: G,
 ) -> Result<(G::ScalarField, G::ScalarField), InvalidTag> {
-    // Absorb the statement.
-    transcript.append_element(&g)?;
-    transcript.append_element(&pk)?.process()?;
+    // Absorb the statement: generator and public key.
+    transcript.append_elements(&[g, pk])?;
+    // Finish the block.
+    transcript.process()?;
 
     // Commitment: use the prover transcript to seed randomness.
     let k = G::ScalarField::rand(&mut transcript.rng());
     let commitment = G::generator() * k;
     transcript.append_element(&commitment.into_affine())?;
-    // Get a challenge of 16 bytes and map it into the field Fr.
-    let challenge = transcript.short_field_challenge::<G::ScalarField>(16)?;
+    // Get a challenge over the field Fr.
+    let _challenge: G::ScalarField = transcript.field_challenge()?;
+    let challenge = transcript.field_challenge()?;
+
+
     let response = k + challenge * sk;
     let proof = (challenge, response);
     Ok(proof)
@@ -51,12 +60,12 @@ fn verify<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     pk: G,
     proof: (G::ScalarField, G::ScalarField),
 ) -> Result<(), InvalidTag> {
-    transcript.append_element(&g)?;
-    transcript.append_element(&pk)?.process()?;
+    transcript.append_elements(&[g, pk])?;
+    transcript.process()?;
     let (challenge, response) = proof;
     let commitment = g * response - pk * challenge;
     transcript.append_element(&commitment.into_affine())?;
-    let challenge2 = transcript.short_field_challenge::<G::ScalarField>(16)?;
+    let challenge2 = transcript.field_challenge::<G::ScalarField>()?;
     if challenge == challenge2 {
         Ok(())
     } else {
@@ -69,7 +78,7 @@ fn main() {
 
     // type H = nimue::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::legacy::DigestBridge<sha2::Sha256>;
-    // type H = nimue::keccak::Keccak;
+    type H = nimue::keccak::Keccak;
     type G = ark_bls12_381::G1Affine;
     type F = ark_bls12_381::Fr;
 

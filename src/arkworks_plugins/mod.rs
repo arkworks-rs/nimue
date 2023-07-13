@@ -5,8 +5,8 @@ mod iopattern;
 pub use absorbs::Absorbs;
 
 use ark_ec::{
-    short_weierstrass::{Affine, SWCurveConfig},
-    AffineRepr,
+    short_weierstrass::{Affine, SWCurveConfig, Projective},
+    AffineRepr, CurveGroup,
 };
 use ark_ff::{BigInteger, Fp, FpConfig, PrimeField};
 use ark_serialize::CanonicalSerialize;
@@ -15,12 +15,17 @@ pub use iopattern::AlgebraicIO;
 
 use crate::Lane;
 
+/// The number of random bytes needed to putput a field element that is uniformly distributed.
+fn random_felt_bytelen<F: PrimeField>() -> usize {
+    F::MODULUS_BIT_SIZE as usize / 8 + 100
+}
+
 /// Provides a way to absorb generically arkworks types into a sponge.
 ///
 /// This function is similar to the trait [`Absorb`](https://github.com/arkworks-rs/crypto-primitives/blob/main/src/sponge/absorb.rs) from arkworks, with slight changes to satisfy the stricter absorption model of the SAFE API.
 pub trait Absorbable<Other>: Sized {
     fn absorb_size() -> usize;
-    fn to_absorbable(myself: &Self) -> Vec<Other>;
+    fn to_absorbable(&self) -> Vec<Other>;
 }
 
 impl<const N: usize, P: FpConfig<N>> Absorbable<Fp<P, N>> for Fp<P, N> {
@@ -28,8 +33,8 @@ impl<const N: usize, P: FpConfig<N>> Absorbable<Fp<P, N>> for Fp<P, N> {
         1
     }
 
-    fn to_absorbable(myself: &Self) -> Vec<Self> {
-        vec![*myself]
+    fn to_absorbable(&self) -> Vec<Self> {
+        vec![*self]
     }
 }
 
@@ -38,8 +43,8 @@ impl<const N: usize, P: FpConfig<N>> Absorbable<u8> for Fp<P, N> {
         Self::default().compressed_size()
     }
 
-    fn to_absorbable(myself: &Self) -> Vec<u8> {
-        myself.into_bigint().to_bytes_le()
+    fn to_absorbable(&self) -> Vec<u8> {
+        self.into_bigint().to_bytes_le()
     }
 }
 
@@ -50,33 +55,39 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
         1
     }
 
-    fn to_absorbable(myself: &Self) -> Vec<Fp<C, N>> {
-        let (&x, &y) = myself.xy().unwrap();
+    fn to_absorbable(&self) -> Vec<Fp<C, N>> {
+        let (&x, &y) = self.xy().unwrap();
         vec![x, y]
     }
 }
 
-impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P> {
+// this one little `where` trick avoids specifying in any implementation `Projective<P>: Absorbable<L>`.
+impl<'a, P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P> where
+    Projective<P>: Absorbable<L> {
     fn absorb_size() -> usize {
         usize::div_ceil(Self::default().compressed_size(), L::compressed_size())
     }
 
-    fn to_absorbable(myself: &Self) -> Vec<L> {
+    fn to_absorbable(&self) -> Vec<L> {
         let mut output = Vec::new();
-        myself.serialize_compressed(&mut output).unwrap();
+        self.serialize_compressed(&mut output).unwrap();
         L::from_bytes(&output)
     }
 }
 
-impl<L: Lane, A: Absorbable<L>, const N: usize> Absorbable<L> for &[A; N] {
+impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Projective<P>  {
     fn absorb_size() -> usize {
-        A::absorb_size() * N
+        <Affine<P> as Absorbable<L>>::absorb_size()
     }
 
-    fn to_absorbable(myself: &Self) -> Vec<L> {
-        myself.iter().flat_map(|x| A::to_absorbable(x)).collect()
+    fn to_absorbable(&self) -> Vec<L> {
+        <Affine<P> as Absorbable<L>>::to_absorbable(&self.into_affine())
+
     }
 }
+
+
+
 
 #[macro_export]
 macro_rules! impl_absorbable {

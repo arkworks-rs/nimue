@@ -1,5 +1,5 @@
 use ark_ec::AffineRepr;
-use ark_ff::Field;
+use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
 use super::{
@@ -62,6 +62,11 @@ where
     pub fn squeeze_bytes(self, count: usize) -> Self {
         let count = usize::div_ceil(count, S::L::extractable_bytelen());
         self.iop.squeeze(count).into()
+    }
+
+    pub fn squeeze_field<F: PrimeField>(self, count: usize) -> Self {
+        // XXX. check if typeof::<F>() == typeof::<S::L>() and if so use native squeeze
+        self.squeeze_bytes(super::random_felt_bytelen::<F>() * count).into()
     }
 }
 

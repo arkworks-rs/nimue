@@ -99,11 +99,12 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         &self.state[C::CAPACITY..]
     }
 
-    fn divide_unchecked(&mut self) -> &mut Self {
+    fn ratchet_unchecked(&mut self) -> &mut Self {
         self.state.permute();
         // set to zero the state up to rate
         self.state[0..C::RATE].iter_mut().for_each(|x| x.zeroize());
         self.squeeze_pos = C::RATE;
         self
     }
+
 }

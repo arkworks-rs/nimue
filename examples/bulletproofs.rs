@@ -3,7 +3,7 @@ use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::{log2, Zero};
 use nimue::arkworks_plugins::{Absorbable, AlgebraicIO};
-use nimue::{IOPattern, DefaultHash};
+use nimue::IOPattern;
 use nimue::{
     arkworks_plugins::{Absorbs, FieldChallenges},
     Duplexer, InvalidTag, Merlin,
@@ -44,6 +44,10 @@ fn prove<S, G>(
 where
     S: Duplexer,
     G: AffineRepr + Absorbable<S::L>,
+    // XXX. ugly.
+    // This allows to absorb also porjective elements.
+    // This condition is always satisfied. How can we fix it?
+    G::Group: Absorbable<S::L>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -82,8 +86,7 @@ where
         + G::Group::msm(h_right, b_left).unwrap();
     let right_compressed = right.into_affine();
 
-    transcript.append_element(&left_compressed)?;
-    transcript.append_element(&right_compressed)?;
+    transcript.append_elements(&[left, right])?;
     let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
@@ -127,6 +130,7 @@ where
 
         transcript.append_element(left)?;
         transcript.append_element(right)?;
+
         let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
         let x_inv = x.inverse().expect("You just won the lottery!");
 
@@ -196,6 +200,7 @@ fn fold_generators<G: AffineRepr>(
         .map(|(&a, &b)| (a * x + b * y).into_affine())
         .collect()
 }
+
 
 fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
     a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()

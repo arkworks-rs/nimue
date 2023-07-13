@@ -5,10 +5,17 @@ use rand::{CryptoRng, RngCore};
 use super::keccak::Keccak;
 use super::{DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
 
-// Arthur is a cryptographically-secure random number generator that is
-// seeded by a random-number generator and is bound to the protocol transcript.
+/// Arthur is a cryptographically-secure random number generator that is bound to the protocol transcript.
+///
+/// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.
+/// For this reason, we construct a Rng that will absorb whatever the verifier absorbs, and that in addition
+/// it is seeded by a cryptographic random number generator (by default, [`rand::rngs::OsRng`]).
+///
+/// Every time the prover's sponge is squeeze, the state of the sponge is ratcheted, so that it can't be inverted and the randomness recovered.
 pub(crate) struct Arthur<R: RngCore + CryptoRng> {
+    /// The sponge that is used to generate the random coins.
     pub(crate) sponge: Keccak,
+    /// The cryptographic random number generator that seeds the sponge.
     pub(crate) csrng: R,
 }
 
@@ -26,9 +33,16 @@ impl<R: RngCore + CryptoRng> RngCore for Arthur<R> {
     }
 
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.csrng.fill_bytes(dest);
-        self.sponge.absorb_unchecked(dest);
+        // Seed (at most) 32 bytes of randomness from the CSRNG
+        let len = usize::min(dest.len(), 32);
+        self.csrng.fill_bytes(&mut dest[..len]);
+        self.sponge.absorb_unchecked(&dest[..len]);
+
+        // fill `dest` with the output of the sponge
         self.sponge.squeeze_unchecked(dest);
+
+        // erase the state from the sponge so that it can't be reverted
+        self.sponge.ratchet_unchecked();
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
@@ -97,24 +111,28 @@ where
     pub(crate) merlin: Merlin<S>,
 }
 
+
+
+
 impl<S: Duplexer, R: RngCore + CryptoRng> Transcript<S, R> {
     #[inline]
-    pub fn append(&mut self, input: &[S::L]) -> Result<&mut Self, InvalidTag> {
+    pub fn append(&mut self, input: &[S::L]) -> Result<Vec<u8>, InvalidTag> {
+        let serialized = bincode::serialize(input).unwrap();
+        self.arthur.sponge.absorb_unchecked(&serialized);
         self.merlin.append(input)?;
-        Ok(self)
+
+        Ok(serialized)
     }
 
     /// Get a challenge of `count` bytes.
     pub fn challenge_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
         self.merlin.challenge_bytes(dest)?;
-        self.arthur.sponge.absorb_unchecked(dest);
         Ok(())
     }
 
     #[inline]
-    pub fn process(&mut self) -> Result<&mut Self, InvalidTag> {
-        self.merlin.process()?;
-        Ok(self)
+    pub fn process(&mut self) -> Result<(), InvalidTag> {
+        self.merlin.process().map(|_| ())
     }
 
     #[inline]

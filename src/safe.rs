@@ -184,7 +184,11 @@ pub trait Duplexer: Clone + Zeroize {
     /// - zero rate elements.
     /// This has the effect that state holds no information about the elements absorbed so far.
     /// The resulting state is compressed.
-    fn divide_unchecked(&mut self) -> &mut Self;
+    fn divide_unchecked(&mut self) -> &mut Self {
+        self.ratchet_unchecked()
+    }
+
+    fn ratchet_unchecked(&mut self) -> &mut Self;
 
     /// Exports the hash state, allowing for preprocessing.
     ///
@@ -256,7 +260,7 @@ impl<D: Duplexer> Safe<D> {
                 }
             }
         } else {
-            Err("Invalid tag".into())
+            Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Absorb(input.len()), op).into())
         }
     }
 
@@ -266,10 +270,8 @@ impl<D: Duplexer> Safe<D> {
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
     pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
-        let op = self.stack.pop_front().unwrap();
-
-        match op {
-            Op::Squeeze(length) => {
+        match self.stack.pop_front() {
+            Some(Op::Squeeze(length)) => {
                 if output.len() > length {
                     Err("Output buffer too large".into())
                 } else {
@@ -285,7 +287,13 @@ impl<D: Duplexer> Safe<D> {
                     Ok(())
                 }
             }
-            _ => Err("Invalid tag".into()),
+            None => {
+                Err(format!("Invalid tag. Expected {:?}", Op::Squeeze(output.len())).into())
+            }
+            Some(op) => {
+                Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Squeeze(output.len()), op).into())
+            }
+
         }
     }
 

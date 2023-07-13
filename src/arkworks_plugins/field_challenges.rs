@@ -2,6 +2,8 @@ use super::super::{Duplexer, InvalidTag, Merlin, Transcript};
 use ark_ff::PrimeField;
 use rand::{CryptoRng, RngCore};
 
+
+
 pub trait FieldChallenges {
     /// Squeeze a field element challenge of `byte_count` bytes
     /// from the protocol transcript.
@@ -19,7 +21,7 @@ pub trait FieldChallenges {
 
     /// Squeeze a field element challenge uniformly distributed over the whole domain.
     fn field_challenge<F: PrimeField>(&mut self) -> Result<F, InvalidTag> {
-        self.short_field_challenge(F::MODULUS_BIT_SIZE as usize / 8 + 100)
+        self.short_field_challenge(super::random_felt_bytelen::<F>())
     }
 }
 

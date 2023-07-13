@@ -37,9 +37,7 @@ enum Mode {
 }
 
 impl<D: BlockSizeUser + Digest + Clone + Reset> DigestBridge<D> {
-    /// Hardcoded block size for SHA2.
     const BLOCK_SIZE: usize = D::BlockSize::USIZE;
-    /// Hardcoded digest size for SHA2.
     const DIGEST_SIZE: usize = D::OutputSize::USIZE;
 
     fn mask_squeeze(i: usize, cv: &[u8]) -> GenericArray<u8, D::BlockSize> {
@@ -115,7 +113,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Duplexer for DigestBr
         self
     }
 
-    fn divide_unchecked(&mut self) -> &mut Self {
+    fn ratchet_unchecked(&mut self) -> &mut Self {
         if self.mode == Mode::Absorb {
             let digest = self.hasher.finalize_reset();
             // remove all data in `leftovers`
@@ -152,17 +150,17 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Duplexer for DigestBr
             self.squeeze_unchecked(output)
         // Squeeze another digest
         } else if let Mode::Ratcheted(i) = self.mode {
-            let len = usize::min(output.len(), Self::DIGEST_SIZE);
+            let chunk_len = usize::min(output.len(), Self::DIGEST_SIZE);
             // self.hasher is a freshly initialized state.
             // Add the squeeze mask, current digest, and index
             Digest::update(&mut self.hasher, &Self::mask_squeeze(i, &self.cv));
             let digest = self.hasher.finalize_reset();
             // Copy the digest into the output, and store the rest for later
-            output[..len].copy_from_slice(&digest[..len]);
-            self.leftovers.extend_from_slice(&output[len..]);
+            output[..chunk_len].copy_from_slice(&digest[..chunk_len]);
+            self.leftovers.extend_from_slice(&output[chunk_len..]);
             // Update the state
             self.mode = Mode::Ratcheted(i + 1);
-            self.squeeze_unchecked(&mut output[len..])
+            self.squeeze_unchecked(&mut output[chunk_len..])
         } else {
             unreachable!()
         }
