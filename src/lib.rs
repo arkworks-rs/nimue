@@ -17,20 +17,43 @@
 //!
 //! // create a new protocol that will absorb 1 byte and squeeze 1 byte.
 //! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
+//! // by default we use keccak, but `nimue::legacy::DigestBridge<sha2::Sha256>` works too.
 //! let mut merlin = Merlin::<nimue::DefaultHash>::new(&io);
 //! merlin.append(&[0x42]).expect("Absorbing one byte");
 //! let mut chal = [0u8; 16];
 //! merlin.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
-//! The [`IOPattern`] struct is a builder for the IO Pattern of the protocol. It declares how many **native elements** will be absorbed and how many bytes will be squeezed.
+//! The [`IOPattern`] struct is a builder for the IO Pattern of the protocol.
+//! It declares how many **native elements** will be absorbed and how many bytes will be squeezed.
+//! Protocols can be composed in a secure manner by concatenating the respective [`IOPattern`]s.
 //! [`Merlin`] allows to generate public coin for protocol satisfying the IO Pattern.
+//! Compatibility with arkworks types is given by the feature flag `arkworks`.
+//!
+//! The prover can use a [`Transcript`] to generate both the zk randomness as well as the public coins:
+//! ```
+//! use nimue::{IOPattern, Transcript};
+//! use rand::Rng;
+//!
+//! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
+//! // by default, the transcript is seeded with `rand::rngs::OsRng`.
+//! let mut transcript = Transcript::<nimue::DefaultHash>::from(&io);
+//! transcript.append(&[0x42]).expect("Absorbing one byte");
+//!
+//! // generate 32 bytes of private randomness.
+//! let mut rnd = transcript.rng().gen::<[u8; 32]>();
+//! let mut chal = [0u8; 16];
+//!
+//! // continue with the protocol.
+//! transcript.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! ```
+//!
 //!
 //! # Features
 //!
 //! Nimue supports multi-round protocols, domain separation, and protocol composition.
-//! In addition, it addresses some of [Merlin]'s core design limitations:
-//! - Support for arbitrary hash functions, including algebraic hashes.
+//! Inspired from [Merlin], it tries to address some of its core design limitations:
+//! - Support for arbitrary sponge functions, including algebraic hashes.
 //! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
 //! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
 //! - Retro-compatibility with MD hashes.
@@ -41,14 +64,9 @@
 //! - Randomness generation for the prover.
 //! It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
 //!
-//! # Protocol Composition
+//! # Work-in-progress features
 //!
-//! Protocols can be composed in a secure manner at compile time by combining the IO Patterns of each protocol.
-//! This serves as a security feature, preventing the prover
-//! from unexpectedly branching without following a specific set of commands.
-//!
-//! # Possible extra features
-//!
+//! - squeeze native field elements
 //! - byte-oriented squeeze interface such that:
 //!    `squeeze(1); squeeze(1)` is the same to `squeeze(2)` in Fiat-Shamir?
 //!
