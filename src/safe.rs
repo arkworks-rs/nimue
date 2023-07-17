@@ -1,5 +1,4 @@
 use super::{InvalidTag, Lane};
-use ::core::cmp::Ordering;
 use std::collections::vec_deque::VecDeque;
 use zeroize::Zeroize;
 
@@ -240,27 +239,22 @@ impl<D: Duplexer> Safe<D> {
     /// Perform secure absorption of the elements in `input`.
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
     pub fn absorb(&mut self, input: &[D::L]) -> Result<&mut Self, InvalidTag> {
-        let op = self
-            .stack
-            .pop_front()
-            .ok_or::<InvalidTag>("Stack is already empty".into())?;
-        if let Op::Absorb(length) = op {
-            match length.cmp(&input.len()) {
-                Ordering::Less => {
-                    Err(format!("Not enough input for absorb: requested {}", input.len()).into())
-                }
-                Ordering::Equal => {
-                    self.sponge.absorb_unchecked(input);
-                    Ok(self)
-                }
-                Ordering::Greater => {
+        match self.stack.pop_front() {
+            Some(Op::Absorb(length)) if length <= input.len() => {
+                if length < input.len() {
                     self.stack.push_front(Op::Absorb(length - input.len()));
-                    self.sponge.absorb_unchecked(input);
-                    Ok(self)
                 }
+                self.sponge.absorb_unchecked(input);
+                Ok(self)
             }
-        } else {
-            Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Absorb(input.len()), op).into())
+            None => {
+                self.stack.clear();
+                Err(format!("Invalid tag. Stack empty, got {:?}", Op::Absorb(input.len())).into())
+            }
+            Some(op) => {
+                self.stack.clear();
+                Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Absorb(input.len()), op).into())
+            }
         }
     }
 
@@ -271,26 +265,24 @@ impl<D: Duplexer> Safe<D> {
     /// This function provides no guarantee of streaming-friendliness.
     pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
-            Some(Op::Squeeze(length)) => {
-                if output.len() > length {
-                    Err("Output buffer too large".into())
-                } else {
-                    let squeeze_len = usize::div_ceil(length, D::L::extractable_bytelen());
-                    let mut squeeze_lane = vec![D::L::default(); squeeze_len];
-                    self.sponge.squeeze_unchecked(&mut squeeze_lane);
-                    let mut squeeze_bytes = vec![0u8; D::L::extractable_bytelen() * squeeze_len];
-                    D::L::to_random_bytes(&squeeze_lane, squeeze_bytes.as_mut_slice());
-                    output.copy_from_slice(&squeeze_bytes[..output.len()]);
-                    if length != output.len() {
-                        self.stack.push_front(Op::Squeeze(length - output.len()));
-                    }
-                    Ok(())
+            Some(Op::Squeeze(length)) if output.len()<= length => {
+                let squeeze_len = usize::div_ceil(length, D::L::extractable_bytelen());
+                let mut squeeze_lane = vec![D::L::default(); squeeze_len];
+                self.sponge.squeeze_unchecked(&mut squeeze_lane);
+                let mut squeeze_bytes = vec![0u8; D::L::extractable_bytelen() * squeeze_len];
+                D::L::to_random_bytes(&squeeze_lane, squeeze_bytes.as_mut_slice());
+                output.copy_from_slice(&squeeze_bytes[..output.len()]);
+                if length != output.len() {
+                    self.stack.push_front(Op::Squeeze(length - output.len()));
                 }
+                Ok(())
             }
             None => {
-                Err(format!("Invalid tag. Expected {:?}", Op::Squeeze(output.len())).into())
+                self.stack.clear();
+                Err(format!("Invalid tag. Stack empty, got {:?}", Op::Squeeze(output.len())).into())
             }
             Some(op) => {
+                self.stack.clear();
                 Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Squeeze(output.len()), op).into())
             }
 
@@ -315,11 +307,9 @@ impl<D: Duplexer> Safe<D> {
 }
 
 impl<S: Duplexer> Drop for Safe<S> {
-    /// Destroyes the sponge state.
+    /// Destroy the sponge state.
     fn drop(&mut self) {
-        if !self.stack.is_empty() {
-            panic!("Invalid tag. Remaining operations: {:?}", self.stack);
-        }
+        assert!(self.stack.is_empty());
         self.sponge.zeroize();
     }
 }

@@ -45,8 +45,8 @@ fn schnorr_proof<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     let commitment = G::generator() * k;
     transcript.append_element(&commitment.into_affine())?;
     // Get a challenge over the field Fr.
-    let _challenge: G::ScalarField = transcript.field_challenge()?;
-    let challenge = transcript.field_challenge()?;
+    let challenge: G::ScalarField = transcript.field_challenge()?;
+    let challenge: G::ScalarField = transcript.field_challenge().expect("hello");
 
 
     let response = k + challenge * sk;
@@ -89,7 +89,8 @@ fn main() {
     g.serialize_compressed(&mut writer).unwrap();
     let pk = (g * &sk).into();
     let mut prover_transcript = Transcript::<H>::from(io_pattern.clone());
-    let mut verifier_transcript = Merlin::from(io_pattern.clone());
     let proof = schnorr_proof::<H, G>(&mut prover_transcript, sk, g, pk).expect("Valid proof");
+
+    let mut verifier_transcript = Merlin::from(io_pattern.clone());
     verify::<H, G>(&mut verifier_transcript, g, pk, proof).expect("Valid proof");
 }
