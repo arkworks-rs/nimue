@@ -1,32 +1,45 @@
 #![feature(int_roundings)]
 //!
-//! **This is work in progress, not suitable for production.**
+//! **This crate is work in progress, not suitable for production.**
 //!
-//! This library is a secure construction for zero-knowledge proofs based on [SAFE].
+//! Nimue helps performing Fiat-Shamir on any public-coin protocol.
 //! It enables secure provision of randomness for the prover and secure generation
 //! of random coins for the verifier.
+//! It is inspired by the [SAFE] API with minor variations.
 //!
 //! This allows for the implementation of non-interactive protocols in a readable manner,
 //! in a unified framework for sponge functions.
 //!
+//! # Example
+//!
+//! ```
+//! use nimue::{IOPattern, Merlin};
+//!
+//! // create a new protocol that will absorb 1 byte and squeeze 1 byte.
+//! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
+//! let mut merlin = Merlin::<nimue::DefaultHash>::new(&io);
+//! merlin.append(&[0x42]).expect("Absorbing one byte");
+//! let mut chal = [0u8; 16];
+//! merlin.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! ```
+//!
+//! The [`IOPattern`] struct is a builder for the IO Pattern of the protocol. It declares how many **native elements** will be absorbed and how many bytes will be squeezed.
+//! [`Merlin`] allows to generate public coin for protocol satisfying the IO Pattern.
+//!
 //! # Features
 //!
-//! This library is inspired by [Merlin] but is not a drop-in replacement.
-//! It supports multi-round protocols and domain separation, and
-//! addresses of Merlin's core design limitations:
-//! - Support for arbitrary hash function, including algebraic hashes.
-//! To build a secure Fiat-Shamir transform, a permutation function is required.
-//! You can choose from SHA3, Poseidon, Anemoi, instantiated over
-//! $\mathbb{F}_{2^8}$ or any large-characteristic field $\mathbb{F}_p$.
-//! - Retro-compatibility with Sha2 and MD hashes.
-//! We have a legacy interface for Sha2 and Blake2 that can be easily extended to Merkle-Damgard hashes
-//! and, more in general, any hash function that satisfies the [`digest::Digest`] trait.
-//! - Provides an API for preprocessing.
-//! In recursive SNARKs, minimizing the number of invocations of the permutation
+//! Nimue supports multi-round protocols, domain separation, and protocol composition.
+//! In addition, it addresses some of [Merlin]'s core design limitations:
+//! - Support for arbitrary hash functions, including algebraic hashes.
+//! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
+//! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
+//! - Retro-compatibility with MD hashes.
+//! We have a legacy interface for Sha2, Blake2, and any hash function that satisfies the [`digest::Digest`] trait.
+//! - API for preprocessing.
+//! In recursive SNARKs, minimizing the number of hash invocations
 //! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
-//!
-//! - Secure randomness generation for the prover.
-//! We provide a secure source of randomness for the prover that is bound to the protocol transcript, and seeded by the oeprating system.
+//! - Randomness generation for the prover.
+//! It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
 //!
 //! # Protocol Composition
 //!
