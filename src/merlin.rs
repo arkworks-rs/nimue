@@ -19,7 +19,7 @@ impl<S: Duplexer> Merlin<S> {
         Self { safe, leftovers }
     }
 
-    /// Absorb a slice of [`Lane`]'s into the sponge.
+    /// Absorb a slice of lanes into the sponge.
     pub fn append(&mut self, input: &[S::L]) -> Result<&mut Self, InvalidTag> {
         self.leftovers.clear();
         self.safe.absorb(input)?;

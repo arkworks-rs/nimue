@@ -46,8 +46,6 @@ fn schnorr_proof<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     transcript.append_element(&commitment.into_affine())?;
     // Get a challenge over the field Fr.
     let challenge: G::ScalarField = transcript.field_challenge()?;
-    let challenge: G::ScalarField = transcript.field_challenge().expect("hello");
-
 
     let response = k + challenge * sk;
     let proof = (challenge, response);

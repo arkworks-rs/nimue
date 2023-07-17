@@ -1,4 +1,4 @@
-//! A wrapper around the Keccak-f[1600] permutation.
+//! A wrapper around the Keccak-f\[1600\] permutation.
 //!
 //! **Warning**: this function is not SHA3.
 //! Despite internally we use the same permutation,

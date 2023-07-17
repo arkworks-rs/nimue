@@ -12,20 +12,20 @@
 //! # Features
 //!
 //! This library is inspired by [Merlin] but is not a drop-in replacement.
-//! Like Merlin, it supports multi-round protocols and domain separation.
-//! Additionally, it addresses some core design limitations of [Merlin]:
-//! - Supports arbitrary hashes, including algebraic.
+//! It supports multi-round protocols and domain separation, and
+//! addresses of Merlin's core design limitations:
+//! - Support for arbitrary hash function, including algebraic hashes.
 //! To build a secure Fiat-Shamir transform, a permutation function is required.
 //! You can choose from SHA3, Poseidon, Anemoi, instantiated over
 //! $\mathbb{F}_{2^8}$ or any large-characteristic field $\mathbb{F}_p$.
-//! - Provides retro-compatibility with Sha2 and MD hashes.
-//! We have a legacy interface for Sha2 that can be easily extended to Merkle-Damgard hashes
-//! and any hash function that satisfies the [`digest::Digest`] trait.
+//! - Retro-compatibility with Sha2 and MD hashes.
+//! We have a legacy interface for Sha2 and Blake2 that can be easily extended to Merkle-Damgard hashes
+//! and, more in general, any hash function that satisfies the [`digest::Digest`] trait.
 //! - Provides an API for preprocessing.
 //! In recursive SNARKs, minimizing the number of invocations of the permutation
-//! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this.
+//! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
 //!
-//! - Enables secure randomness generation for the prover.
+//! - Secure randomness generation for the prover.
 //! We provide a secure source of randomness for the prover that is bound to the protocol transcript, and seeded by the oeprating system.
 //!
 //! # Protocol Composition

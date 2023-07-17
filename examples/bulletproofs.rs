@@ -45,8 +45,9 @@ where
     S: Duplexer,
     G: AffineRepr + Absorbable<S::L>,
     // XXX. ugly.
-    // This allows to absorb also porjective elements.
-    // This condition is always satisfied. How can we fix it?
+    // This allows to absorb also projective elements.
+    // This condition is however always satisfied, but
+    // Rust will only know when these traits are part of Group.
     G::Group: Absorbable<S::L>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
@@ -154,8 +155,8 @@ fn main() {
 
     type H = nimue::DefaultHash;
 
-    let a = [1, 2, 3, 4].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
-    let b = [1, 2, 3, 4].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
+    let a = [1, 2, 3, 4, 5, 6, 7, 8].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
+    let b = [1, 2, 3, 4, 5, 6, 7, 8].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
     let g = (0..a.len())
         .map(|_| G::rand(&mut OsRng))
         .collect::<Vec<_>>();
