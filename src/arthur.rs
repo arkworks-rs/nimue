@@ -115,6 +115,10 @@ where
 
 
 impl<S: Duplexer, R: RngCore + CryptoRng> Transcript<S, R> {
+    pub fn new(io_pattern: &IOPattern, csrng: R) -> Self {
+        TranscriptBuilder::new(io_pattern).finalize_with_rng(csrng)
+    }
+
     #[inline]
     pub fn append(&mut self, input: &[S::L]) -> Result<Vec<u8>, InvalidTag> {
         let serialized = bincode::serialize(input).unwrap();

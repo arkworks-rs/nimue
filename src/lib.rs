@@ -33,11 +33,11 @@
 //! The prover can use a [`Transcript`] to generate both the zk randomness as well as the public coins:
 //! ```
 //! use nimue::{IOPattern, Transcript};
-//! use rand::Rng;
+//! use rand::{Rng, rngs::OsRng};
 //!
 //! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
 //! // by default, the transcript is seeded with `rand::rngs::OsRng`.
-//! let mut transcript = Transcript::<nimue::DefaultHash>::from(&io);
+//! let mut transcript = Transcript::<nimue::DefaultHash>::new(&io, OsRng);
 //! transcript.append(&[0x42]).expect("Absorbing one byte");
 //!
 //! // generate 32 bytes of private randomness.
@@ -103,6 +103,9 @@ mod merlin;
 mod safe;
 /// Support for sponge functions.
 mod sponge;
+/// Unit-tests.
+#[cfg(test)]
+mod tests;
 
 pub use arthur::{Transcript, TranscriptBuilder};
 pub use errors::InvalidTag;
