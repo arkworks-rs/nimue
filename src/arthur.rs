@@ -12,14 +12,14 @@ use super::{DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
 /// it is seeded by a cryptographic random number generator (by default, [`rand::rngs::OsRng`]).
 ///
 /// Every time the prover's sponge is squeeze, the state of the sponge is ratcheted, so that it can't be inverted and the randomness recovered.
-pub(crate) struct Arthur<R: RngCore + CryptoRng> {
+pub(crate) struct ProverRng<R: RngCore + CryptoRng> {
     /// The sponge that is used to generate the random coins.
     pub(crate) sponge: Keccak,
     /// The cryptographic random number generator that seeds the sponge.
     pub(crate) csrng: R,
 }
 
-impl<R: RngCore + CryptoRng> RngCore for Arthur<R> {
+impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
     fn next_u32(&mut self) -> u32 {
         let mut buf = [0u8; 4];
         self.fill_bytes(buf.as_mut());
@@ -52,7 +52,7 @@ impl<R: RngCore + CryptoRng> RngCore for Arthur<R> {
 }
 
 /// Builder for the prover state.
-pub struct TranscriptBuilder<S: Duplexer>
+pub struct ArthurBuilder<S: Duplexer>
 where
     S: Duplexer,
 {
@@ -60,7 +60,7 @@ where
     u8sponge: Keccak,
 }
 
-impl<S: Duplexer> TranscriptBuilder<S> {
+impl<S: Duplexer> ArthurBuilder<S> {
     pub(crate) fn new(io_pattern: &IOPattern) -> Self {
         let merlin = Merlin::new(io_pattern);
 
@@ -80,43 +80,43 @@ impl<S: Duplexer> TranscriptBuilder<S> {
 
     // Finalize the state integrating a cryptographically-secure
     // random number generator that will be used to seed the state before future squeezes.
-    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Transcript<S, R> {
-        let arthur = Arthur {
+    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<S, R> {
+        let arthur = ProverRng {
             sponge: self.u8sponge,
             csrng,
         };
 
-        Transcript {
+        Arthur {
             merlin: self.merlin,
             arthur,
         }
     }
 }
 
-impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Transcript<S> {
+impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Arthur<S> {
     fn from(pattern: B) -> Self {
-        TranscriptBuilder::new(pattern.borrow()).finalize_with_rng(DefaultRng::default())
+        ArthurBuilder::new(pattern.borrow()).finalize_with_rng(DefaultRng::default())
     }
 }
 
 /// The state of an interactive proof system.
 /// Holds the state of the verifier, and provides the random coins for the prover.
-pub struct Transcript<S, R = DefaultRng>
+pub struct Arthur<S, R = DefaultRng>
 where
     S: Duplexer,
     R: RngCore + CryptoRng,
 {
     /// The randomness state of the prover.
-    pub(crate) arthur: Arthur<R>,
+    pub(crate) arthur: ProverRng<R>,
     pub(crate) merlin: Merlin<S>,
 }
 
 
 
 
-impl<S: Duplexer, R: RngCore + CryptoRng> Transcript<S, R> {
+impl<S: Duplexer, R: RngCore + CryptoRng> Arthur<S, R> {
     pub fn new(io_pattern: &IOPattern, csrng: R) -> Self {
-        TranscriptBuilder::new(io_pattern).finalize_with_rng(csrng)
+        ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)
     }
 
     #[inline]
@@ -145,9 +145,9 @@ impl<S: Duplexer, R: RngCore + CryptoRng> Transcript<S, R> {
     }
 }
 
-impl<R: RngCore + CryptoRng> CryptoRng for Arthur<R> {}
+impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<S: Duplexer, R: RngCore + CryptoRng> ::core::fmt::Debug for Transcript<S, R> {
+impl<S: Duplexer, R: RngCore + CryptoRng> ::core::fmt::Debug for Arthur<S, R> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.merlin.fmt(f)
     }

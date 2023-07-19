@@ -1,4 +1,4 @@
-use super::super::{Duplexer, InvalidTag, Merlin, Transcript};
+use super::super::{Duplexer, InvalidTag, Merlin, Arthur};
 use ark_ff::PrimeField;
 use rand::{CryptoRng, RngCore};
 
@@ -25,7 +25,7 @@ pub trait FieldChallenges {
     }
 }
 
-impl<S: Duplexer, R: RngCore + CryptoRng> FieldChallenges for Transcript<S, R> {
+impl<S: Duplexer, R: RngCore + CryptoRng> FieldChallenges for Arthur<S, R> {
     fn short_field_challenge<F: PrimeField>(&mut self, byte_count: usize) -> Result<F, InvalidTag> {
         self.merlin.short_field_challenge(byte_count)
     }

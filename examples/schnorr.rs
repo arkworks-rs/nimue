@@ -2,7 +2,7 @@ use ark_ec::{AffineRepr, CurveGroup};
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use nimue::arkworks_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
-use nimue::{Duplexer, IOPattern, InvalidTag, Merlin, Transcript};
+use nimue::{Duplexer, IOPattern, InvalidTag, Merlin, Arthur};
 
 trait SchnorrIOPattern {
     fn schnorr_io<G, S: Duplexer>(&self) -> Self
@@ -30,7 +30,7 @@ impl SchnorrIOPattern for IOPattern {
 }
 
 fn schnorr_proof<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
-    transcript: &mut Transcript<S>,
+    transcript: &mut Arthur<S>,
     sk: G::ScalarField,
     g: G,
     pk: G,
@@ -86,7 +86,7 @@ fn main() {
     let mut writer = Vec::new();
     g.serialize_compressed(&mut writer).unwrap();
     let pk = (g * &sk).into();
-    let mut prover_transcript = Transcript::<H>::from(io_pattern.clone());
+    let mut prover_transcript = Arthur::<H>::from(io_pattern.clone());
     let proof = schnorr_proof::<H, G>(&mut prover_transcript, sk, g, pk).expect("Valid proof");
 
     let mut verifier_transcript = Merlin::from(io_pattern.clone());

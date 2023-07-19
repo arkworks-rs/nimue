@@ -1,6 +1,6 @@
 use crate::{Lane, Merlin};
 
-use super::super::{Duplexer, InvalidTag, Transcript};
+use super::super::{Duplexer, InvalidTag, Arthur};
 use super::Absorbable;
 use rand::{CryptoRng, RngCore};
 
@@ -13,7 +13,7 @@ pub trait Absorbs<L: Lane> {
     }
 }
 
-impl<S, R> Absorbs<S::L> for Transcript<S, R>
+impl<S, R> Absorbs<S::L> for Arthur<S, R>
 where
     S: Duplexer,
     R: RngCore + CryptoRng,

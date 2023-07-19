@@ -30,22 +30,22 @@
 //! [`Merlin`] allows to generate public coin for protocol satisfying the IO Pattern.
 //! Compatibility with arkworks types is given by the feature flag `arkworks`.
 //!
-//! The prover can use a [`Transcript`] to generate both the zk randomness as well as the public coins:
+//! The prover can use a [`Arthur`] to generate both the zk randomness as well as the public coins:
 //! ```
-//! use nimue::{IOPattern, Transcript};
+//! use nimue::{IOPattern, Arthur};
 //! use rand::{Rng, rngs::OsRng};
 //!
 //! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
-//! // by default, the transcript is seeded with `rand::rngs::OsRng`.
-//! let mut transcript = Transcript::<nimue::DefaultHash>::new(&io, OsRng);
-//! transcript.append(&[0x42]).expect("Absorbing one byte");
+//! // by default, arthur is seeded with `rand::rngs::OsRng`.
+//! let mut arthur = Arthur::<nimue::DefaultHash>::new(&io, OsRng);
+//! arthur.append(&[0x42]).expect("Absorbing one byte");
 //!
 //! // generate 32 bytes of private randomness.
-//! let mut rnd = transcript.rng().gen::<[u8; 32]>();
+//! let mut rnd = arthur.rng().gen::<[u8; 32]>();
 //! let mut chal = [0u8; 16];
 //!
 //! // continue with the protocol.
-//! transcript.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! arthur.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
 //!
@@ -107,7 +107,7 @@ mod sponge;
 #[cfg(test)]
 mod tests;
 
-pub use arthur::{Transcript, TranscriptBuilder};
+pub use arthur::{Arthur, ArthurBuilder};
 pub use errors::InvalidTag;
 pub use merlin::Merlin;
 pub use safe::{Duplexer, IOPattern, Safe};
@@ -119,4 +119,4 @@ pub(crate) use sponge::DuplexSponge;
 
 pub type DefaultRng = rand::rngs::OsRng;
 pub type DefaultHash = keccak::Keccak;
-pub type DefaultTranscript = Transcript<DefaultHash>;
+pub type DefaultTranscript = Arthur<DefaultHash>;

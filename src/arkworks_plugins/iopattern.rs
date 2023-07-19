@@ -3,7 +3,7 @@ use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
 use super::{
-    super::{Duplexer, IOPattern, Lane, Merlin, Transcript},
+    super::{Duplexer, IOPattern, Lane, Merlin, Arthur},
     Absorbable,
 };
 
@@ -76,7 +76,7 @@ impl<S: Duplexer> From<AlgebraicIO<S>> for IOPattern {
     }
 }
 
-impl<S: Duplexer> From<AlgebraicIO<S>> for Transcript<S> {
+impl<S: Duplexer> From<AlgebraicIO<S>> for Arthur<S> {
     fn from(value: AlgebraicIO<S>) -> Self {
         IOPattern::from(value).into()
     }
