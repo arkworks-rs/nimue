@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
-use serde::{Serialize, Deserialize};
 
 /// A Lane is the basic unit a sponge function works on.
 /// We need only two things from a lane: the ability to convert it to bytes and back.

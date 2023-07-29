@@ -3,7 +3,7 @@ use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
 use super::{
-    super::{Duplexer, IOPattern, Lane, Merlin, Arthur},
+    super::{Arthur, Duplexer, IOPattern, Lane, Merlin},
     Absorbable,
 };
 
@@ -40,7 +40,7 @@ where
     }
 
     pub fn absorb_bytes(self, count: usize) -> Self {
-        let count = usize::div_ceil(count, S::L::compressed_size());
+        let count = crate::div_ceil!(count, S::L::compressed_size());
         self.iop.absorb(count).into()
     }
 
@@ -60,13 +60,14 @@ where
     }
 
     pub fn squeeze_bytes(self, count: usize) -> Self {
-        let count = usize::div_ceil(count, S::L::extractable_bytelen());
+        let count = crate::div_ceil!(count, S::L::extractable_bytelen());
         self.iop.squeeze(count).into()
     }
 
     pub fn squeeze_field<F: PrimeField>(self, count: usize) -> Self {
         // XXX. check if typeof::<F>() == typeof::<S::L>() and if so use native squeeze
-        self.squeeze_bytes(super::random_felt_bytelen::<F>() * count).into()
+        self.squeeze_bytes(super::random_felt_bytelen::<F>() * count)
+            .into()
     }
 }
 

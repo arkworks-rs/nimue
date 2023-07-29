@@ -111,9 +111,6 @@ where
     pub(crate) merlin: Merlin<S>,
 }
 
-
-
-
 impl<S: Duplexer, R: RngCore + CryptoRng> Arthur<S, R> {
     pub fn new(io_pattern: &IOPattern, csrng: R) -> Self {
         ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)

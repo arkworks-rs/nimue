@@ -249,11 +249,20 @@ impl<D: Duplexer> Safe<D> {
             }
             None => {
                 self.stack.clear();
-                Err(format!("Invalid tag. Stack empty, got {:?}", Op::Absorb(input.len())).into())
+                Err(format!(
+                    "Invalid tag. Stack empty, got {:?}",
+                    Op::Absorb(input.len())
+                )
+                .into())
             }
             Some(op) => {
                 self.stack.clear();
-                Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Absorb(input.len()), op).into())
+                Err(format!(
+                    "Invalid tag. Expected {:?}, got {:?}",
+                    Op::Absorb(input.len()),
+                    op
+                )
+                .into())
             }
         }
     }
@@ -265,8 +274,8 @@ impl<D: Duplexer> Safe<D> {
     /// This function provides no guarantee of streaming-friendliness.
     pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
-            Some(Op::Squeeze(length)) if output.len()<= length => {
-                let squeeze_len = usize::div_ceil(length, D::L::extractable_bytelen());
+            Some(Op::Squeeze(length)) if output.len() <= length => {
+                let squeeze_len = super::div_ceil!(length, D::L::extractable_bytelen());
                 let mut squeeze_lane = vec![D::L::default(); squeeze_len];
                 self.sponge.squeeze_unchecked(&mut squeeze_lane);
                 let mut squeeze_bytes = vec![0u8; D::L::extractable_bytelen() * squeeze_len];
@@ -279,13 +288,21 @@ impl<D: Duplexer> Safe<D> {
             }
             None => {
                 self.stack.clear();
-                Err(format!("Invalid tag. Stack empty, got {:?}", Op::Squeeze(output.len())).into())
+                Err(format!(
+                    "Invalid tag. Stack empty, got {:?}",
+                    Op::Squeeze(output.len())
+                )
+                .into())
             }
             Some(op) => {
                 self.stack.clear();
-                Err(format!("Invalid tag. Expected {:?}, got {:?}", Op::Squeeze(output.len()), op).into())
+                Err(format!(
+                    "Invalid tag. Expected {:?}, got {:?}",
+                    Op::Squeeze(output.len()),
+                    op
+                )
+                .into())
             }
-
         }
     }
 

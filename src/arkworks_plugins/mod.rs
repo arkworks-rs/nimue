@@ -5,7 +5,7 @@ mod iopattern;
 pub use absorbs::Absorbs;
 
 use ark_ec::{
-    short_weierstrass::{Affine, SWCurveConfig, Projective},
+    short_weierstrass::{Affine, Projective, SWCurveConfig},
     AffineRepr, CurveGroup,
 };
 use ark_ff::{BigInteger, Fp, FpConfig, PrimeField};
@@ -62,10 +62,12 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
 }
 
 // this one little `where` trick avoids specifying in any implementation `Projective<P>: Absorbable<L>`.
-impl<'a, P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P> where
-    Projective<P>: Absorbable<L> {
+impl<'a, P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P>
+where
+    Projective<P>: Absorbable<L>,
+{
     fn absorb_size() -> usize {
-        usize::div_ceil(Self::default().compressed_size(), L::compressed_size())
+        crate::div_ceil!(Self::default().compressed_size(), L::compressed_size())
     }
 
     fn to_absorbable(&self) -> Vec<L> {
@@ -75,19 +77,15 @@ impl<'a, P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P> where
     }
 }
 
-impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Projective<P>  {
+impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Projective<P> {
     fn absorb_size() -> usize {
         <Affine<P> as Absorbable<L>>::absorb_size()
     }
 
     fn to_absorbable(&self) -> Vec<L> {
         <Affine<P> as Absorbable<L>>::to_absorbable(&self.into_affine())
-
     }
 }
-
-
-
 
 #[macro_export]
 macro_rules! impl_absorbable {

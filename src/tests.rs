@@ -1,4 +1,4 @@
-use crate::{IOPattern, Merlin, keccak::Keccak};
+use crate::{keccak::Keccak, IOPattern, Merlin};
 
 /// How should a protocol without IOPattern be handled?
 #[test]
@@ -32,7 +32,6 @@ fn test_deterministic() {
     let mut first_merlin = Merlin::<Keccak>::new(&iop);
     let mut second_merlin = Merlin::<Keccak>::new(&iop);
 
-
     let mut first = [0u8; 16];
     let mut second = [0u8; 16];
 
@@ -44,20 +43,25 @@ fn test_deterministic() {
     assert_eq!(first, second);
 }
 
-
 /// Basic scatistical test to check that the squeezed output looks random.
 /// XXX.
 #[test]
 fn test_statistics() {
-    let iop = IOPattern::new("example.com").absorb(4).process().squeeze(2048);
+    let iop = IOPattern::new("example.com")
+        .absorb(4)
+        .process()
+        .squeeze(2048);
     let mut merlin = Merlin::<Keccak>::new(&iop);
     merlin.append(b"seed").unwrap();
     merlin.process().unwrap();
     let mut output = [0u8; 2048];
     merlin.challenge_bytes(&mut output).unwrap();
 
-
-    let frequencies = (0u8..=255).map(|i| output.iter().filter(|&&x| x == i).count()).collect::<Vec<_>>();
+    let frequencies = (0u8..=255)
+        .map(|i| output.iter().filter(|&&x| x == i).count())
+        .collect::<Vec<_>>();
     // each element should appear roughly 8 times on average. Checking we're not too far from that.
-    assert!(frequencies.iter().all(|&x| x < frequencies[0] + 16 && x > 0));
+    assert!(frequencies
+        .iter()
+        .all(|&x| x < frequencies[0] + 16 && x > 0));
 }

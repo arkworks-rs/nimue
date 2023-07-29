@@ -106,5 +106,4 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         self.squeeze_pos = C::RATE;
         self
     }
-
 }

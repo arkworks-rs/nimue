@@ -1,6 +1,6 @@
 use crate::{Lane, Merlin};
 
-use super::super::{Duplexer, InvalidTag, Arthur};
+use super::super::{Arthur, Duplexer, InvalidTag};
 use super::Absorbable;
 use rand::{CryptoRng, RngCore};
 

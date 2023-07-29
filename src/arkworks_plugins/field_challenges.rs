@@ -1,8 +1,6 @@
-use super::super::{Duplexer, InvalidTag, Merlin, Arthur};
+use super::super::{Arthur, Duplexer, InvalidTag, Merlin};
 use ark_ff::PrimeField;
 use rand::{CryptoRng, RngCore};
-
-
 
 pub trait FieldChallenges {
     /// Squeeze a field element challenge of `byte_count` bytes

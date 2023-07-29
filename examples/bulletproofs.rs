@@ -6,39 +6,86 @@ use nimue::arkworks_plugins::{Absorbable, AlgebraicIO};
 use nimue::IOPattern;
 use nimue::{
     arkworks_plugins::{Absorbs, FieldChallenges},
-    Duplexer, InvalidTag, Merlin,
+    Arthur, Duplexer, InvalidTag, Merlin,
 };
 use rand::rngs::OsRng;
 
+fn fold_generators<G: AffineRepr>(
+    a: &[G],
+    b: &[G],
+    x: &G::ScalarField,
+    y: &G::ScalarField,
+) -> Vec<G> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(&a, &b)| (a * x + b * y).into_affine())
+        .collect()
+}
+
+/// Computes the inner prouct of vectors `a` and `b`.
+///
+/// Useless once https://github.com/arkworks-rs/algebra/pull/665 gets merged.
+fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
+    a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
+}
+
+/// Folds together `(a, b)` using challenges `x` and `y`.
+fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(&a, &b)| a * x + b * y)
+        .collect()
+}
+
+// The bulletproof proof.
 struct Bulletproof<G: AffineRepr> {
-    proof: Vec<(G, G)>,
+    /// the prover's messages
+    round_msgs: Vec<(G, G)>,
+    /// the last round message
     last: (G::ScalarField, G::ScalarField),
 }
 
+/// The IO Pattern of a bulleproof.
+///
+/// Defining this as a trait allows us to "attach" the bulletproof IO to
+/// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
 trait BulletproofIOPattern {
+    fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
+    where
+        G: AffineRepr + Absorbable<S::L>;
+
     fn bulletproof_io<G, S: Duplexer>(&self, len: usize) -> Self
     where
         G: AffineRepr + Absorbable<S::L>;
 }
 
 impl BulletproofIOPattern for IOPattern {
+    /// The IO of the bulletproof statement (the sole commitment)
+    fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
+    where
+        G: AffineRepr + Absorbable<S::L>,
+    {
+        AlgebraicIO::<S>::from(self).absorb_point::<G>(1).into()
+    }
+
+    /// The IO of the bulletproof protocol
     fn bulletproof_io<G, S>(&self, len: usize) -> Self
     where
         G: AffineRepr + Absorbable<S::L>,
-        S: Duplexer
+        S: Duplexer,
     {
-        let mut pattern = AlgebraicIO::<S>::from(self).absorb_point::<G>(1);
+        let mut io_pattern = AlgebraicIO::<S>::from(self);
         for _ in 0..log2(len) {
-            pattern = pattern.absorb_point::<G>(2).squeeze_bytes(16);
+            io_pattern = io_pattern.absorb_point::<G>(2).squeeze_bytes(16);
         }
-        pattern.into()
+        io_pattern.into()
     }
 }
 
 fn prove<S, G>(
-    transcript: &mut Merlin<S>,
+    transcript: &mut Arthur<S>,
     generators: (&[G], &[G], &G),
-    statement: &G,
+    statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> Result<Bulletproof<G>, InvalidTag>
 where
@@ -63,9 +110,8 @@ where
         let c = a * b;
         let left = g * a + h * b + u * c;
         let right = *statement;
-        println!("{}", (left - right).is_zero());
         return Ok(Bulletproof {
-            proof: vec![],
+            round_msgs: vec![],
             last: (witness.0[0], witness.1[0]),
         });
     }
@@ -102,7 +148,10 @@ where
     let new_statement = (*statement + left * x.square() + right * x_inv.square()).into_affine();
 
     let mut bulletproof = prove(transcript, new_generators, &new_statement, new_witness)?;
-    bulletproof.proof.push((left_compressed, right_compressed));
+    // proof will be reverse-order
+    bulletproof
+        .round_msgs
+        .push((left_compressed, right_compressed));
     Ok(bulletproof)
 }
 
@@ -121,9 +170,9 @@ where
     let u = *generators.2;
     let mut statement = *statement;
 
-    let mut n = 1 << bulletproof.proof.len();
+    let mut n = 1 << bulletproof.round_msgs.len();
     assert_eq!(g.len(), n);
-    for (left, right) in bulletproof.proof.iter().rev() {
+    for (left, right) in bulletproof.round_msgs.iter().rev() {
         n /= 2;
 
         let (g_left, g_right) = g.split_at(n);
@@ -154,9 +203,23 @@ fn main() {
     use ark_std::UniformRand;
 
     type H = nimue::DefaultHash;
+    // the vector size
+    let size = 8u64;
 
-    let a = [1, 2, 3, 4, 5, 6, 7, 8].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
-    let b = [1, 2, 3, 4, 5, 6, 7, 8].iter().map(|&x| F::from(x)).collect::<Vec<_>>();
+    // initialize the IO Pattern putting the domain separator ("example.com")
+    let io_pattern = IOPattern::new("example.com")
+        // add the IO of the bulletproof statement (the commitment)
+        .bulletproof_statement::<G, H>()
+        // (optional) process the data so far, filling the block till the end.
+        .process()
+        // add the IO of the bulletproof protocol (the transcript)
+        .bulletproof_io::<G, H>(size as usize);
+
+    // the test vectors
+    let a = (0..size).map(|x| F::from(x)).collect::<Vec<_>>();
+    let b = (0..size).map(|x| F::from(x + 42)).collect::<Vec<_>>();
+    let ab = inner_prod(&a, &b);
+    // the generators to be used for respectively a, b, ip
     let g = (0..a.len())
         .map(|_| G::rand(&mut OsRng))
         .collect::<Vec<_>>();
@@ -164,45 +227,28 @@ fn main() {
         .map(|_| G::rand(&mut OsRng))
         .collect::<Vec<_>>();
     let u = G::rand(&mut OsRng);
-    let ip = inner_prod(&a, &b);
 
     let generators = (&g[..], &h[..], &u);
     let statement =
-        (G1Projective::msm(&g, &a).unwrap() + G1Projective::msm(&h, &b).unwrap() + u * ip)
+        (G1Projective::msm(&g, &a).unwrap() + G1Projective::msm(&h, &b).unwrap() + u * ab)
             .into_affine();
     let witness = (&a[..], &b[..]);
 
-    let iop = IOPattern::new("example.com").bulletproof_io::<G, H>(a.len());
-    let mut transcript = Merlin::new(&iop);
-    transcript.append_element(&statement).unwrap();
+    let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
+    prover_transcript.append_element(&statement).unwrap();
+    prover_transcript.process().unwrap();
     let bulletproof =
-        prove::<nimue::keccak::Keccak, G>(&mut transcript, generators, &statement, witness)
+        prove::<nimue::keccak::Keccak, G>(&mut prover_transcript, generators, &statement, witness)
             .unwrap();
-    let mut transcript = Merlin::<nimue::keccak::Keccak>::new(&iop);
-    transcript.append_element(&statement).unwrap();
-    verify(&mut transcript, generators, &statement, &bulletproof).expect("Invalid proof");
-}
 
-fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
-    a.iter()
-        .zip(b.iter())
-        .map(|(&a, &b)| a * x + b * y)
-        .collect()
-}
-
-fn fold_generators<G: AffineRepr>(
-    a: &[G],
-    b: &[G],
-    x: &G::ScalarField,
-    y: &G::ScalarField,
-) -> Vec<G> {
-    a.iter()
-        .zip(b.iter())
-        .map(|(&a, &b)| (a * x + b * y).into_affine())
-        .collect()
-}
-
-
-fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
-    a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
+    let mut verifier_transcript = Merlin::<nimue::keccak::Keccak>::new(&io_pattern);
+    verifier_transcript.append_element(&statement).unwrap();
+    verifier_transcript.process().unwrap();
+    verify(
+        &mut verifier_transcript,
+        generators,
+        &statement,
+        &bulletproof,
+    )
+    .expect("Invalid proof");
 }

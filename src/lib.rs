@@ -1,4 +1,3 @@
-#![feature(int_roundings)]
 //!
 //! **This crate is work in progress, not suitable for production.**
 //!
@@ -120,3 +119,12 @@ pub(crate) use sponge::DuplexSponge;
 pub type DefaultRng = rand::rngs::OsRng;
 pub type DefaultHash = keccak::Keccak;
 pub type DefaultTranscript = Arthur<DefaultHash>;
+
+/// Perform ceil division.
+/// XXX. Remove once feature(int_roundings) is on stable.
+macro_rules! div_ceil {
+    ($a: expr, $b: expr) => {
+        ($a + $b - 1) / $b
+    };
+}
+pub(crate) use div_ceil;
