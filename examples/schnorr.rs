@@ -42,15 +42,8 @@ impl SchnorrIOPattern for IOPattern {
 
 fn prove<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     transcript: &mut Arthur<S>,
-    sk: G::ScalarField,
-    g: G,
-    pk: G,
+    witness: G::ScalarField,
 ) -> Result<(G::ScalarField, G::ScalarField), InvalidTag> {
-    // Absorb the statement: generator and public key.
-    transcript.append_elements(&[g, pk])?;
-    // Finish the block.
-    transcript.process()?;
-
     // Commitment: use the prover transcript to seed randomness.
     let k = G::ScalarField::rand(&mut transcript.rng());
     let commitment = G::generator() * k;
@@ -58,7 +51,7 @@ fn prove<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     // Get a challenge over the field Fr.
     let challenge: G::ScalarField = transcript.field_challenge()?;
 
-    let response = k + challenge * sk;
+    let response = k + challenge * witness;
     let proof = (challenge, response);
     Ok(proof)
 }
@@ -69,8 +62,6 @@ fn verify<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     pk: G,
     proof: (G::ScalarField, G::ScalarField),
 ) -> Result<(), InvalidTag> {
-    transcript.append_elements(&[g, pk])?;
-    transcript.process()?;
     let (challenge, response) = proof;
     let commitment = g * response - pk * challenge;
     transcript.append_element(&commitment.into_affine())?;
@@ -105,8 +96,12 @@ fn main() {
     let pk = (g * &sk).into();
 
     let mut prover_transcript = Arthur::<H>::from(io_pattern.clone());
-    let proof = prove::<H, G>(&mut prover_transcript, sk, g, pk).expect("Valid proof");
+    prover_transcript.append_elements(&[g, pk]).unwrap();
+    prover_transcript.process().unwrap();
+    let proof = prove::<H, G>(&mut prover_transcript, sk).expect("Valid proof");
 
     let mut verifier_transcript = Merlin::from(io_pattern.clone());
+    verifier_transcript.append_elements(&[g, pk]).unwrap();
+    verifier_transcript.process().unwrap();
     verify::<H, G>(&mut verifier_transcript, g, pk, proof).expect("Valid proof");
 }

@@ -102,14 +102,6 @@ where
     if witness.0.len() == 1 {
         assert_eq!(generators.0.len(), 1);
 
-        let g = generators.0[0];
-        let h = generators.1[0];
-        let u = *generators.2;
-        let a = witness.0[0];
-        let b = witness.1[0];
-        let c = a * b;
-        let left = g * a + h * b + u * c;
-        let right = *statement;
         return Ok(Bulletproof {
             round_msgs: vec![],
             last: (witness.0[0], witness.1[0]),
@@ -223,23 +215,24 @@ fn main() {
     let g = (0..a.len())
         .map(|_| G::rand(&mut OsRng))
         .collect::<Vec<_>>();
-    let h = (0..a.len())
+    let h = (0..b.len())
         .map(|_| G::rand(&mut OsRng))
         .collect::<Vec<_>>();
     let u = G::rand(&mut OsRng);
 
     let generators = (&g[..], &h[..], &u);
     let statement =
-        (G1Projective::msm(&g, &a).unwrap() + G1Projective::msm(&h, &b).unwrap() + u * ab)
+        (G1Projective::msm_unchecked(&g, &a) +
+        G1Projective::msm_unchecked(&h, &b) + u * ab)
             .into_affine();
     let witness = (&a[..], &b[..]);
 
     let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
-    prover_transcript.append_element(&statement).unwrap();
+    prover_transcript.append_elements(&[statement]).unwrap();
     prover_transcript.process().unwrap();
     let bulletproof =
         prove::<nimue::keccak::Keccak, G>(&mut prover_transcript, generators, &statement, witness)
-            .unwrap();
+            .expect("Error proving");
 
     let mut verifier_transcript = Merlin::<nimue::keccak::Keccak>::new(&io_pattern);
     verifier_transcript.append_element(&statement).unwrap();

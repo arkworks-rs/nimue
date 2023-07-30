@@ -52,7 +52,7 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
     for Affine<P>
 {
     fn absorb_size() -> usize {
-        1
+        2
     }
 
     fn to_absorbable(&self) -> Vec<Fp<C, N>> {
@@ -92,7 +92,7 @@ macro_rules! impl_absorbable {
     ($t:ty) => {
         impl Absorbable for $t {
             fn absorb_size() -> usize {
-                usize::div_ceil(core::mem::size_of::<$t>(), Other::packed_size())
+                crate::div_ceil!(core::mem::size_of::<$t>(), Other::packed_size())
             }
 
             fn to_absorbable(myself: &Self) -> Vec<Other> {

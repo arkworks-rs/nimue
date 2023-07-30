@@ -240,8 +240,8 @@ impl<D: Duplexer> Safe<D> {
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
     pub fn absorb(&mut self, input: &[D::L]) -> Result<&mut Self, InvalidTag> {
         match self.stack.pop_front() {
-            Some(Op::Absorb(length)) if length <= input.len() => {
-                if length < input.len() {
+            Some(Op::Absorb(length)) if length >= input.len() => {
+                if length > input.len() {
                     self.stack.push_front(Op::Absorb(length - input.len()));
                 }
                 self.sponge.absorb_unchecked(input);
