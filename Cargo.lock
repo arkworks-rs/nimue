@@ -46,8 +46,7 @@ dependencies = [
 [[package]]
 name = "ark-ec"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "defd9a439d56ac24968cca0571f598a61bc8c55f71d50a89cda591cb750670ba"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "ark-ff",
  "ark-poly",
@@ -56,6 +55,7 @@ dependencies = [
  "derivative",
  "hashbrown",
  "itertools",
+ "num-bigint",
  "num-traits",
  "zeroize",
 ]
@@ -63,8 +63,7 @@ dependencies = [
 [[package]]
 name = "ark-ff"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec847af850f44ad29048935519032c33da8aa03340876d351dfab5660d2966ba"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "ark-ff-asm",
  "ark-ff-macros",
@@ -83,8 +82,7 @@ dependencies = [
 [[package]]
 name = "ark-ff-asm"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ed4aa4fe255d0bc6d79373f7e31d2ea147bcf486cba1be5ba7ea85abdb92348"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -93,8 +91,7 @@ dependencies = [
 [[package]]
 name = "ark-ff-macros"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7abe79b0e4288889c4574159ab790824d0033b9fdcb2a112a3182fac2e514565"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -106,8 +103,7 @@ dependencies = [
 [[package]]
 name = "ark-poly"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d320bfc44ee185d899ccbadfa8bc31aab923ce1558716e1997a1e74057fe86bf"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "ark-ff",
  "ark-serialize",
@@ -131,8 +127,7 @@ dependencies = [
 [[package]]
 name = "ark-serialize"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb7b85a02b83d2f22f89bd5cac66c9c89474240cb6207cb1efc16d098e822a5"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "ark-serialize-derive",
  "ark-std",
@@ -143,8 +138,7 @@ dependencies = [
 [[package]]
 name = "ark-serialize-derive"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae3281bc6d0fd7e549af32b52511e1302185bd688fd3359fa36423346ff682ea"
+source = "git+https://github.com/mmaker/algebra#ac6dec49331496697227c81c89117f6ce6394f43"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -166,8 +160,7 @@ dependencies = [
 [[package]]
 name = "ark-std"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
+source = "git+https://github.com/arkworks-rs/utils#4cee4bc18ff6b0159c00d48622181db145938601"
 dependencies = [
  "num-traits",
  "rand",
@@ -575,3 +568,8 @@ dependencies = [
  "quote",
  "syn 2.0.22",
 ]
+
+[[patch.unused]]
+name = "ark-curve25519"
+version = "0.4.0"
+source = "git+https://github.com/arkworks-rs/curves#3fded1fbccf7c5491930dd8340c9b4567355d509"

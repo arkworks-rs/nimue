@@ -56,7 +56,7 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
     }
 
     fn to_absorbable(&self) -> Vec<Fp<C, N>> {
-        let (&x, &y) = self.xy().unwrap();
+        let (x, y) = self.xy().unwrap();
         vec![x, y]
     }
 }
