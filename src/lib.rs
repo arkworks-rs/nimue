@@ -118,8 +118,6 @@ pub(crate) use sponge::DuplexSponge;
 
 pub type DefaultRng = rand::rngs::OsRng;
 pub type DefaultHash = keccak::Keccak;
-pub type DefaultTranscript = Arthur<DefaultHash>;
-
 
 /// Perform ceil division.
 /// XXX. Remove once feature(int_roundings) is on stable.

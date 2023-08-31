@@ -44,7 +44,6 @@ fn test_deterministic() {
 }
 
 /// Basic scatistical test to check that the squeezed output looks random.
-/// XXX.
 #[test]
 fn test_statistics() {
     let iop = IOPattern::new("example.com")

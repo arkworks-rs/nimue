@@ -8,7 +8,7 @@
 //! squeeze(1); squeeze(1); squeeze(1) = squeeze(3);
 //! ```
 
-use std::mem::size_of;
+use core::mem::size_of;
 
 use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
 use generic_array::GenericArray;

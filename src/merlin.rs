@@ -1,10 +1,15 @@
+use crate::DefaultHash;
+
 use super::{Duplexer, IOPattern, InvalidTag, Lane, Safe};
 use core::borrow::Borrow;
 
 /// Merlin is wrapper around a sponge that provides a secure
 /// Fiat-Shamir implementation for public-coin protocols.
 #[derive(Clone)]
-pub struct Merlin<S: Duplexer> {
+pub struct Merlin<S = DefaultHash>
+where
+    S: Duplexer,
+{
     safe: Safe<S>,
     leftovers: Vec<u8>,
 }

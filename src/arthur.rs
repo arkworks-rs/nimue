@@ -2,6 +2,8 @@ use core::borrow::Borrow;
 
 use rand::{CryptoRng, RngCore};
 
+use crate::DefaultHash;
+
 use super::keccak::Keccak;
 use super::{DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
 
@@ -101,7 +103,7 @@ impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Arthur<S> {
 
 /// The state of an interactive proof system.
 /// Holds the state of the verifier, and provides the random coins for the prover.
-pub struct Arthur<S, R = DefaultRng>
+pub struct Arthur<S = DefaultHash, R = DefaultRng>
 where
     S: Duplexer,
     R: RngCore + CryptoRng,

@@ -2,10 +2,8 @@ use ark_ec::AffineRepr;
 use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
-use super::{
-    super::{Arthur, Duplexer, IOPattern, Lane, Merlin},
-    Absorbable,
-};
+use super::super::{Arthur, Duplexer, IOPattern, Lane, Merlin};
+use super::Absorbable;
 
 /// An IOPattern
 /// that is aware of the sponge used and understands arkworks types,

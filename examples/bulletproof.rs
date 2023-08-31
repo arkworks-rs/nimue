@@ -222,8 +222,7 @@ fn main() {
 
     let generators = (&g[..], &h[..], &u);
     let statement =
-        (G1Projective::msm_unchecked(&g, &a) +
-        G1Projective::msm_unchecked(&h, &b) + u * ab)
+        (G1Projective::msm_unchecked(&g, &a) + G1Projective::msm_unchecked(&h, &b) + u * ab)
             .into_affine();
     let witness = (&a[..], &b[..]);
 
