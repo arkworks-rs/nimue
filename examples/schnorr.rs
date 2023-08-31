@@ -86,7 +86,7 @@ fn main() {
         // append the statement (generator, public key)
         .schnorr_statement::<G, H>()
         // process the statement separating it from the rest of the protocol
-        .process()
+        .ratchet()
         // add the schnorr io pattern
         .schnorr_io::<G, H>();
     let sk = F::rand(&mut OsRng);

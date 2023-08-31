@@ -5,14 +5,14 @@ use crate::{keccak::Keccak, IOPattern, Merlin};
 fn test_iopattern() {
     // test that the byte separator is always added
     let iop = IOPattern::new("example.com");
-    assert_eq!(iop.as_bytes(), b"example.com\0");
+    assert!(iop.as_bytes().starts_with(b"example.com"));
 }
 
 /// A protocol flow that does not match the IOPattern should fail.
 #[test]
 #[should_panic]
 fn test_invalid_io_sequence() {
-    let iop = IOPattern::new("example.com").absorb(3).squeeze(1);
+    let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
     let mut merlin = Merlin::<Keccak>::new(&iop);
     merlin.challenge_bytes(&mut [0u8; 16]).unwrap();
 }
@@ -21,14 +21,14 @@ fn test_invalid_io_sequence() {
 #[test]
 #[should_panic]
 fn test_unfinished_io() {
-    let iop = IOPattern::new("example.com").absorb(3).squeeze(1);
+    let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
     let _merlin = Merlin::<Keccak>::new(&iop);
 }
 
 /// Challenges from the same transcript should be equal.
 #[test]
 fn test_deterministic() {
-    let iop = IOPattern::new("example.com").absorb(3).squeeze(16);
+    let iop = IOPattern::new("example.com").absorb(3, "elt").squeeze(16, "elt");
     let mut first_merlin = Merlin::<Keccak>::new(&iop);
     let mut second_merlin = Merlin::<Keccak>::new(&iop);
 
@@ -47,9 +47,9 @@ fn test_deterministic() {
 #[test]
 fn test_statistics() {
     let iop = IOPattern::new("example.com")
-        .absorb(4)
-        .process()
-        .squeeze(2048);
+        .absorb(4, "statement")
+        .ratchet()
+        .squeeze(2048, "gee");
     let mut merlin = Merlin::<Keccak>::new(&iop);
     merlin.append(b"seed").unwrap();
     merlin.process().unwrap();

@@ -34,32 +34,32 @@ where
     }
 
     pub fn absorb<T: Absorbable<S::L>>(self, count: usize) -> Self {
-        self.iop.absorb(T::absorb_size() * count).into()
+        self.iop.absorb(T::absorb_size() * count, "nat").into()
     }
 
     pub fn absorb_bytes(self, count: usize) -> Self {
         let count = crate::div_ceil!(count, S::L::compressed_size());
-        self.iop.absorb(count).into()
+        self.iop.absorb(count, "").into()
     }
 
     pub fn absorb_point<A>(self, count: usize) -> Self
     where
         A: AffineRepr + Absorbable<S::L>,
     {
-        self.iop.absorb(A::absorb_size() * count).into()
+        self.iop.absorb(A::absorb_size() * count, "GG").into()
     }
 
     pub fn absorb_field<F: Field + Absorbable<S::L>>(self, count: usize) -> Self {
-        self.iop.absorb(F::absorb_size() * count).into()
+        self.iop.absorb(F::absorb_size() * count, "GG").into()
     }
 
     pub fn process(self) -> Self {
-        self.iop.process().into()
+        self.iop.ratchet().into()
     }
 
     pub fn squeeze_bytes(self, count: usize) -> Self {
         let count = crate::div_ceil!(count, S::L::extractable_bytelen());
-        self.iop.squeeze(count).into()
+        self.iop.squeeze(count, "").into()
     }
 
     pub fn squeeze_field<F: PrimeField>(self, count: usize) -> Self {

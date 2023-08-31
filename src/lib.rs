@@ -15,7 +15,7 @@
 //! use nimue::{IOPattern, Merlin};
 //!
 //! // create a new protocol that will absorb 1 byte and squeeze 1 byte.
-//! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
+//! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! // by default we use keccak, but `nimue::legacy::DigestBridge<sha2::Sha256>` works too.
 //! let mut merlin = Merlin::<nimue::DefaultHash>::new(&io);
 //! merlin.append(&[0x42]).expect("Absorbing one byte");
@@ -34,7 +34,7 @@
 //! use nimue::{IOPattern, Arthur};
 //! use rand::{Rng, rngs::OsRng};
 //!
-//! let io = IOPattern::new("example protocol").absorb(1).squeeze(16);
+//! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! // by default, arthur is seeded with `rand::rngs::OsRng`.
 //! let mut arthur = Arthur::<nimue::DefaultHash>::new(&io, OsRng);
 //! arthur.append(&[0x42]).expect("Absorbing one byte");

@@ -203,7 +203,7 @@ fn main() {
         // add the IO of the bulletproof statement (the commitment)
         .bulletproof_statement::<G, H>()
         // (optional) process the data so far, filling the block till the end.
-        .process()
+        .ratchet()
         // add the IO of the bulletproof protocol (the transcript)
         .bulletproof_io::<G, H>(size as usize);
 

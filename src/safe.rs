@@ -34,8 +34,8 @@ impl Op {
     fn new(id: char, count: Option<usize>) -> Result<Self, InvalidTag> {
         match (id, count) {
             ('S', Some(c)) if c > 0 => Ok(Op::Squeeze(c)),
-            (x, Some(c)) if x.is_alphabetic() && c > 0 => Ok(Op::Absorb(c)),
-            (',', None) | (',', Some(0)) => Ok(Op::Divide),
+            ('A', Some(c)) if c > 0 => Ok(Op::Absorb(c)),
+            ('R', None) | ('R', Some(0)) => Ok(Op::Divide),
             _ => Err("Invalid tag".into()),
         }
     }
@@ -46,29 +46,27 @@ impl Op {
 #[derive(Clone)]
 pub struct IOPattern(String);
 
-const SEP_BYTE: u8 = b'\x00';
-
 impl IOPattern {
     pub fn new(domsep: &str) -> Self {
-        let mut tag_base = domsep.to_string();
-        tag_base.push(SEP_BYTE as char);
-        Self(tag_base)
+        assert!(!domsep.contains(" "));
+        Self(domsep.to_string())
     }
 
-    pub fn absorb(self, count: usize) -> Self {
+    pub fn absorb(self, count: usize, label: &'static str) -> Self {
+        assert!(count > 0, "Count must be positive");
+        assert!(!label.contains(' '));
+
+        Self(self.0 + &format!(" A{}{}", count, label))
+    }
+
+    pub fn squeeze(self, count: usize, label: &'static str) -> Self {
         assert!(count > 0, "Count must be positive");
 
-        Self(self.0 + &format!("A{}", count))
+        Self(self.0 + &format!(" S{}{}", count, label))
     }
 
-    pub fn squeeze(self, count: usize) -> Self {
-        assert!(count > 0, "Count must be positive");
-
-        Self(self.0 + &format!("S{}", count))
-    }
-
-    pub fn process(self) -> Self {
-        Self(self.0 + &",")
+    pub fn ratchet(self) -> Self {
+        Self(self.0 + &" R")
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -84,25 +82,10 @@ impl IOPattern {
     fn parse_io(io_pattern: &[u8]) -> Result<VecDeque<Op>, InvalidTag> {
         let mut stack = VecDeque::new();
 
-        // skip the domain separator.
-        let mut index = 0;
-        for (i, &b) in io_pattern.iter().enumerate() {
-            if b == SEP_BYTE {
-                index = i;
-            }
-        }
-        let io_pattern = &io_pattern[index + 1..];
-
-        let mut i: usize = 0;
-        while i != io_pattern.len() {
-            let next_id = io_pattern[i] as char;
-            let mut j = i + 1;
-            let mut next_length = 0;
-            while j != io_pattern.len() && io_pattern[j].is_ascii_digit() {
-                next_length = next_length * 10 + (io_pattern[j] - b'0') as usize;
-                j += 1;
-            }
-            i = j;
+        // skip the domain separator
+        for part in io_pattern.split(|&b| b as char ==' ').into_iter().skip(1) {
+            let next_id = part[0] as char;
+            let next_length = part[1..].into_iter().take_while(|x| x.is_ascii_digit()).fold(0, |acc, x| acc * 10 + (x - b'0') as usize);
 
             // check that next_length != 0 is performed internally on Op::new
             let next_op = Op::new(next_id, Some(next_length))?;
