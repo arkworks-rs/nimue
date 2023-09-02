@@ -311,7 +311,10 @@ impl<D: Duplexer> Safe<D> {
 impl<H: Duplexer> Drop for Safe<H> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
-        assert!(self.stack.is_empty());
+        // assert!(self.stack.is_empty());
+        if self.stack.is_empty() {
+            log::error!("Unfinished operations:\n {:?}", self.stack)
+        }
         self.sponge.zeroize();
     }
 }

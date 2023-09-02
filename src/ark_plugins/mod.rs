@@ -69,7 +69,7 @@ where
     Projective<P>: Absorbable<L>,
 {
     fn absorb_size() -> usize {
-        crate::div_ceil!(Self::default().compressed_size(), L::compressed_size())
+        (Self::default().compressed_size() + L::compressed_size() - 1) / L::compressed_size()
     }
 
     fn to_absorbable(&self) -> Vec<L> {
