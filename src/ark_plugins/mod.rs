@@ -5,7 +5,8 @@ mod iopattern;
 pub use absorbs::Absorbs;
 
 use ark_ec::{
-    short_weierstrass::{Affine, Projective, SWCurveConfig},
+    short_weierstrass as sw,
+    twisted_edwards as ed,
     AffineRepr, CurveGroup,
 };
 use ark_ff::{BigInteger, Fp, FpConfig, PrimeField};
@@ -48,8 +49,23 @@ impl<const N: usize, P: FpConfig<N>> Absorbable<u8> for Fp<P, N> {
     }
 }
 
-impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Absorbable<Fp<C, N>>
-    for Affine<P>
+impl<const N: usize, C: FpConfig<N>, P: sw::SWCurveConfig<BaseField = Fp<C, N>>> Absorbable<Fp<C, N>>
+    for sw::Affine<P>
+{
+    fn absorb_size() -> usize {
+        2
+    }
+
+    fn to_absorbable(&self) -> Vec<Fp<C, N>> {
+        let (x, y) = self.xy().unwrap();
+        // XXX. this clone is a hack just to make sure that we are compatible also
+        // with HEAD on arkworks algebra, where .xy() returns references.
+        vec![x.clone(), y.clone()]
+    }
+}
+
+impl<const N: usize, C: FpConfig<N>, P: ed::TECurveConfig<BaseField = Fp<C, N>>> Absorbable<Fp<C, N>>
+    for ed::Affine<P>
 {
     fn absorb_size() -> usize {
         2
@@ -64,9 +80,9 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
 }
 
 // this one little `where` trick avoids specifying in any implementation `Projective<P>: Absorbable<L>`.
-impl<'a, P: SWCurveConfig, L: Lane> Absorbable<L> for Affine<P>
+impl<'a, P: ed::TECurveConfig, L: Lane> Absorbable<L> for ed::Affine<P>
 where
-    Projective<P>: Absorbable<L>,
+    ed::Projective<P>: Absorbable<L>,
 {
     fn absorb_size() -> usize {
         (Self::default().compressed_size() + L::compressed_size() - 1) / L::compressed_size()
@@ -79,13 +95,38 @@ where
     }
 }
 
-impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Projective<P> {
+impl<'a, P: sw::SWCurveConfig, L: Lane> Absorbable<L> for sw::Affine<P>
+where
+    sw::Projective<P>: Absorbable<L>,
+{
     fn absorb_size() -> usize {
-        <Affine<P> as Absorbable<L>>::absorb_size()
+        (Self::default().compressed_size() + L::compressed_size() - 1) / L::compressed_size()
     }
 
     fn to_absorbable(&self) -> Vec<L> {
-        <Affine<P> as Absorbable<L>>::to_absorbable(&self.into_affine())
+        let mut output = Vec::new();
+        self.serialize_compressed(&mut output).unwrap();
+        L::from_bytes(&output)
+    }
+}
+
+impl<P: sw::SWCurveConfig, L: Lane> Absorbable<L> for sw::Projective<P> {
+    fn absorb_size() -> usize {
+        <sw::Affine<P> as Absorbable<L>>::absorb_size()
+    }
+
+    fn to_absorbable(&self) -> Vec<L> {
+        <sw::Affine<P> as Absorbable<L>>::to_absorbable(&self.into_affine())
+    }
+}
+
+impl<P: ed::TECurveConfig, L: Lane> Absorbable<L> for ed::Projective<P> {
+    fn absorb_size() -> usize {
+        <ed::Affine<P> as Absorbable<L>>::absorb_size()
+    }
+
+    fn to_absorbable(&self) -> Vec<L> {
+        <ed::Affine<P> as Absorbable<L>>::to_absorbable(&self.into_affine())
     }
 }
 
@@ -93,6 +134,8 @@ impl<P: SWCurveConfig, L: Lane> Absorbable<L> for Projective<P> {
 macro_rules! impl_absorbable {
     ($t:ty) => {
         impl Absorbable for $t {
+            type Other = u8;
+
             fn absorb_size() -> usize {
                 crate::div_ceil!(core::mem::size_of::<$t>(), Other::packed_size())
             }
