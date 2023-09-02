@@ -6,26 +6,26 @@ use core::borrow::Borrow;
 /// Merlin is wrapper around a sponge that provides a secure
 /// Fiat-Shamir implementation for public-coin protocols.
 #[derive(Clone)]
-pub struct Merlin<S = DefaultHash>
+pub struct Merlin<H = DefaultHash>
 where
-    S: Duplexer,
+    H: Duplexer,
 {
-    safe: Safe<S>,
+    safe: Safe<H>,
     leftovers: Vec<u8>,
 }
 
-impl<S: Duplexer> Merlin<S> {
+impl<H: Duplexer> Merlin<H> {
     /// Creates a new [`Merlin`] instance with the given sponge and IO Pattern.
     ///
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
     pub fn new(io_pattern: &IOPattern) -> Self {
         let safe = Safe::new(io_pattern);
-        let leftovers = Vec::with_capacity(S::L::extractable_bytelen());
+        let leftovers = Vec::with_capacity(H::L::extractable_bytelen());
         Self { safe, leftovers }
     }
 
     /// Absorb a slice of lanes into the sponge.
-    pub fn append(&mut self, input: &[S::L]) -> Result<&mut Self, InvalidTag> {
+    pub fn append(&mut self, input: &[H::L]) -> Result<&mut Self, InvalidTag> {
         self.leftovers.clear();
         self.safe.absorb(input)?;
         Ok(self)
@@ -39,7 +39,7 @@ impl<S: Duplexer> Merlin<S> {
     }
 
     /// Signals the end of the statement and returns the (compressed) sponge state.
-    pub fn divide_and_store(self) -> Result<Vec<S::L>, InvalidTag> {
+    pub fn divide_and_store(self) -> Result<Vec<H::L>, InvalidTag> {
         self.safe.divide_and_store()
     }
 
@@ -53,13 +53,13 @@ impl<S: Duplexer> Merlin<S> {
     // }
 }
 
-impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Merlin<S> {
+impl<H: Duplexer, B: Borrow<IOPattern>> From<B> for Merlin<H> {
     fn from(io_pattern: B) -> Self {
         Merlin::new(io_pattern.borrow())
     }
 }
 
-impl<S: Duplexer> ::core::fmt::Debug for Merlin<S> {
+impl<H: Duplexer> core::fmt::Debug for Merlin<H> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Merlin").field(&self.safe).finish()
     }

@@ -83,9 +83,12 @@ impl IOPattern {
         let mut stack = VecDeque::new();
 
         // skip the domain separator
-        for part in io_pattern.split(|&b| b as char ==' ').into_iter().skip(1) {
+        for part in io_pattern.split(|&b| b as char == ' ').into_iter().skip(1) {
             let next_id = part[0] as char;
-            let next_length = part[1..].into_iter().take_while(|x| x.is_ascii_digit()).fold(0, |acc, x| acc * 10 + (x - b'0') as usize);
+            let next_length = part[1..]
+                .into_iter()
+                .take_while(|x| x.is_ascii_digit())
+                .fold(0, |acc, x| acc * 10 + (x - b'0') as usize);
 
             // check that next_length != 0 is performed internally on Op::new
             let next_op = Op::new(next_id, Some(next_length))?;
@@ -108,7 +111,6 @@ impl IOPattern {
         } else {
             // guaranteed never to fail, since:
             assert!(dst.len() > 0 && !stack.is_empty());
-
             let previous = dst.pop_back().unwrap();
             let next = stack.pop_front().unwrap();
 
@@ -306,7 +308,7 @@ impl<D: Duplexer> Safe<D> {
     }
 }
 
-impl<S: Duplexer> Drop for Safe<S> {
+impl<H: Duplexer> Drop for Safe<H> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
         assert!(self.stack.is_empty());
@@ -314,7 +316,7 @@ impl<S: Duplexer> Drop for Safe<S> {
     }
 }
 
-impl<S: Duplexer> ::core::fmt::Debug for Safe<S> {
+impl<H: Duplexer> ::core::fmt::Debug for Safe<H> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.

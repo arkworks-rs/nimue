@@ -82,7 +82,7 @@ This crate doesn't support big-endian targets.
 
 /// Extensions for arkworks types.
 #[cfg(feature = "arkworks")]
-pub mod arkworks_plugins;
+pub mod ark_plugins;
 
 /// Support for legacy hash functions (SHA2).
 pub mod legacy;

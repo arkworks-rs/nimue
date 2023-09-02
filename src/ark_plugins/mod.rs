@@ -57,7 +57,7 @@ impl<const N: usize, C: FpConfig<N>, P: SWCurveConfig<BaseField = Fp<C, N>>> Abs
 
     fn to_absorbable(&self) -> Vec<Fp<C, N>> {
         let (x, y) = self.xy().unwrap();
-        // XXX. this is a hack just to make sure that we are compatible also
+        // XXX. this clone is a hack just to make sure that we are compatible also
         // with HEAD on arkworks algebra, where .xy() returns references.
         vec![x.clone(), y.clone()]
     }
@@ -112,7 +112,7 @@ macro_rules! impl_absorbable {
 macro_rules! impl_lane {
     ($t:ty, $n: expr) => {
         impl Lane for $t {
-            fn random_bytes_size() -> usize {
+            const fn random_bytes_size() -> usize {
                 $n
             }
 

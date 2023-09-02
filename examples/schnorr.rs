@@ -1,37 +1,37 @@
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
-use nimue::arkworks_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
+use nimue::ark_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
 use nimue::{Arthur, Duplexer, IOPattern, InvalidTag, Merlin};
 
 trait SchnorrIOPattern {
-    fn schnorr_statement<G, S: Duplexer>(&self) -> Self
+    fn schnorr_statement<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>;
+        G: AffineRepr + Absorbable<H::L>;
 
-    fn schnorr_io<G, S: Duplexer>(&self) -> Self
+    fn schnorr_io<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>;
+        G: AffineRepr + Absorbable<H::L>;
 }
 
 impl SchnorrIOPattern for IOPattern {
-    fn schnorr_statement<G, S: Duplexer>(&self) -> Self
+    fn schnorr_statement<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>,
+        G: AffineRepr + Absorbable<H::L>,
     {
         // the statement: generator and public key
-        AlgebraicIO::<S>::from(self)
+        AlgebraicIO::<H>::from(self)
             .absorb_point::<G>(2)
             // (optional) allow for preprocessing of the generators
             .into()
     }
 
     /// A Schnorr signature's IO Pattern.
-    fn schnorr_io<G, S: Duplexer>(&self) -> IOPattern
+    fn schnorr_io<G, H: Duplexer>(&self) -> IOPattern
     where
-        G: AffineRepr + Absorbable<S::L>,
+        G: AffineRepr + Absorbable<H::L>,
     {
-        AlgebraicIO::<S>::from(self)
+        AlgebraicIO::<H>::from(self)
             // absorb the commitment
             .absorb_point::<G>(1)
             // challenge in bytes
@@ -40,8 +40,8 @@ impl SchnorrIOPattern for IOPattern {
     }
 }
 
-fn prove<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
-    transcript: &mut Arthur<S>,
+fn prove<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
+    transcript: &mut Arthur<H>,
     witness: G::ScalarField,
 ) -> Result<(G::ScalarField, G::ScalarField), InvalidTag> {
     // Commitment: use the prover transcript to seed randomness.
@@ -56,8 +56,8 @@ fn prove<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
     Ok(proof)
 }
 
-fn verify<S: Duplexer, G: AffineRepr + Absorbable<S::L>>(
-    transcript: &mut Merlin<S>,
+fn verify<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
+    transcript: &mut Merlin<H>,
     g: G,
     pk: G,
     proof: (G::ScalarField, G::ScalarField),

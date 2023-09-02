@@ -1,10 +1,9 @@
-use super::{DuplexSponge, Lane, SpongeConfig};
-use crate::sponge::{
-    poseidon::{PoseidonConfig, PoseidonDefaultConfigField, PoseidonSponge},
-    CryptographicSponge,
-};
-
 use ark_std::UniformRand;
+
+use super::{DuplexSponge, Lane, SpongeConfig};
+use crate::sponge::CryptographicSponge;
+use crate::sponge::poseidon::{PoseidonConfig, PoseidonDefaultConfigField, PoseidonSponge};
+
 
 impl<F: Lane + PoseidonDefaultConfigField> SpongeConfig for PoseidonSponge<F> {
     type L = F;

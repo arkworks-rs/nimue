@@ -8,12 +8,12 @@ use super::Absorbable;
 /// An IOPattern
 /// that is aware of the sponge used and understands arkworks types,
 /// such as fields and group elements.
-pub struct AlgebraicIO<S: Duplexer> {
-    _sponge: ::core::marker::PhantomData<S>,
+pub struct AlgebraicIO<H: Duplexer> {
+    _sponge: ::core::marker::PhantomData<H>,
     iop: IOPattern,
 }
 
-impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for AlgebraicIO<S> {
+impl<H: Duplexer, B: Borrow<IOPattern>> From<B> for AlgebraicIO<H> {
     fn from(value: B) -> Self {
         AlgebraicIO {
             _sponge: Default::default(),
@@ -22,9 +22,9 @@ impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for AlgebraicIO<S> {
     }
 }
 
-impl<S> AlgebraicIO<S>
+impl<H> AlgebraicIO<H>
 where
-    S: Duplexer,
+    H: Duplexer,
 {
     pub fn new(domsep: &str) -> Self {
         Self {
@@ -33,23 +33,23 @@ where
         }
     }
 
-    pub fn absorb<T: Absorbable<S::L>>(self, count: usize) -> Self {
+    pub fn absorb<T: Absorbable<H::L>>(self, count: usize) -> Self {
         self.iop.absorb(T::absorb_size() * count, "nat").into()
     }
 
     pub fn absorb_bytes(self, count: usize) -> Self {
-        let count = crate::div_ceil!(count, S::L::compressed_size());
+        let count = crate::div_ceil!(count, H::L::compressed_size());
         self.iop.absorb(count, "").into()
     }
 
     pub fn absorb_point<A>(self, count: usize) -> Self
     where
-        A: AffineRepr + Absorbable<S::L>,
+        A: AffineRepr + Absorbable<H::L>,
     {
         self.iop.absorb(A::absorb_size() * count, "GG").into()
     }
 
-    pub fn absorb_field<F: Field + Absorbable<S::L>>(self, count: usize) -> Self {
+    pub fn absorb_field<F: Field + Absorbable<H::L>>(self, count: usize) -> Self {
         self.iop.absorb(F::absorb_size() * count, "GG").into()
     }
 
@@ -58,7 +58,7 @@ where
     }
 
     pub fn squeeze_bytes(self, count: usize) -> Self {
-        let count = crate::div_ceil!(count, S::L::extractable_bytelen());
+        let count = crate::div_ceil!(count, H::L::extractable_bytelen());
         self.iop.squeeze(count, "").into()
     }
 
@@ -69,20 +69,20 @@ where
     }
 }
 
-impl<S: Duplexer> From<AlgebraicIO<S>> for IOPattern {
-    fn from(value: AlgebraicIO<S>) -> Self {
+impl<H: Duplexer> From<AlgebraicIO<H>> for IOPattern {
+    fn from(value: AlgebraicIO<H>) -> Self {
         value.iop
     }
 }
 
-impl<S: Duplexer> From<AlgebraicIO<S>> for Arthur<S> {
-    fn from(value: AlgebraicIO<S>) -> Self {
+impl<H: Duplexer> From<AlgebraicIO<H>> for Arthur<H> {
+    fn from(value: AlgebraicIO<H>) -> Self {
         IOPattern::from(value).into()
     }
 }
 
-impl<S: Duplexer> From<AlgebraicIO<S>> for Merlin<S> {
-    fn from(value: AlgebraicIO<S>) -> Self {
+impl<H: Duplexer> From<AlgebraicIO<H>> for Merlin<H> {
+    fn from(value: AlgebraicIO<H>) -> Self {
         IOPattern::from(value).into()
     }
 }

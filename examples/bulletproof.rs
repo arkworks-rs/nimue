@@ -2,10 +2,10 @@ use ark_bls12_381::G1Projective;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::{log2, Zero};
-use nimue::arkworks_plugins::{Absorbable, AlgebraicIO};
+use nimue::ark_plugins::{Absorbable, AlgebraicIO};
 use nimue::IOPattern;
 use nimue::{
-    arkworks_plugins::{Absorbs, FieldChallenges},
+    ark_plugins::{Absorbs, FieldChallenges},
     Arthur, Duplexer, InvalidTag, Merlin,
 };
 use rand::rngs::OsRng;

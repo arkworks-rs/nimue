@@ -28,7 +28,9 @@ fn test_unfinished_io() {
 /// Challenges from the same transcript should be equal.
 #[test]
 fn test_deterministic() {
-    let iop = IOPattern::new("example.com").absorb(3, "elt").squeeze(16, "elt");
+    let iop = IOPattern::new("example.com")
+        .absorb(3, "elt")
+        .squeeze(16, "elt");
     let mut first_merlin = Merlin::<Keccak>::new(&iop);
     let mut second_merlin = Merlin::<Keccak>::new(&iop);
 
