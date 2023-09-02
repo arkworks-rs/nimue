@@ -2,13 +2,16 @@ use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
+use crate::DefaultHash;
+
 use super::super::{Arthur, Duplexer, IOPattern, Lane, Merlin};
 use super::Absorbable;
 
 /// An IOPattern
 /// that is aware of the sponge used and understands arkworks types,
 /// such as fields and group elements.
-pub struct AlgebraicIO<H: Duplexer> {
+pub struct AlgebraicIO<H = DefaultHash>
+where H: Duplexer {
     _sponge: ::core::marker::PhantomData<H>,
     iop: IOPattern,
 }
