@@ -1,4 +1,4 @@
-use ark_ec::AffineRepr;
+use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
 use core::borrow::Borrow;
 
@@ -42,11 +42,11 @@ where
         self.iop.absorb(count, "").into()
     }
 
-    pub fn absorb_point<A>(self, count: usize) -> Self
+    pub fn absorb_point<G>(self, count: usize) -> Self
     where
-        A: AffineRepr + Absorbable<H::L>,
+        G: CurveGroup + Absorbable<H::L>,
     {
-        self.iop.absorb(A::absorb_size() * count, "GG").into()
+        self.iop.absorb(G::absorb_size() * count, "GG").into()
     }
 
     pub fn absorb_field<F: Field + Absorbable<H::L>>(self, count: usize) -> Self {

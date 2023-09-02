@@ -1,4 +1,5 @@
-use ark_ec::{AffineRepr, CurveGroup};
+use ark_ec::{CurveGroup, Group};
+use ark_ff::One;
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use nimue::ark_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
@@ -7,17 +8,17 @@ use nimue::{Arthur, Duplexer, IOPattern, InvalidTag, Merlin};
 trait SchnorrIOPattern {
     fn schnorr_statement<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<H::L>;
+        G: CurveGroup + Absorbable<H::L>;
 
     fn schnorr_io<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<H::L>;
+        G: CurveGroup + Absorbable<H::L>;
 }
 
 impl SchnorrIOPattern for IOPattern {
     fn schnorr_statement<G, H: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<H::L>,
+        G: CurveGroup + Absorbable<H::L>,
     {
         // the statement: generator and public key
         AlgebraicIO::<H>::from(self)
@@ -29,7 +30,7 @@ impl SchnorrIOPattern for IOPattern {
     /// A Schnorr signature's IO Pattern.
     fn schnorr_io<G, H: Duplexer>(&self) -> IOPattern
     where
-        G: AffineRepr + Absorbable<H::L>,
+        G: CurveGroup + Absorbable<H::L>,
     {
         AlgebraicIO::<H>::from(self)
             // absorb the commitment
@@ -40,14 +41,14 @@ impl SchnorrIOPattern for IOPattern {
     }
 }
 
-fn prove<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
+fn prove<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
     transcript: &mut Arthur<H>,
     witness: G::ScalarField,
 ) -> Result<(G::ScalarField, G::ScalarField), InvalidTag> {
     // Commitment: use the prover transcript to seed randomness.
     let k = G::ScalarField::rand(&mut transcript.rng());
     let commitment = G::generator() * k;
-    transcript.append_element(&commitment.into_affine())?;
+    transcript.append_element(&commitment)?;
     // Get a challenge over the field Fr.
     let challenge: G::ScalarField = transcript.field_challenge()?;
 
@@ -56,7 +57,7 @@ fn prove<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
     Ok(proof)
 }
 
-fn verify<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
+fn verify<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
     transcript: &mut Merlin<H>,
     g: G,
     pk: G,
@@ -64,7 +65,7 @@ fn verify<H: Duplexer, G: AffineRepr + Absorbable<H::L>>(
 ) -> Result<(), InvalidTag> {
     let (challenge, response) = proof;
     let commitment = g * response - pk * challenge;
-    transcript.append_element(&commitment.into_affine())?;
+    transcript.append_element(&commitment)?;
     let challenge2 = transcript.field_challenge::<G::ScalarField>()?;
     if challenge == challenge2 {
         Ok(())
@@ -79,7 +80,7 @@ fn main() {
     // type H = nimue::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::legacy::DigestBridge<sha2::Sha256>;
     type H = nimue::keccak::Keccak;
-    type G = ark_bls12_381::G1Affine;
+    type G = ark_bls12_381::G1Projective;
     type F = ark_bls12_381::Fr;
 
     let io_pattern = IOPattern::new("the domain separator goes here")

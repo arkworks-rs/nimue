@@ -1,7 +1,6 @@
-use ark_bls12_381::G1Projective;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
-use ark_std::{log2, Zero};
+use ark_std::log2;
 use nimue::ark_plugins::{Absorbable, AlgebraicIO};
 use nimue::IOPattern;
 use nimue::{
@@ -10,12 +9,12 @@ use nimue::{
 };
 use rand::rngs::OsRng;
 
-fn fold_generators<G: AffineRepr>(
-    a: &[G],
-    b: &[G],
-    x: &G::ScalarField,
-    y: &G::ScalarField,
-) -> Vec<G> {
+fn fold_generators<A: AffineRepr>(
+    a: &[A],
+    b: &[A],
+    x: &A::ScalarField,
+    y: &A::ScalarField,
+) -> Vec<A> {
     a.iter()
         .zip(b.iter())
         .map(|(&a, &b)| (a * x + b * y).into_affine())
@@ -38,7 +37,7 @@ fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
 }
 
 // The bulletproof proof.
-struct Bulletproof<G: AffineRepr> {
+struct Bulletproof<G: CurveGroup> {
     /// the prover's messages
     round_msgs: Vec<(G, G)>,
     /// the last round message
@@ -52,18 +51,18 @@ struct Bulletproof<G: AffineRepr> {
 trait BulletproofIOPattern {
     fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>;
+        G: CurveGroup + Absorbable<S::L>;
 
     fn bulletproof_io<G, S: Duplexer>(&self, len: usize) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>;
+        G: CurveGroup + Absorbable<S::L>;
 }
 
 impl BulletproofIOPattern for IOPattern {
     /// The IO of the bulletproof statement (the sole commitment)
     fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>,
+        G: CurveGroup + Absorbable<S::L>,
     {
         AlgebraicIO::<S>::from(self).absorb_point::<G>(1).into()
     }
@@ -71,7 +70,7 @@ impl BulletproofIOPattern for IOPattern {
     /// The IO of the bulletproof protocol
     fn bulletproof_io<G, S>(&self, len: usize) -> Self
     where
-        G: AffineRepr + Absorbable<S::L>,
+        G: CurveGroup + Absorbable<S::L>,
         S: Duplexer,
     {
         let mut io_pattern = AlgebraicIO::<S>::from(self);
@@ -84,18 +83,13 @@ impl BulletproofIOPattern for IOPattern {
 
 fn prove<S, G>(
     transcript: &mut Arthur<S>,
-    generators: (&[G], &[G], &G),
-    statement: &G, // the actual inner-roduct of the witness is not really needed
+    generators: (&[G::Affine], &[G::Affine], &G::Affine),
+    statement: &G::Affine, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> Result<Bulletproof<G>, InvalidTag>
 where
     S: Duplexer,
-    G: AffineRepr + Absorbable<S::L>,
-    // XXX. ugly.
-    // This allows to absorb also projective elements.
-    // This condition is however always satisfied, but
-    // Rust will only know when these traits are part of Group.
-    G::Group: Absorbable<S::L>,
+    G: CurveGroup + Absorbable<S::L>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -116,14 +110,12 @@ where
     let u = *generators.2;
 
     let left = u * inner_prod(a_left, b_right)
-        + G::Group::msm(g_right, a_left).unwrap()
-        + G::Group::msm(h_left, b_right).unwrap();
-    let left_compressed = left.into_affine();
+        + G::msm(g_right, a_left).unwrap()
+        + G::msm(h_left, b_right).unwrap();
 
     let right = u * inner_prod(a_right, b_left)
-        + G::Group::msm(g_left, a_right).unwrap()
-        + G::Group::msm(h_right, b_left).unwrap();
-    let right_compressed = right.into_affine();
+        + G::msm(g_left, a_right).unwrap()
+        + G::msm(h_right, b_left).unwrap();
 
     transcript.append_elements(&[left, right])?;
     let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
@@ -143,19 +135,19 @@ where
     // proof will be reverse-order
     bulletproof
         .round_msgs
-        .push((left_compressed, right_compressed));
+        .push((left, right));
     Ok(bulletproof)
 }
 
 fn verify<G, S>(
     transcript: &mut Merlin<S>,
-    generators: (&[G], &[G], &G),
-    statement: &G,
+    generators: (&[G::Affine], &[G::Affine], &G::Affine),
+    statement: &G::Affine,
     bulletproof: &Bulletproof<G>,
 ) -> Result<(), InvalidTag>
 where
     S: Duplexer,
-    G: AffineRepr + Absorbable<S::L>,
+    G: CurveGroup + Absorbable<S::L>,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
@@ -190,9 +182,12 @@ where
 }
 
 fn main() {
-    use ark_bls12_381::g1::G1Affine as G;
-    use ark_bls12_381::Fr as F;
+    use ark_bls12_381::g1::G1Projective as G;
+    use ark_ec::Group;
     use ark_std::UniformRand;
+
+    type F = <G as Group>::ScalarField;
+    type GAffine = <G as CurveGroup>::Affine;
 
     type H = nimue::DefaultHash;
     // the vector size
@@ -213,27 +208,25 @@ fn main() {
     let ab = inner_prod(&a, &b);
     // the generators to be used for respectively a, b, ip
     let g = (0..a.len())
-        .map(|_| G::rand(&mut OsRng))
+        .map(|_| GAffine::rand(&mut OsRng))
         .collect::<Vec<_>>();
     let h = (0..b.len())
-        .map(|_| G::rand(&mut OsRng))
+        .map(|_| GAffine::rand(&mut OsRng))
         .collect::<Vec<_>>();
-    let u = G::rand(&mut OsRng);
+    let u = GAffine::rand(&mut OsRng);
 
     let generators = (&g[..], &h[..], &u);
-    let statement =
-        (G1Projective::msm_unchecked(&g, &a) + G1Projective::msm_unchecked(&h, &b) + u * ab)
-            .into_affine();
+    let statement = (G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab).into_affine();
     let witness = (&a[..], &b[..]);
 
     let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
     prover_transcript.append_elements(&[statement]).unwrap();
     prover_transcript.process().unwrap();
     let bulletproof =
-        prove::<nimue::keccak::Keccak, G>(&mut prover_transcript, generators, &statement, witness)
+        prove::<nimue::DefaultHash, G>(&mut prover_transcript, generators, &statement, witness)
             .expect("Error proving");
 
-    let mut verifier_transcript = Merlin::<nimue::keccak::Keccak>::new(&io_pattern);
+    let mut verifier_transcript = Merlin::<nimue::DefaultHash>::new(&io_pattern);
     verifier_transcript.append_element(&statement).unwrap();
     verifier_transcript.process().unwrap();
     verify(

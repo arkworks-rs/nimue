@@ -4,11 +4,7 @@ mod iopattern;
 
 pub use absorbs::Absorbs;
 
-use ark_ec::{
-    short_weierstrass as sw,
-    twisted_edwards as ed,
-    AffineRepr, CurveGroup,
-};
+use ark_ec::{short_weierstrass as sw, twisted_edwards as ed, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, Fp, FpConfig, PrimeField};
 use ark_serialize::CanonicalSerialize;
 pub use field_challenges::FieldChallenges;
@@ -49,8 +45,8 @@ impl<const N: usize, P: FpConfig<N>> Absorbable<u8> for Fp<P, N> {
     }
 }
 
-impl<const N: usize, C: FpConfig<N>, P: sw::SWCurveConfig<BaseField = Fp<C, N>>> Absorbable<Fp<C, N>>
-    for sw::Affine<P>
+impl<const N: usize, C: FpConfig<N>, P: sw::SWCurveConfig<BaseField = Fp<C, N>>>
+    Absorbable<Fp<C, N>> for sw::Affine<P>
 {
     fn absorb_size() -> usize {
         2
@@ -64,8 +60,8 @@ impl<const N: usize, C: FpConfig<N>, P: sw::SWCurveConfig<BaseField = Fp<C, N>>>
     }
 }
 
-impl<const N: usize, C: FpConfig<N>, P: ed::TECurveConfig<BaseField = Fp<C, N>>> Absorbable<Fp<C, N>>
-    for ed::Affine<P>
+impl<const N: usize, C: FpConfig<N>, P: ed::TECurveConfig<BaseField = Fp<C, N>>>
+    Absorbable<Fp<C, N>> for ed::Affine<P>
 {
     fn absorb_size() -> usize {
         2
