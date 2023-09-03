@@ -13,9 +13,10 @@ pub trait FieldChallenges {
     /// Fill a slice of field element challenges of `byte_count` bytes.
     fn fill_field_challenges<F: PrimeField>(
         &mut self,
-        byte_count: usize,
         dest: &mut [F],
-    ) -> Result<(), InvalidTag>;
+    ) -> Result<(), InvalidTag> {
+        dest.iter_mut().map(|elt| self.field_challenge().and_then(|x| Ok(*elt = x))).collect()
+    }
 
     /// Squeeze a field element challenge uniformly distributed over the whole domain.
     fn field_challenge<F: PrimeField>(&mut self) -> Result<F, InvalidTag> {
@@ -26,14 +27,6 @@ pub trait FieldChallenges {
 impl<S: Duplexer, R: RngCore + CryptoRng> FieldChallenges for Arthur<S, R> {
     fn short_field_challenge<F: PrimeField>(&mut self, byte_count: usize) -> Result<F, InvalidTag> {
         self.merlin.short_field_challenge(byte_count)
-    }
-
-    fn fill_field_challenges<F: PrimeField>(
-        &mut self,
-        byte_count: usize,
-        dest: &mut [F],
-    ) -> Result<(), InvalidTag> {
-        self.merlin.fill_field_challenges(byte_count, dest)
     }
 }
 
@@ -46,18 +39,8 @@ impl<S: Duplexer> FieldChallenges for Merlin<S> {
     /// over the entire field `F`, squeeze F::num_bits()/8 + 100.
     fn short_field_challenge<F: PrimeField>(&mut self, byte_count: usize) -> Result<F, InvalidTag> {
         let mut chal = vec![0u8; byte_count];
-        self.challenge_bytes(&mut chal)?;
+        self.squeeze_bytes(&mut chal)?;
         Ok(F::from_le_bytes_mod_order(&chal))
     }
 
-    fn fill_field_challenges<F: PrimeField>(
-        &mut self,
-        byte_count: usize,
-        dest: &mut [F],
-    ) -> Result<(), InvalidTag> {
-        for d in dest.iter_mut() {
-            *d = self.short_field_challenge(byte_count)?;
-        }
-        Ok(())
-    }
 }

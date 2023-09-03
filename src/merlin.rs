@@ -1,6 +1,6 @@
 use crate::DefaultHash;
 
-use super::{Duplexer, IOPattern, InvalidTag, Lane, Safe};
+use super::{Duplexer, IOPattern, InvalidTag, Safe};
 use core::borrow::Borrow;
 
 /// Merlin is wrapper around a sponge that provides a secure
@@ -8,10 +8,9 @@ use core::borrow::Borrow;
 #[derive(Clone)]
 pub struct Merlin<H = DefaultHash>
 where
-    H: Duplexer,
+    H: Duplexer
 {
     safe: Safe<H>,
-    leftovers: Vec<u8>,
 }
 
 impl<H: Duplexer> Merlin<H> {
@@ -20,37 +19,32 @@ impl<H: Duplexer> Merlin<H> {
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
     pub fn new(io_pattern: &IOPattern) -> Self {
         let safe = Safe::new(io_pattern);
-        let leftovers = Vec::with_capacity(H::L::extractable_bytelen());
-        Self { safe, leftovers }
+        Self { safe }
     }
 
     /// Absorb a slice of lanes into the sponge.
-    pub fn append(&mut self, input: &[H::L]) -> Result<&mut Self, InvalidTag> {
-        self.leftovers.clear();
+    pub fn absorb_native(&mut self, input: &[H::L]) -> Result<&mut Self, InvalidTag> {
         self.safe.absorb(input)?;
         Ok(self)
     }
 
     /// Signals the end of the statement.
-    pub fn process(&mut self) -> Result<&mut Self, InvalidTag> {
-        self.leftovers.clear();
+    pub fn ratchet(&mut self) -> Result<&mut Self, InvalidTag> {
         self.safe.divide()?;
         Ok(self)
     }
 
     /// Signals the end of the statement and returns the (compressed) sponge state.
-    pub fn divide_and_store(self) -> Result<Vec<H::L>, InvalidTag> {
-        self.safe.divide_and_store()
+    pub fn ratchet_and_store(self) -> Result<Vec<H::L>, InvalidTag> {
+        self.safe.ratchet_and_store()
     }
 
     /// Get a challenge of `count` bytes.
-    pub fn challenge_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn squeeze_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
         self.safe.squeeze_bytes(dest)
     }
 
-    // pub fn challenge_native(&mut self, mut dest: &mut [S::L]) -> Result<(), InvalidTag> {
-    //     self.safe.squeeze(&mut dest)
-    // }
+    // XXX. squeezing native elements is not (yet) supported.
 }
 
 impl<H: Duplexer, B: Borrow<IOPattern>> From<B> for Merlin<H> {

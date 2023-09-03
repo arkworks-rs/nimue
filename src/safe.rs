@@ -216,7 +216,7 @@ impl<D: Duplexer> Safe<D> {
     }
 
     /// Divide and return the sponge state.
-    pub fn divide_and_store(mut self) -> Result<Vec<<D as Duplexer>::L>, InvalidTag> {
+    pub fn ratchet_and_store(mut self) -> Result<Vec<<D as Duplexer>::L>, InvalidTag> {
         self.divide()?;
         Ok(self.sponge.store_unchecked().to_vec())
     }

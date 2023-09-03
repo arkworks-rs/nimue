@@ -89,3 +89,10 @@ impl<H: Duplexer> From<AlgebraicIO<H>> for Merlin<H> {
         IOPattern::from(value).into()
     }
 }
+
+
+impl<H: Duplexer> AsRef<IOPattern> for AlgebraicIO<H> {
+    fn as_ref(&self) -> &IOPattern {
+        &self.iop
+    }
+}

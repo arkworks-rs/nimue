@@ -117,7 +117,7 @@ where
         + G::msm(g_left, a_right).unwrap()
         + G::msm(h_right, b_left).unwrap();
 
-    transcript.append_elements(&[left, right])?;
+    transcript.absorb_slice(&[left, right])?;
     let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
@@ -162,8 +162,8 @@ where
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
 
-        transcript.append_element(left)?;
-        transcript.append_element(right)?;
+        transcript.absorb(left)?;
+        transcript.absorb(right)?;
 
         let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
         let x_inv = x.inverse().expect("You just won the lottery!");
@@ -220,15 +220,15 @@ fn main() {
     let witness = (&a[..], &b[..]);
 
     let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
-    prover_transcript.append_elements(&[statement]).unwrap();
-    prover_transcript.process().unwrap();
+    prover_transcript.absorb_slice(&[statement]).unwrap();
+    prover_transcript.ratchet().unwrap();
     let bulletproof =
         prove::<nimue::DefaultHash, G>(&mut prover_transcript, generators, &statement, witness)
             .expect("Error proving");
 
     let mut verifier_transcript = Merlin::<nimue::DefaultHash>::new(&io_pattern);
-    verifier_transcript.append_element(&statement).unwrap();
-    verifier_transcript.process().unwrap();
+    verifier_transcript.absorb(&statement).unwrap();
+    verifier_transcript.ratchet().unwrap();
     verify(
         &mut verifier_transcript,
         generators,

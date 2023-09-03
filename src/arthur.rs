@@ -2,10 +2,8 @@ use core::borrow::Borrow;
 
 use rand::{CryptoRng, RngCore};
 
-use crate::DefaultHash;
-
 use super::keccak::Keccak;
-use super::{DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
+use super::{DefaultHash, DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
 
 /// Arthur is a cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
@@ -119,23 +117,23 @@ impl<S: Duplexer, R: RngCore + CryptoRng> Arthur<S, R> {
     }
 
     #[inline]
-    pub fn append(&mut self, input: &[S::L]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn absorb_native(&mut self, input: &[S::L]) -> Result<Vec<u8>, InvalidTag> {
         let serialized = bincode::serialize(input).unwrap();
         self.arthur.sponge.absorb_unchecked(&serialized);
-        self.merlin.append(input)?;
+        self.merlin.absorb_native(input)?;
 
         Ok(serialized)
     }
 
     /// Get a challenge of `count` bytes.
-    pub fn challenge_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.challenge_bytes(dest)?;
+    pub fn squeeze_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.squeeze_bytes(dest)?;
         Ok(())
     }
 
     #[inline]
-    pub fn process(&mut self) -> Result<(), InvalidTag> {
-        self.merlin.process().map(|_| ())
+    pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
+        self.merlin.ratchet().map(|_| ())
     }
 
     #[inline]

@@ -14,7 +14,7 @@ fn test_iopattern() {
 fn test_invalid_io_sequence() {
     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
     let mut merlin = Merlin::<Keccak>::new(&iop);
-    merlin.challenge_bytes(&mut [0u8; 16]).unwrap();
+    merlin.squeeze_bytes(&mut [0u8; 16]).unwrap();
 }
 
 // Hiding for now. Should it panic ?
@@ -38,11 +38,11 @@ fn test_deterministic() {
     let mut first = [0u8; 16];
     let mut second = [0u8; 16];
 
-    first_merlin.append(b"123").unwrap();
-    second_merlin.append(b"123").unwrap();
+    first_merlin.absorb_native(b"123").unwrap();
+    second_merlin.absorb_native(b"123").unwrap();
 
-    first_merlin.challenge_bytes(&mut first).unwrap();
-    second_merlin.challenge_bytes(&mut second).unwrap();
+    first_merlin.squeeze_bytes(&mut first).unwrap();
+    second_merlin.squeeze_bytes(&mut second).unwrap();
     assert_eq!(first, second);
 }
 
@@ -54,10 +54,10 @@ fn test_statistics() {
         .ratchet()
         .squeeze(2048, "gee");
     let mut merlin = Merlin::<Keccak>::new(&iop);
-    merlin.append(b"seed").unwrap();
-    merlin.process().unwrap();
+    merlin.absorb_native(b"seed").unwrap();
+    merlin.ratchet().unwrap();
     let mut output = [0u8; 2048];
-    merlin.challenge_bytes(&mut output).unwrap();
+    merlin.squeeze_bytes(&mut output).unwrap();
 
     let frequencies = (0u8..=255)
         .map(|i| output.iter().filter(|&&x| x == i).count())

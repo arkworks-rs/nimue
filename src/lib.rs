@@ -18,9 +18,9 @@
 //! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! // by default we use keccak, but `nimue::legacy::DigestBridge<sha2::Sha256>` works too.
 //! let mut merlin = Merlin::<nimue::DefaultHash>::new(&io);
-//! merlin.append(&[0x42]).expect("Absorbing one byte");
+//! merlin.absorb_native(&[0x42]).expect("Absorbing one byte");
 //! let mut chal = [0u8; 16];
-//! merlin.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! merlin.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
 //! The [`IOPattern`] struct is a builder for the IO Pattern of the protocol.
@@ -37,14 +37,14 @@
 //! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! // by default, arthur is seeded with `rand::rngs::OsRng`.
 //! let mut arthur = Arthur::<nimue::DefaultHash>::new(&io, OsRng);
-//! arthur.append(&[0x42]).expect("Absorbing one byte");
+//! arthur.absorb_native(&[0x42]).expect("Absorbing one byte");
 //!
 //! // generate 32 bytes of private randomness.
 //! let mut rnd = arthur.rng().gen::<[u8; 32]>();
 //! let mut chal = [0u8; 16];
 //!
 //! // continue with the protocol.
-//! arthur.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! arthur.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
 //!

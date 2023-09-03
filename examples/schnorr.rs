@@ -1,5 +1,4 @@
 use ark_ec::{CurveGroup, Group};
-use ark_ff::One;
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use nimue::ark_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
@@ -48,7 +47,7 @@ fn prove<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
     // Commitment: use the prover transcript to seed randomness.
     let k = G::ScalarField::rand(&mut transcript.rng());
     let commitment = G::generator() * k;
-    transcript.append_element(&commitment)?;
+    transcript.absorb(&commitment)?;
     // Get a challenge over the field Fr.
     let challenge: G::ScalarField = transcript.field_challenge()?;
 
@@ -65,7 +64,7 @@ fn verify<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
 ) -> Result<(), InvalidTag> {
     let (challenge, response) = proof;
     let commitment = g * response - pk * challenge;
-    transcript.append_element(&commitment)?;
+    transcript.absorb(&commitment)?;
     let challenge2 = transcript.field_challenge::<G::ScalarField>()?;
     if challenge == challenge2 {
         Ok(())
@@ -97,12 +96,12 @@ fn main() {
     let pk = (g * &sk).into();
 
     let mut prover_transcript = Arthur::<H>::from(io_pattern.clone());
-    prover_transcript.append_elements(&[g, pk]).unwrap();
-    prover_transcript.process().unwrap();
+    prover_transcript.absorb_slice(&[g, pk]).unwrap();
+    prover_transcript.ratchet().unwrap();
     let proof = prove::<H, G>(&mut prover_transcript, sk).expect("Valid proof");
 
     let mut verifier_transcript = Merlin::from(io_pattern.clone());
-    verifier_transcript.append_elements(&[g, pk]).unwrap();
-    verifier_transcript.process().unwrap();
+    verifier_transcript.absorb_slice(&[g, pk]).unwrap();
+    verifier_transcript.ratchet().unwrap();
     verify::<H, G>(&mut verifier_transcript, g, pk, proof).expect("Valid proof");
 }
