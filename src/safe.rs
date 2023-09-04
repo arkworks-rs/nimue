@@ -1,6 +1,7 @@
-use super::{InvalidTag, Lane};
+use super::hash::DuplexHash;
+use super::InvalidTag;
 use std::collections::vec_deque::VecDeque;
-use zeroize::Zeroize;
+use super::hash::Keccak;
 
 // XXX. before, absorb and squeeze were accepting arguments of type
 // use ::core::num::NonZeroUsize;
@@ -19,14 +20,12 @@ enum Op {
     ///
     /// In a tag, squeeze is indicated with 'S'.
     Squeeze(usize),
-    /// Indicates a divide operation.
+    /// Indicates a ratchet operation.
     /// Dividing here means finishing the block and absorbing new elements from here.
     /// For sponge functions, we squeeze sizeof(capacity) lanes
     /// and initialize a new state filling the capacity.
     /// This allows for a more efficient preprocessing, and for removal of the secrets.
-    ///
-    /// In a tag, dividing is indicated with ','
-    Divide,
+    Ratchet,
 }
 
 impl Op {
@@ -35,7 +34,7 @@ impl Op {
         match (id, count) {
             ('S', Some(c)) if c > 0 => Ok(Op::Squeeze(c)),
             ('A', Some(c)) if c > 0 => Ok(Op::Absorb(c)),
-            ('R', None) | ('R', Some(0)) => Ok(Op::Divide),
+            ('R', None) | ('R', Some(0)) => Ok(Op::Ratchet),
             _ => Err("Invalid tag".into()),
         }
     }
@@ -142,95 +141,52 @@ impl ::core::fmt::Debug for IOPattern {
     }
 }
 
-/// A Duplexer is an abstract interface for absorbing and squeezing data.
-///
-/// **HAZARD**: Don't implement this trait unless you know what you are doing.
-/// Consider using the sponges already provided by this library.
-pub trait Duplexer: Clone + Zeroize {
-    /// The basic unit that the sponge works with.
-    /// Must support packing and unpacking to bytes.
-    type L: Lane;
-
-    /// Initializes a new sponge, setting up the state.
-    fn new() -> Self;
-
-    /// Absorbs new elements in the sponge.
-    fn absorb_unchecked(&mut self, input: &[Self::L]) -> &mut Self;
-
-    /// Squeezes out new elements.
-    fn squeeze_unchecked(&mut self, output: &mut [Self::L]) -> &mut Self;
-
-    /// Diving.
-    ///
-    /// This operations makes sure that different elements are processed in different blocks.
-    /// Right now, this is done by:
-    /// - permuting the state.
-    /// - zero rate elements.
-    /// This has the effect that state holds no information about the elements absorbed so far.
-    /// The resulting state is compressed.
-    fn divide_unchecked(&mut self) -> &mut Self {
-        self.ratchet_unchecked()
-    }
-
-    fn ratchet_unchecked(&mut self) -> &mut Self;
-
-    /// Exports the hash state, allowing for preprocessing.
-    ///
-    /// This function can be used for duplicating the state of the sponge,
-    /// but is limited to exporting the state in a way that is compatible
-    /// with the `load` function.
-    fn store_unchecked(&self) -> &[Self::L];
-
-    /// Loads the hash state, allowing for preprocessing.
-    fn load_unchecked(input: &[Self::L]) -> Self;
-}
-
 /// A (slightly modified) SAFE API for sponge functions.
 ///
 /// Operations in the SAFE API provide a secure interface for using sponges.
 #[derive(Clone)]
-pub struct Safe<D: Duplexer> {
-    sponge: D,
+pub struct Safe<H: DuplexHash> {
+    sponge: H,
     stack: VecDeque<Op>,
 }
 
-impl<D: Duplexer> Safe<D> {
+impl<H: DuplexHash> Safe<H> {
     /// Initialise a SAFE sponge,
     /// setting up the state of the sponge function and parsing the tag string.
     pub fn new(io_pattern: &IOPattern) -> Self {
         let stack = io_pattern.finalize();
         let tag = Self::generate_tag(io_pattern.as_bytes());
-        Self::unchecked_load_with_stack(&tag, &stack)
+        Self::unchecked_load_with_stack(tag, stack)
     }
 
     /// Finish the block and compress the state.
     ///
     /// Dividing allows for a more efficient preprocessing.
-    pub fn divide(&mut self) -> Result<&mut Self, InvalidTag> {
-        if self.stack.pop_front().unwrap() != Op::Divide {
+    pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
+        if self.stack.pop_front().unwrap() != Op::Ratchet {
             Err("Invalid tag".into())
         } else {
-            self.sponge.divide_unchecked();
-            Ok(self)
+            self.sponge.ratchet_unchecked();
+            Ok(())
         }
     }
 
     /// Divide and return the sponge state.
-    pub fn ratchet_and_store(mut self) -> Result<Vec<<D as Duplexer>::L>, InvalidTag> {
-        self.divide()?;
-        Ok(self.sponge.store_unchecked().to_vec())
+    pub fn ratchet_and_store(mut self) -> Result<Vec<H::U>, InvalidTag> {
+        self.ratchet()?;
+        Ok(self.sponge.tag().to_vec())
     }
 
     /// Perform secure absorption of the elements in `input`.
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
-    pub fn absorb(&mut self, input: &[D::L]) -> Result<&mut Self, InvalidTag> {
+    pub fn absorb(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Absorb(length)) if length >= input.len() => {
                 if length > input.len() {
                     self.stack.push_front(Op::Absorb(length - input.len()));
                 }
                 self.sponge.absorb_unchecked(input);
-                Ok(self)
+                Ok(())
             }
             None => {
                 self.stack.clear();
@@ -257,15 +213,10 @@ impl<D: Duplexer> Safe<D> {
     /// For byte-oriented sponges, this operation is equivalent to the squeeze operation.
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
-    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Squeeze(length)) if output.len() <= length => {
-                let squeeze_len = super::div_ceil!(length, D::L::extractable_bytelen());
-                let mut squeeze_lane = vec![D::L::default(); squeeze_len];
-                self.sponge.squeeze_unchecked(&mut squeeze_lane);
-                let mut squeeze_bytes = vec![0u8; D::L::extractable_bytelen() * squeeze_len];
-                D::L::to_random_bytes(&squeeze_lane, squeeze_bytes.as_mut_slice());
-                output.copy_from_slice(&squeeze_bytes[..output.len()]);
+                self.sponge.squeeze_unchecked(output);
                 if length != output.len() {
                     self.stack.push_front(Op::Squeeze(length - output.len()));
                 }
@@ -292,23 +243,22 @@ impl<D: Duplexer> Safe<D> {
     }
 
     fn generate_tag(iop_bytes: &[u8]) -> [u8; 32] {
-        let mut keccak = crate::keccak::Keccak::new();
+        let mut keccak = Keccak::default();
         keccak.absorb_unchecked(iop_bytes);
         let mut tag = [0u8; 32];
         keccak.squeeze_unchecked(&mut tag);
         tag
     }
 
-    fn unchecked_load_with_stack(tag: &[u8], stack: &VecDeque<Op>) -> Self {
-        let sponge = D::load_unchecked(&D::L::from_bytes(tag));
+    fn unchecked_load_with_stack(tag: [u8; 32], stack: VecDeque<Op>) -> Self {
         Self {
-            sponge,
-            stack: stack.clone(),
+            sponge: H::new(tag),
+            stack,
         }
     }
 }
 
-impl<H: Duplexer> Drop for Safe<H> {
+impl<H: DuplexHash> Drop for Safe<H> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
         // assert!(self.stack.is_empty());
@@ -319,10 +269,27 @@ impl<H: Duplexer> Drop for Safe<H> {
     }
 }
 
-impl<H: Duplexer> ::core::fmt::Debug for Safe<H> {
+
+
+impl<H: DuplexHash> ::core::fmt::Debug for Safe<H> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
         write!(f, "SAFE sponge with IO: {:?}", self.stack)
+    }
+}
+
+pub trait ByteCompatible {
+    fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag>;
+    fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag>;
+}
+
+impl<H: DuplexHash<U = u8>> ByteCompatible for Safe<H> {
+    fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+        self.absorb(input)
+    }
+
+    fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+        self.squeeze(output)
     }
 }

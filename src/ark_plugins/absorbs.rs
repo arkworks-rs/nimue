@@ -1,11 +1,12 @@
-use crate::{Lane, Merlin};
+use crate::{Unit, Merlin};
 
-use super::super::{Arthur, Duplexer, InvalidTag};
+use super::super::hash::DuplexHash;
+use super::super::{Arthur, InvalidTag};
 use super::Absorbable;
 use rand::{CryptoRng, RngCore};
 
 /// A trait that equips a function with a generic method for absorbing types.
-pub trait Absorbs<L: Lane> {
+pub trait Absorbs<L: Unit> {
     fn absorb<A: Absorbable<L>>(&mut self, e: &A) -> Result<(), InvalidTag>;
 
     fn absorb_slice<A: Absorbable<L>>(&mut self, input: &[A]) -> Result<(), InvalidTag> {
@@ -15,7 +16,7 @@ pub trait Absorbs<L: Lane> {
 
 impl<S, R> Absorbs<S::L> for Arthur<S, R>
 where
-    S: Duplexer,
+    S: DuplexHash,
     R: RngCore + CryptoRng,
 {
     fn absorb<A: Absorbable<S::L>>(&mut self, input: &A) -> Result<(), InvalidTag> {
@@ -26,7 +27,7 @@ where
 
 impl<S> Absorbs<S::L> for Merlin<S>
 where
-    S: Duplexer,
+    S: DuplexHash,
 {
     fn absorb<A: Absorbable<S::L>>(&mut self, input: &A) -> Result<(), InvalidTag> {
         let input = Absorbable::<S::L>::to_absorbable(input);

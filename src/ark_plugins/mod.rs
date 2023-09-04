@@ -10,7 +10,7 @@ use ark_serialize::CanonicalSerialize;
 pub use field_challenges::FieldChallenges;
 pub use iopattern::AlgebraicIO;
 
-use crate::Lane;
+use crate::Unit;
 
 /// The number of random bytes needed to putput a field element that is uniformly distributed.
 fn random_felt_bytelen<F: PrimeField>() -> usize {
@@ -76,7 +76,7 @@ impl<const N: usize, C: FpConfig<N>, P: ed::TECurveConfig<BaseField = Fp<C, N>>>
 }
 
 // this one little `where` trick avoids specifying in any implementation `Projective<P>: Absorbable<L>`.
-impl<'a, P: ed::TECurveConfig, L: Lane> Absorbable<L> for ed::Affine<P>
+impl<'a, P: ed::TECurveConfig, L: Unit> Absorbable<L> for ed::Affine<P>
 where
     ed::Projective<P>: Absorbable<L>,
 {
@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<'a, P: sw::SWCurveConfig, L: Lane> Absorbable<L> for sw::Affine<P>
+impl<'a, P: sw::SWCurveConfig, L: Unit> Absorbable<L> for sw::Affine<P>
 where
     sw::Projective<P>: Absorbable<L>,
 {
@@ -106,7 +106,7 @@ where
     }
 }
 
-impl<P: sw::SWCurveConfig, L: Lane> Absorbable<L> for sw::Projective<P> {
+impl<P: sw::SWCurveConfig, L: Unit> Absorbable<L> for sw::Projective<P> {
     fn absorb_size() -> usize {
         <sw::Affine<P> as Absorbable<L>>::absorb_size()
     }
@@ -116,7 +116,7 @@ impl<P: sw::SWCurveConfig, L: Lane> Absorbable<L> for sw::Projective<P> {
     }
 }
 
-impl<P: ed::TECurveConfig, L: Lane> Absorbable<L> for ed::Projective<P> {
+impl<P: ed::TECurveConfig, L: Unit> Absorbable<L> for ed::Projective<P> {
     fn absorb_size() -> usize {
         <ed::Affine<P> as Absorbable<L>>::absorb_size()
     }
@@ -133,7 +133,7 @@ macro_rules! impl_absorbable {
             type Other = u8;
 
             fn absorb_size() -> usize {
-                crate::div_ceil!(core::mem::size_of::<$t>(), Other::packed_size())
+                super::div_ceil!(core::mem::size_of::<$t>(), Other::packed_size())
             }
 
             fn to_absorbable(myself: &Self) -> Vec<Other> {
@@ -143,57 +143,66 @@ macro_rules! impl_absorbable {
     };
 }
 
-/// Implements a [`Lane`] on the fly for a [`ark_ff::PrimeField`] type.
-///
-/// Takes as input the type, and the number of bytes that can be extracted from an integer mod p. Refer to `scripts/useful_bits_modp.py` for a way to compute this number.
-/// XXX. For now unused until this feature stabilizes.
-#[allow(unused)]
-macro_rules! impl_lane {
-    ($t:ty, $n: expr) => {
-        impl Lane for $t {
-            const fn random_bytes_size() -> usize {
-                $n
-            }
+// / Implements a [`Lane`] on the fly for a [`ark_ff::PrimeField`] type.
+// /
+// / Takes as input the type, and the number of bytes that can be extracted from an integer mod p. Refer to `scripts/useful_bits_modp.py` for a way to compute this number.
+// / XXX. For now unused until this feature stabilizes.
+// #[allow(unused)]
+// macro_rules! impl_lane {
+//     ($t:ty, $n: expr) => {
+//         impl Lane for $t {
+//             const fn random_bytes_size() -> usize {
+//                 $n
+//             }
 
-            fn packed_size() -> usize {
-                use ark_ff::PrimeField;
+//             fn packed_size() -> usize {
+//                 use ark_ff::PrimeField;
 
-                (Self::MODULUS_BIT_SIZE as usize - 1) / 8
-            }
+//                 (Self::MODULUS_BIT_SIZE as usize - 1) / 8
+//             }
 
-            fn to_random_bytes(a: &[Self], dst: &mut [u8]) {
-                use ark_ff::{BigInteger, PrimeField};
+//             fn to_random_bytes(a: &[Self], dst: &mut [u8]) {
+//                 use ark_ff::{BigInteger, PrimeField};
 
-                let length = usize::min(Self::random_bytes_size(), dst.len());
-                let bytes = a[0].into_bigint().to_bytes_le();
-                dst[..length].copy_from_slice(&bytes[..length]);
+//                 let length = usize::min(Self::random_bytes_size(), dst.len());
+//                 let bytes = a[0].into_bigint().to_bytes_le();
+//                 dst[..length].copy_from_slice(&bytes[..length]);
 
-                if dst.len() > length {
-                    Self::fill_bytes(&a[1..], &mut dst[length..]);
-                }
-            }
+//                 if dst.len() > length {
+//                     Self::fill_bytes(&a[1..], &mut dst[length..]);
+//                 }
+//             }
 
-            fn to_bytes(a: &[Self], dst: &mut [u8]) {
-                use ark_ff::{BigInteger, PrimeField};
+//             fn to_bytes(a: &[Self], dst: &mut [u8]) {
+//                 use ark_ff::{BigInteger, PrimeField};
 
-                if a.is_empty() {
-                    return;
-                } else {
-                    let bytes = a[0].into_bigint().to_bytes_le();
-                    dst[..bytes.len()].copy_from_slice(&bytes);
-                    Self::to_bytes(&a[1..], &mut dst[bytes.len()..]);
-                }
-            }
+//                 if a.is_empty() {
+//                     return;
+//                 } else {
+//                     let bytes = a[0].into_bigint().to_bytes_le();
+//                     dst[..bytes.len()].copy_from_slice(&bytes);
+//                     Self::to_bytes(&a[1..], &mut dst[bytes.len()..]);
+//                 }
+//             }
 
-            fn pack_bytes(bytes: &[u8]) -> Vec<Self> {
-                use ark_ff::Field;
+//             fn pack_bytes(bytes: &[u8]) -> Vec<Self> {
+//                 use ark_ff::Field;
 
-                let mut packed = Vec::new();
-                for chunk in bytes.chunks(Self::packed_size()) {
-                    packed.push(Self::from_random_bytes(chunk).unwrap());
-                }
-                packed
-            }
-        }
+//                 let mut packed = Vec::new();
+//                 for chunk in bytes.chunks(Self::packed_size()) {
+//                     packed.push(Self::from_random_bytes(chunk).unwrap());
+//                 }
+//                 packed
+//             }
+//         }
+//     };
+// }
+
+/// Perform ceil division.
+/// XXX. Remove once feature(int_roundings) is on stable.
+macro_rules! div_ceil {
+    ($a: expr, $b: expr) => {
+        ($a + $b - 1) / $b
     };
 }
+pub(crate) use div_ceil;

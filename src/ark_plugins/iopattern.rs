@@ -4,19 +4,21 @@ use core::borrow::Borrow;
 
 use crate::DefaultHash;
 
-use super::super::{Arthur, Duplexer, IOPattern, Lane, Merlin};
+use super::super::{Arthur, DuplexHash, IOPattern, Unit, Merlin};
 use super::Absorbable;
 
 /// An IOPattern
 /// that is aware of the sponge used and understands arkworks types,
 /// such as fields and group elements.
 pub struct AlgebraicIO<H = DefaultHash>
-where H: Duplexer {
+where
+    H: DuplexHash,
+{
     _sponge: ::core::marker::PhantomData<H>,
     iop: IOPattern,
 }
 
-impl<H: Duplexer, B: Borrow<IOPattern>> From<B> for AlgebraicIO<H> {
+impl<H: DuplexHash, B: Borrow<IOPattern>> From<B> for AlgebraicIO<H> {
     fn from(value: B) -> Self {
         AlgebraicIO {
             _sponge: Default::default(),
@@ -27,7 +29,7 @@ impl<H: Duplexer, B: Borrow<IOPattern>> From<B> for AlgebraicIO<H> {
 
 impl<H> AlgebraicIO<H>
 where
-    H: Duplexer,
+    H: DuplexHash,
 {
     pub fn new(domsep: &str) -> Self {
         Self {
@@ -41,7 +43,7 @@ where
     }
 
     pub fn absorb_bytes(self, count: usize) -> Self {
-        let count = crate::div_ceil!(count, H::L::compressed_size());
+        let count = super::div_ceil!(count, H::L::compressed_size());
         self.iop.absorb(count, "").into()
     }
 
@@ -61,7 +63,7 @@ where
     }
 
     pub fn squeeze_bytes(self, count: usize) -> Self {
-        let count = crate::div_ceil!(count, H::L::extractable_bytelen());
+        let count = super::div_ceil!(count, H::L::extractable_bytelen());
         self.iop.squeeze(count, "").into()
     }
 
@@ -72,26 +74,25 @@ where
     }
 }
 
-impl<H: Duplexer> From<AlgebraicIO<H>> for IOPattern {
+impl<H: DuplexHash> From<AlgebraicIO<H>> for IOPattern {
     fn from(value: AlgebraicIO<H>) -> Self {
         value.iop
     }
 }
 
-impl<H: Duplexer> From<AlgebraicIO<H>> for Arthur<H> {
+impl<H: DuplexHash> From<AlgebraicIO<H>> for Arthur<H> {
     fn from(value: AlgebraicIO<H>) -> Self {
         IOPattern::from(value).into()
     }
 }
 
-impl<H: Duplexer> From<AlgebraicIO<H>> for Merlin<H> {
+impl<H: DuplexHash> From<AlgebraicIO<H>> for Merlin<H> {
     fn from(value: AlgebraicIO<H>) -> Self {
         IOPattern::from(value).into()
     }
 }
 
-
-impl<H: Duplexer> AsRef<IOPattern> for AlgebraicIO<H> {
+impl<H: DuplexHash> AsRef<IOPattern> for AlgebraicIO<H> {
     fn as_ref(&self) -> &IOPattern {
         &self.iop
     }

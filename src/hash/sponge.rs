@@ -1,4 +1,4 @@
-use super::{Duplexer, Lane};
+use super::{DuplexHash, Unit};
 
 use core::ops::{Index, IndexMut, Range};
 use std::ops::{RangeFrom, RangeTo};
@@ -13,36 +13,37 @@ pub trait Sponge:
     Zeroize
     + Default
     + Clone
-    + Index<usize, Output = Self::L>
-    + Index<RangeFrom<usize>, Output = [Self::L]>
-    + Index<RangeTo<usize>, Output = [Self::L]>
-    + Index<Range<usize>, Output = [Self::L]>
-    + IndexMut<RangeFrom<usize>, Output = [Self::L]>
-    + IndexMut<RangeTo<usize>, Output = [Self::L]>
-    + IndexMut<Range<usize>, Output = [Self::L]>
+    + Index<usize, Output = Self::U>
+    + Index<RangeFrom<usize>, Output = [Self::U]>
+    + Index<RangeTo<usize>, Output = [Self::U]>
+    + Index<Range<usize>, Output = [Self::U]>
+    + IndexMut<RangeFrom<usize>, Output = [Self::U]>
+    + IndexMut<RangeTo<usize>, Output = [Self::U]>
+    + IndexMut<Range<usize>, Output = [Self::U]>
 {
-    type L: Lane;
+    type U: Unit;
 
     const CAPACITY: usize;
     const RATE: usize;
 
+    fn new(tag: [u8; 32]) -> Self;
     fn permute(&mut self);
 }
 
 /// A cryptographic sponge.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
 pub struct DuplexSponge<C: Sponge> {
     state: C,
     absorb_pos: usize,
     squeeze_pos: usize,
 }
 
-impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
-    type L = F;
 
-    fn new() -> Self {
-        let mut state = C::default();
-        state.permute();
+impl<F: Unit, C: Sponge<U = F>> DuplexHash for DuplexSponge<C> {
+    type U = F;
+
+    fn new(tag: [u8; 32]) -> Self {
+        let mut state = C::new(tag);
         Self {
             state,
             absorb_pos: 0,
@@ -50,7 +51,7 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         }
     }
 
-    fn absorb_unchecked(&mut self, input: &[Self::L]) -> &mut Self {
+    fn absorb_unchecked(&mut self, input: &[Self::U]) -> &mut Self {
         if input.len() == 0 {
             self.squeeze_pos = C::RATE;
             self
@@ -69,7 +70,7 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         }
     }
 
-    fn squeeze_unchecked(&mut self, output: &mut [Self::L]) -> &mut Self {
+    fn squeeze_unchecked(&mut self, output: &mut [Self::U]) -> &mut Self {
         if output.len() == 0 {
             return self;
         }
@@ -88,14 +89,7 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         self.squeeze_unchecked(rest)
     }
 
-    fn load_unchecked(input: &[Self::L]) -> Self {
-        let len = usize::min(input.len(), C::CAPACITY);
-        let mut sponge = Self::new();
-        sponge.state[C::RATE..C::RATE + len].clone_from_slice(&input[..len]);
-        sponge
-    }
-
-    fn store_unchecked(&self) -> &[Self::L] {
+    fn tag(&self) -> &[Self::U] {
         &self.state[C::CAPACITY..]
     }
 
@@ -107,3 +101,4 @@ impl<F: Lane, C: Sponge<L = F>> Duplexer for DuplexSponge<C> {
         self
     }
 }
+

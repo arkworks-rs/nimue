@@ -1,4 +1,5 @@
-use super::super::{Arthur, Duplexer, InvalidTag, Merlin};
+use super::super::hash::DuplexHash;
+use super::super::{Arthur, InvalidTag, Merlin};
 use ark_ff::PrimeField;
 use rand::{CryptoRng, RngCore};
 
@@ -11,11 +12,10 @@ pub trait FieldChallenges {
     fn short_field_challenge<F: PrimeField>(&mut self, byte_count: usize) -> Result<F, InvalidTag>;
 
     /// Fill a slice of field element challenges of `byte_count` bytes.
-    fn fill_field_challenges<F: PrimeField>(
-        &mut self,
-        dest: &mut [F],
-    ) -> Result<(), InvalidTag> {
-        dest.iter_mut().map(|elt| self.field_challenge().and_then(|x| Ok(*elt = x))).collect()
+    fn field_challenges<F: PrimeField, const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+        dest.iter_mut()
+            .map(|elt| self.field_challenge().and_then(|x| Ok(*elt = x)))
+            .collect()
     }
 
     /// Squeeze a field element challenge uniformly distributed over the whole domain.
@@ -24,13 +24,13 @@ pub trait FieldChallenges {
     }
 }
 
-impl<S: Duplexer, R: RngCore + CryptoRng> FieldChallenges for Arthur<S, R> {
+impl<S: DuplexHash, R: RngCore + CryptoRng> FieldChallenges for Arthur<S, R> {
     fn short_field_challenge<F: PrimeField>(&mut self, byte_count: usize) -> Result<F, InvalidTag> {
         self.merlin.short_field_challenge(byte_count)
     }
 }
 
-impl<S: Duplexer> FieldChallenges for Merlin<S> {
+impl<S: DuplexHash> FieldChallenges for Merlin<S> {
     /// Get a field element challenge from the protocol transcript.
     ///
     /// The number of random bytes used to generate the challenge is explicit:
@@ -42,5 +42,4 @@ impl<S: Duplexer> FieldChallenges for Merlin<S> {
         self.squeeze_bytes(&mut chal)?;
         Ok(F::from_le_bytes_mod_order(&chal))
     }
-
 }

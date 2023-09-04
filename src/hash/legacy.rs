@@ -1,8 +1,8 @@
 //! Legacy hash functions interface.
 //!
-//! This code is greately inspired from libsignal's poksho:
+//! This code is inspired from libsignal's poksho:
 //! <https://github.com/signalapp/libsignal/blob/main/rust/poksho/src/shosha256.rs>.
-//! With the variation that here, squeeze satisfies streaming and
+//! With the variation that here, squeeze satisfies streaming and the implementation is for any Digest.
 //!
 //! ```text
 //! squeeze(1); squeeze(1); squeeze(1) = squeeze(3);
@@ -14,7 +14,7 @@ use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputRese
 use generic_array::GenericArray;
 use zeroize::Zeroize;
 
-use super::Duplexer;
+use super::DuplexHash;
 
 /// A Bridge to our sponge interface for legacy `Digest` implementations.
 #[derive(Clone)]
@@ -75,10 +75,8 @@ impl<D: Clone + Digest + Reset> Drop for DigestBridge<D> {
     }
 }
 
-impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Duplexer for DigestBridge<D> {
-    type L = u8;
-
-    fn new() -> Self {
+impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Default for DigestBridge<D> {
+    fn default() -> Self {
         let mut hasher = D::new();
         Digest::update(&mut hasher, &Self::mask_absorb());
         Self {
@@ -88,14 +86,18 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Duplexer for DigestBr
             leftovers: Vec::new(),
         }
     }
+}
 
-    fn load_unchecked(input: &[Self::L]) -> Self {
-        let mut sha2bridge = Self::new();
-        Digest::update(&mut sha2bridge.hasher, &Self::mask_squeeze(0, input));
-        sha2bridge
+impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for DigestBridge<D> {
+    type U = u8;
+
+    fn new(tag: [u8; 32]) -> Self {
+        let mut bridge = Self::default();
+        Digest::update(&mut bridge.hasher, &Self::mask_squeeze(0, &tag));
+        bridge
     }
 
-    fn absorb_unchecked(&mut self, input: &[Self::L]) -> &mut Self {
+    fn absorb_unchecked(&mut self, input: &[Self::U]) -> &mut Self {
         if let Mode::Ratcheted(count) = self.mode {
             // append to the state the squeeze mask
             // with the length of the data read so far
@@ -124,11 +126,11 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Duplexer for DigestBr
         self
     }
 
-    fn store_unchecked(&self) -> &[u8] {
+    fn tag(&self) -> &[u8] {
         &self.cv
     }
 
-    fn squeeze_unchecked(&mut self, output: &mut [Self::L]) -> &mut Self {
+    fn squeeze_unchecked(&mut self, output: &mut [Self::U]) -> &mut Self {
         // Nothing to squeeze
         if output.is_empty() {
             self

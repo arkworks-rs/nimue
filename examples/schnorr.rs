@@ -2,20 +2,20 @@ use ark_ec::{CurveGroup, Group};
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use nimue::ark_plugins::{Absorbable, Absorbs, AlgebraicIO, FieldChallenges};
-use nimue::{Arthur, Duplexer, IOPattern, InvalidTag, Merlin};
+use nimue::{Arthur, DuplexHash, IOPattern, InvalidTag, Merlin};
 
 trait SchnorrIOPattern {
-    fn schnorr_statement<G, H: Duplexer>(&self) -> Self
+    fn schnorr_statement<G, H: DuplexHash>(&self) -> Self
     where
         G: CurveGroup + Absorbable<H::L>;
 
-    fn schnorr_io<G, H: Duplexer>(&self) -> Self
+    fn schnorr_io<G, H: DuplexHash>(&self) -> Self
     where
         G: CurveGroup + Absorbable<H::L>;
 }
 
 impl SchnorrIOPattern for IOPattern {
-    fn schnorr_statement<G, H: Duplexer>(&self) -> Self
+    fn schnorr_statement<G, H: DuplexHash>(&self) -> Self
     where
         G: CurveGroup + Absorbable<H::L>,
     {
@@ -27,7 +27,7 @@ impl SchnorrIOPattern for IOPattern {
     }
 
     /// A Schnorr signature's IO Pattern.
-    fn schnorr_io<G, H: Duplexer>(&self) -> IOPattern
+    fn schnorr_io<G, H: DuplexHash>(&self) -> IOPattern
     where
         G: CurveGroup + Absorbable<H::L>,
     {
@@ -40,7 +40,7 @@ impl SchnorrIOPattern for IOPattern {
     }
 }
 
-fn prove<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
+fn prove<H: DuplexHash, G: CurveGroup + Absorbable<H::L>>(
     transcript: &mut Arthur<H>,
     witness: G::ScalarField,
 ) -> Result<(G::ScalarField, G::ScalarField), InvalidTag> {
@@ -56,7 +56,7 @@ fn prove<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
     Ok(proof)
 }
 
-fn verify<H: Duplexer, G: CurveGroup + Absorbable<H::L>>(
+fn verify<H: DuplexHash, G: CurveGroup + Absorbable<H::L>>(
     transcript: &mut Merlin<H>,
     g: G,
     pk: G,
@@ -78,7 +78,7 @@ fn main() {
 
     // type H = nimue::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::legacy::DigestBridge<sha2::Sha256>;
-    type H = nimue::keccak::Keccak;
+    type H = nimue::hash::Keccak;
     type G = ark_bls12_381::G1Projective;
     type F = ark_bls12_381::Fr;
 

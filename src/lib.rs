@@ -81,49 +81,31 @@ This crate doesn't support big-endian targets.
 );
 
 /// Extensions for arkworks types.
-#[cfg(feature = "arkworks")]
-pub mod ark_plugins;
-
-/// Support for legacy hash functions (SHA2).
-pub mod legacy;
+// #[cfg(feature = "arkworks")]
+// pub mod ark_plugins;
 
 /// Error types.
 mod errors;
-/// SHA3 sponge function.
-pub mod keccak;
 
 /// Prover's internal state.
 mod arthur;
-/// Basic units over which a sponge operates.
-mod lane;
+/// Support for hash functions.
+pub mod hash;
 /// Verifier transcript.
 mod merlin;
-/// SAFE API for sponge functions.
+/// SAFE API
 mod safe;
-/// Support for sponge functions.
-mod sponge;
 /// Unit-tests.
 #[cfg(test)]
 mod tests;
 
+mod plugins;
+
 pub use arthur::{Arthur, ArthurBuilder};
 pub use errors::InvalidTag;
+pub use hash::DuplexHash;
 pub use merlin::Merlin;
-pub use safe::{Duplexer, IOPattern, Safe};
-
-// Traits that could be exposed externally in the future
-// for constructing custom sponges, for now only visible internally.
-pub(crate) use lane::Lane;
-pub(crate) use sponge::DuplexSponge;
+pub use safe::{IOPattern, Safe};
 
 pub type DefaultRng = rand::rngs::OsRng;
-pub type DefaultHash = keccak::Keccak;
-
-/// Perform ceil division.
-/// XXX. Remove once feature(int_roundings) is on stable.
-macro_rules! div_ceil {
-    ($a: expr, $b: expr) => {
-        ($a + $b - 1) / $b
-    };
-}
-pub(crate) use div_ceil;
+pub type DefaultHash = hash::Keccak;

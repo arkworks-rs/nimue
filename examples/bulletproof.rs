@@ -5,7 +5,7 @@ use nimue::ark_plugins::{Absorbable, AlgebraicIO};
 use nimue::IOPattern;
 use nimue::{
     ark_plugins::{Absorbs, FieldChallenges},
-    Arthur, Duplexer, InvalidTag, Merlin,
+    Arthur, DuplexHash, InvalidTag, Merlin,
 };
 use rand::rngs::OsRng;
 
@@ -49,18 +49,18 @@ struct Bulletproof<G: CurveGroup> {
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
 /// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
 trait BulletproofIOPattern {
-    fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
+    fn bulletproof_statement<G, S: DuplexHash>(&self) -> Self
     where
         G: CurveGroup + Absorbable<S::L>;
 
-    fn bulletproof_io<G, S: Duplexer>(&self, len: usize) -> Self
+    fn bulletproof_io<G, S: DuplexHash>(&self, len: usize) -> Self
     where
         G: CurveGroup + Absorbable<S::L>;
 }
 
 impl BulletproofIOPattern for IOPattern {
     /// The IO of the bulletproof statement (the sole commitment)
-    fn bulletproof_statement<G, S: Duplexer>(&self) -> Self
+    fn bulletproof_statement<G, S: DuplexHash>(&self) -> Self
     where
         G: CurveGroup + Absorbable<S::L>,
     {
@@ -71,7 +71,7 @@ impl BulletproofIOPattern for IOPattern {
     fn bulletproof_io<G, S>(&self, len: usize) -> Self
     where
         G: CurveGroup + Absorbable<S::L>,
-        S: Duplexer,
+        S: DuplexHash,
     {
         let mut io_pattern = AlgebraicIO::<S>::from(self);
         for _ in 0..log2(len) {
@@ -88,7 +88,7 @@ fn prove<S, G>(
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> Result<Bulletproof<G>, InvalidTag>
 where
-    S: Duplexer,
+    S: DuplexHash,
     G: CurveGroup + Absorbable<S::L>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
@@ -133,9 +133,7 @@ where
 
     let mut bulletproof = prove(transcript, new_generators, &new_statement, new_witness)?;
     // proof will be reverse-order
-    bulletproof
-        .round_msgs
-        .push((left, right));
+    bulletproof.round_msgs.push((left, right));
     Ok(bulletproof)
 }
 
@@ -146,7 +144,7 @@ fn verify<G, S>(
     bulletproof: &Bulletproof<G>,
 ) -> Result<(), InvalidTag>
 where
-    S: Duplexer,
+    S: DuplexHash,
     G: CurveGroup + Absorbable<S::L>,
 {
     let mut g = generators.0.to_vec();

@@ -2,9 +2,8 @@ use core::borrow::Borrow;
 
 use rand::{CryptoRng, RngCore};
 
-use super::keccak::Keccak;
-use super::{DefaultHash, DefaultRng, Duplexer, IOPattern, InvalidTag, Merlin};
-
+use super::hash::{DuplexHash, Keccak};
+use super::{DefaultHash, DefaultRng, IOPattern, InvalidTag, Merlin};
 /// Arthur is a cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
 /// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.
@@ -52,19 +51,19 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
 }
 
 /// Builder for the prover state.
-pub struct ArthurBuilder<S: Duplexer>
+pub struct ArthurBuilder<S: DuplexHash>
 where
-    S: Duplexer,
+    S: DuplexHash,
 {
     merlin: Merlin<S>,
     u8sponge: Keccak,
 }
 
-impl<S: Duplexer> ArthurBuilder<S> {
+impl<S: DuplexHash> ArthurBuilder<S> {
     pub(crate) fn new(io_pattern: &IOPattern) -> Self {
         let merlin = Merlin::new(io_pattern);
 
-        let mut u8sponge = Keccak::new();
+        let mut u8sponge = Keccak::default();
         u8sponge.absorb_unchecked(io_pattern.as_bytes());
 
         Self { u8sponge, merlin }
@@ -74,7 +73,7 @@ impl<S: Duplexer> ArthurBuilder<S> {
     // and divide
     pub fn rekey(mut self, data: &[u8]) -> Self {
         self.u8sponge.absorb_unchecked(data);
-        self.u8sponge.divide_unchecked();
+        self.u8sponge.ratchet_unchecked();
         self
     }
 
@@ -93,7 +92,7 @@ impl<S: Duplexer> ArthurBuilder<S> {
     }
 }
 
-impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Arthur<S> {
+impl<S: DuplexHash, B: Borrow<IOPattern>> From<B> for Arthur<S> {
     fn from(pattern: B) -> Self {
         ArthurBuilder::new(pattern.borrow()).finalize_with_rng(DefaultRng::default())
     }
@@ -103,7 +102,7 @@ impl<S: Duplexer, B: Borrow<IOPattern>> From<B> for Arthur<S> {
 /// Holds the state of the verifier, and provides the random coins for the prover.
 pub struct Arthur<S = DefaultHash, R = DefaultRng>
 where
-    S: Duplexer,
+    S: DuplexHash,
     R: RngCore + CryptoRng,
 {
     /// The randomness state of the prover.
@@ -111,24 +110,18 @@ where
     pub(crate) merlin: Merlin<S>,
 }
 
-impl<S: Duplexer, R: RngCore + CryptoRng> Arthur<S, R> {
+impl<S: DuplexHash, R: RngCore + CryptoRng> Arthur<S, R> {
     pub fn new(io_pattern: &IOPattern, csrng: R) -> Self {
         ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)
     }
 
     #[inline]
-    pub fn absorb_native(&mut self, input: &[S::L]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn absorb_native(&mut self, input: &[S::U]) -> Result<Vec<u8>, InvalidTag> {
         let serialized = bincode::serialize(input).unwrap();
         self.arthur.sponge.absorb_unchecked(&serialized);
         self.merlin.absorb_native(input)?;
 
         Ok(serialized)
-    }
-
-    /// Get a challenge of `count` bytes.
-    pub fn squeeze_bytes(&mut self, dest: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.squeeze_bytes(dest)?;
-        Ok(())
     }
 
     #[inline]
@@ -144,7 +137,7 @@ impl<S: Duplexer, R: RngCore + CryptoRng> Arthur<S, R> {
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<S: Duplexer, R: RngCore + CryptoRng> ::core::fmt::Debug for Arthur<S, R> {
+impl<S: DuplexHash, R: RngCore + CryptoRng> ::core::fmt::Debug for Arthur<S, R> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.merlin.fmt(f)
     }

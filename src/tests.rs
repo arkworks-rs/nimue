@@ -1,4 +1,4 @@
-use crate::{keccak::Keccak, IOPattern, Merlin};
+use crate::{hash::keccak::Keccak, IOPattern, Merlin};
 
 /// How should a protocol without IOPattern be handled?
 #[test]
