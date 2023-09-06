@@ -43,3 +43,10 @@ required-features = ["arkworks"]
 [[example]]
 name = "bulletproof"
 required-features = ["arkworks"]
+
+[package.metadata.docs.rs]
+rustdoc-args = [
+    "--html-in-header", "docs/katex-header.html",
+    "--cfg", "docsrs",
+]
+features = ["arkworks", "dalek"]
