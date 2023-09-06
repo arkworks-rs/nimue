@@ -1,8 +1,8 @@
 [package]
 name = "nimue"
-version = "0.0.1-alpha4"
+version = "0.0.1-alpha5"
 authors = ["Michele Orrù <michele@tumbolandia.net>"]
-description = "A library for secure Fiat-Shamir."
+description = "A library for Fiat-Shamir transcripts."
 edition = "2021"
 license = "MIT/Apache-2.0"
 resolver = "2"
@@ -46,7 +46,7 @@ required-features = ["arkworks"]
 
 [package.metadata.docs.rs]
 rustdoc-args = [
-    "--html-in-header", "docs/katex-header.html",
+    "--html-in-header", "doc/katex-header.html",
     "--cfg", "docsrs",
 ]
 features = ["arkworks", "dalek"]
