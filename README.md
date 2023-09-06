@@ -11,5 +11,5 @@ Nimue: a Fiat-Shamir library
 Nimue is a hash-agnostic library that believes in random oracles.
 It built on the top of the SAFE framework and provides an API for generating the verifier's and prover's random coins.
 
-Check out the [documentation](https://docs.rs/crate/nimue/) and some [`examples/`](https://github.com/mmaker/nimue/tree/main/examples).
+Check out the [documentation](https://docs.rs/nimue/latest/nimue/) and some [`examples/`](https://github.com/mmaker/nimue/tree/main/examples).
 
