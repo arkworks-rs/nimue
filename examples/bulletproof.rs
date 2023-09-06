@@ -220,7 +220,7 @@ fn main() {
         prove::<nimue::DefaultHash, G>(&mut prover_transcript, generators, &statement, witness)
             .expect("Error proving");
 
-    let mut verifier_transcript = Merlin::<nimue::DefaultHash>::new(&io_pattern);
+    let mut verifier_transcript = Merlin::new(&io_pattern);
     verifier_transcript
         .absorb_serializable(&[statement])
         .unwrap();

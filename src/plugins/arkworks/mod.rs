@@ -61,7 +61,9 @@ impl<C: FpConfig<N>, const N: usize, H: DuplexHash<U = Fp<C, N>>> BridgeField
         input
             .iter()
             .map(|i| match i.into_affine().xy() {
-                Some((&x, &y)) => self.absorb_native(&[x, y]),
+                // clone here is a hack for the API change
+                // .xy() returning &(x, y) vs (x, y)
+                Some((x, y)) => self.absorb_native(&[x.clone(), y.clone()]),
                 None => unimplemented!(),
             })
             .collect()
