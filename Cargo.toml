@@ -1,6 +1,6 @@
 [package]
 name = "nimue"
-version = "0.0.1-alpha3"
+version = "0.0.1-alpha4"
 authors = ["Michele Orrù <michele@tumbolandia.net>"]
 description = "A library for secure Fiat-Shamir."
 edition = "2021"
