@@ -1,4 +1,4 @@
-use crate::InvalidTag;
+pub use crate::{DuplexHash, IOPattern, InvalidTag, Arthur, Merlin};
 use curve25519_dalek::{RistrettoPoint, Scalar};
 
 pub trait DalekIO {

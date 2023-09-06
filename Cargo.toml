@@ -1,6 +1,6 @@
 [package]
 name = "nimue"
-version = "0.0.1-alpha5"
+version = "0.0.1-alpha6"
 authors = ["Michele Orrù <michele@tumbolandia.net>"]
 description = "A library for Fiat-Shamir transcripts."
 edition = "2021"

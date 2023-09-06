@@ -1,10 +1,9 @@
 mod prelude;
 
+use prelude::*;
 use curve25519_dalek::{RistrettoPoint, Scalar};
 
-use crate::{DuplexHash, IOPattern, InvalidTag, Merlin};
-
-impl prelude::DalekIO for IOPattern {
+impl<H: DuplexHash> DalekIO for IOPattern<H> {
     fn absorb_scalars(self, count: usize, label: &'static str) -> Self {
         self.absorb(count * 32, label)
     }
