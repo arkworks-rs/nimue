@@ -22,7 +22,6 @@ pub trait Sponge:
     + IndexMut<Range<usize>, Output = [Self::U]>
 {
     type U: Unit;
-
     const CAPACITY: usize;
     const RATE: usize;
 

@@ -1,7 +1,7 @@
 use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
 use ark_serialize::{CanonicalSerialize, SerializationError};
-use core::fmt::{Display, Formatter, Debug};
+use core::fmt::{Debug, Display, Formatter};
 
 use crate::{hash::Unit, InvalidTag};
 
@@ -19,7 +19,6 @@ pub trait ArkIOPattern {
     ) -> Self;
 
     fn squeeze_pfelt<F: PrimeField>(self, count: usize, label: &'static str) -> Self;
-
 }
 
 impl Display for SerTagErr {

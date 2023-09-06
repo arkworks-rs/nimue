@@ -15,10 +15,7 @@ use rand::{CryptoRng, RngCore};
 impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {}
 
 impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
-    fn absorb_serializable<S: CanonicalSerialize>(
-        &mut self,
-        input: &[S],
-    ) -> Result<(), SerTagErr> {
+    fn absorb_serializable<S: CanonicalSerialize>(&mut self, input: &[S]) -> Result<(), SerTagErr> {
         let mut u8input = Vec::new();
         input
             .serialize_compressed(&mut u8input)
@@ -28,9 +25,9 @@ impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
 
     fn squeeze_pfelt<F: PrimeField>(&mut self) -> Result<F, InvalidTag> {
         let len = ((F::BasePrimeField::MODULUS_BIT_SIZE + 128) / 8) as usize;
-            let mut bytes = vec![0; len];
-            self.squeeze_bytes(&mut bytes)?;
-            Ok(F::from_le_bytes_mod_order(&bytes))
+        let mut bytes = vec![0; len];
+        self.squeeze_bytes(&mut bytes)?;
+        Ok(F::from_le_bytes_mod_order(&bytes))
     }
 }
 
@@ -73,7 +70,6 @@ impl<C: FpConfig<N>, const N: usize, H: DuplexHash<U = Fp<C, N>>> BridgeField
     fn squeeze_scalars(&mut self, output: &mut [Self::U]) -> Result<(), InvalidTag> {
         self.squeeze_native(output)
     }
-
 }
 
 impl<H: DuplexHash> ArkIOPattern for IOPattern<H> {

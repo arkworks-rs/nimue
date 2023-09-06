@@ -1,5 +1,5 @@
-use std::collections::vec_deque::VecDeque;
 use core::marker::PhantomData;
+use std::collections::vec_deque::VecDeque;
 
 use super::errors::InvalidTag;
 use super::hash::{DuplexHash, Keccak};

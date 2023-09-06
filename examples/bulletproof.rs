@@ -1,8 +1,8 @@
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::{Arthur, Merlin, IOPattern, InvalidTag, DuplexHash};
 use nimue::plugins::arkworks::prelude::*;
+use nimue::{Arthur, DuplexHash, IOPattern, InvalidTag, Merlin};
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -70,7 +70,9 @@ impl<H: DuplexHash> BulletproofIOPattern for IOPattern<H> {
         S: DuplexHash,
     {
         for _ in 0..log2(len) {
-            self = self.absorb_serializable::<G>(2, "round-message").squeeze_pfelt::<G::ScalarField>(1, "challenge");
+            self = self
+                .absorb_serializable::<G>(2, "round-message")
+                .squeeze_pfelt::<G::ScalarField>(1, "challenge");
         }
         self
     }
@@ -83,7 +85,7 @@ fn prove<H, G>(
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> Result<Bulletproof<G>, InvalidTag>
 where
-    H: DuplexHash<U=u8>,
+    H: DuplexHash<U = u8>,
     G: CurveGroup,
 {
     assert_eq!(witness.0.len(), witness.1.len());
@@ -139,7 +141,7 @@ fn verify<G, H>(
     bulletproof: &Bulletproof<G>,
 ) -> Result<(), InvalidTag>
 where
-    H: DuplexHash<U=u8>,
+    H: DuplexHash<U = u8>,
     G: CurveGroup,
 {
     let mut g = generators.0.to_vec();
@@ -219,7 +221,9 @@ fn main() {
             .expect("Error proving");
 
     let mut verifier_transcript = Merlin::<nimue::DefaultHash>::new(&io_pattern);
-    verifier_transcript.absorb_serializable(&[statement]).unwrap();
+    verifier_transcript
+        .absorb_serializable(&[statement])
+        .unwrap();
     verifier_transcript.ratchet().unwrap();
     verify(
         &mut verifier_transcript,

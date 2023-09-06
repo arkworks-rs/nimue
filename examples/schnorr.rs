@@ -57,7 +57,7 @@ fn prove<H: DuplexHash<U = u8>, G: CurveGroup>(
     Ok(proof)
 }
 
-fn verify<H: DuplexHash<U=u8>, G: CurveGroup>(
+fn verify<H: DuplexHash<U = u8>, G: CurveGroup>(
     transcript: &mut Merlin<H, u8>,
     g: G,
     pk: G,
