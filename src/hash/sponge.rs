@@ -38,14 +38,12 @@ pub struct DuplexSponge<C: Sponge> {
     squeeze_pos: usize,
 }
 
-
 impl<F: Unit, C: Sponge<U = F>> DuplexHash for DuplexSponge<C> {
     type U = F;
 
     fn new(tag: [u8; 32]) -> Self {
-        let mut state = C::new(tag);
         Self {
-            state,
+            state: C::new(tag),
             absorb_pos: 0,
             squeeze_pos: 0,
         }
@@ -101,4 +99,3 @@ impl<F: Unit, C: Sponge<U = F>> DuplexHash for DuplexSponge<C> {
         self
     }
 }
-

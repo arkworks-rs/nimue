@@ -1,9 +1,10 @@
-use core::borrow::Borrow;
-
 use rand::{CryptoRng, RngCore};
 
+use crate::hash::Unit;
+use crate::IOPattern;
+
 use super::hash::{DuplexHash, Keccak};
-use super::{DefaultHash, DefaultRng, IOPattern, InvalidTag, Merlin};
+use super::{DefaultHash, DefaultRng, InvalidTag, Merlin};
 /// Arthur is a cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
 /// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.
@@ -51,16 +52,16 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
 }
 
 /// Builder for the prover state.
-pub struct ArthurBuilder<S: DuplexHash>
+pub struct ArthurBuilder<S: DuplexHash<U = U>, U: Unit>
 where
     S: DuplexHash,
 {
-    merlin: Merlin<S>,
+    merlin: Merlin<S, U>,
     u8sponge: Keccak,
 }
 
-impl<S: DuplexHash> ArthurBuilder<S> {
-    pub(crate) fn new(io_pattern: &IOPattern) -> Self {
+impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
+    pub(crate) fn new(io_pattern: &IOPattern<H>) -> Self {
         let merlin = Merlin::new(io_pattern);
 
         let mut u8sponge = Keccak::default();
@@ -79,7 +80,7 @@ impl<S: DuplexHash> ArthurBuilder<S> {
 
     // Finalize the state integrating a cryptographically-secure
     // random number generator that will be used to seed the state before future squeezes.
-    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<S, R> {
+    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<H, R, H::U> {
         let arthur = ProverRng {
             sponge: self.u8sponge,
             csrng,
@@ -92,41 +93,42 @@ impl<S: DuplexHash> ArthurBuilder<S> {
     }
 }
 
-impl<S: DuplexHash, B: Borrow<IOPattern>> From<B> for Arthur<S> {
-    fn from(pattern: B) -> Self {
-        ArthurBuilder::new(pattern.borrow()).finalize_with_rng(DefaultRng::default())
+impl<R: RngCore + CryptoRng + Default, H: DuplexHash> From<&IOPattern<H>> for Arthur<H, R, H::U> {
+    fn from(pattern: &IOPattern<H>) -> Self {
+        ArthurBuilder::new(pattern).finalize_with_rng(R::default())
     }
 }
 
 /// The state of an interactive proof system.
 /// Holds the state of the verifier, and provides the random coins for the prover.
-pub struct Arthur<S = DefaultHash, R = DefaultRng>
+pub struct Arthur<H = DefaultHash, R = DefaultRng, U = u8>
 where
-    S: DuplexHash,
+    H: DuplexHash<U = U>,
     R: RngCore + CryptoRng,
+    U: Unit,
 {
     /// The randomness state of the prover.
     pub(crate) arthur: ProverRng<R>,
-    pub(crate) merlin: Merlin<S>,
+    pub(crate) merlin: Merlin<H, H::U>,
 }
 
-impl<S: DuplexHash, R: RngCore + CryptoRng> Arthur<S, R> {
-    pub fn new(io_pattern: &IOPattern, csrng: R) -> Self {
+impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
+    pub fn new(io_pattern: &IOPattern<H>, csrng: R) -> Self {
         ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)
     }
 
     #[inline]
-    pub fn absorb_native(&mut self, input: &[S::U]) -> Result<Vec<u8>, InvalidTag> {
-        let serialized = bincode::serialize(input).unwrap();
-        self.arthur.sponge.absorb_unchecked(&serialized);
+    pub fn absorb_native(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+        // let serialized = bincode::serialize(input).unwrap();
+        // self.arthur.sponge.absorb_unchecked(&serialized);
         self.merlin.absorb_native(input)?;
 
-        Ok(serialized)
+        Ok(())
     }
 
     #[inline]
     pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
-        self.merlin.ratchet().map(|_| ())
+        self.merlin.ratchet()
     }
 
     #[inline]
@@ -137,8 +139,18 @@ impl<S: DuplexHash, R: RngCore + CryptoRng> Arthur<S, R> {
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<S: DuplexHash, R: RngCore + CryptoRng> ::core::fmt::Debug for Arthur<S, R> {
+impl<R: RngCore + CryptoRng, H: DuplexHash> ::core::fmt::Debug for Arthur<H, R, H::U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.merlin.fmt(f)
+    }
+}
+
+impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
+    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+        self.absorb_native(input)
+    }
+
+    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.squeeze_native(output)
     }
 }

@@ -37,7 +37,7 @@
 //! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! // by default, arthur is seeded with `rand::rngs::OsRng`.
 //! let mut arthur = Arthur::<nimue::DefaultHash>::new(&io, OsRng);
-//! arthur.absorb_native(&[0x42]).expect("Absorbing one byte");
+//! arthur.absorb_bytes(&[0x42]).expect("Absorbing one byte");
 //!
 //! // generate 32 bytes of private randomness.
 //! let mut rnd = arthur.rng().gen::<[u8; 32]>();
@@ -99,7 +99,7 @@ mod safe;
 #[cfg(test)]
 mod tests;
 
-mod plugins;
+pub mod plugins;
 
 pub use arthur::{Arthur, ArthurBuilder};
 pub use errors::InvalidTag;

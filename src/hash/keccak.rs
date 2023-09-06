@@ -7,7 +7,7 @@
 use core::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::sponge::{Sponge, DuplexSponge};
+use super::sponge::{DuplexSponge, Sponge};
 pub type Keccak = DuplexSponge<AlignedKeccakState>;
 
 fn transmute_state(st: &mut AlignedKeccakState) -> &mut [u64; 25] {
@@ -24,7 +24,6 @@ pub struct AlignedKeccakState([u8; 200]);
 impl Sponge for AlignedKeccakState {
     type U = u8;
     const CAPACITY: usize = 200 - 166;
-
     const RATE: usize = 166;
 
     fn new(tag: [u8; 32]) -> Self {
@@ -43,7 +42,7 @@ impl Sponge for AlignedKeccakState {
 
 impl Default for AlignedKeccakState {
     fn default() -> Self {
-        Self([0u8; 200])
+        Self([0u8; Self::CAPACITY + Self::RATE])
     }
 }
 

@@ -1,10 +1,12 @@
-use crate::{hash::keccak::Keccak, IOPattern, Merlin};
+use crate::hash::keccak::Keccak;
+use crate::safe::IOPattern;
+use crate::Merlin;
 
 /// How should a protocol without IOPattern be handled?
 #[test]
 fn test_iopattern() {
     // test that the byte separator is always added
-    let iop = IOPattern::new("example.com");
+    let iop = IOPattern::<Keccak>::new("example.com");
     assert!(iop.as_bytes().starts_with(b"example.com"));
 }
 

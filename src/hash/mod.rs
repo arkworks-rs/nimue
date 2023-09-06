@@ -1,17 +1,16 @@
 /// SHA3 sponge function.
 pub mod keccak;
-/// Basic units over which a sponge operates.
-pub mod unit;
 /// Support for legacy hash functions (SHA2).
 pub mod legacy;
 pub mod sponge;
 
 pub use keccak::Keccak;
-pub use unit::Unit;
-
 use zeroize::Zeroize;
 
-/// A Duplexer is an abstract interface for absorbing and squeezing data.
+/// Basic units over which a sponge operates.
+pub trait Unit: Clone + Default + Sized + Zeroize {}
+
+/// A DuplexHash is an abstract interface for absorbing and squeezing data.
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.
@@ -45,5 +44,19 @@ pub trait DuplexHash: Default + Clone + Zeroize {
     /// but is limited to exporting the state in a way that is compatible
     /// with the `load` function.
     fn tag(&self) -> &[Self::U];
-
 }
+
+impl Unit for u8 {}
+
+//     /// Return the number of random bytes that can be extracted from a random lane.
+//     ///
+//     /// If `L` is randomly distributed, how many bytes can be extracted from it?
+//     fn extractable_bytelen() -> usize;
+
+//     /// Return the number of bytes needed to express a lane.
+//     fn compressed_size() -> usize;
+
+//     /// Assuming `a` is randomly distributed in `L`, write
+//     /// `a` with random bytes.
+//     /// This function assumes that `src` contains enough bytes to fill `dst`.
+//     fn to_random_bytes(src: &[Self], dst: &mut [u8]);

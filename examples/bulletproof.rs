@@ -1,12 +1,8 @@
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::ark_plugins::{Absorbable, AlgebraicIO};
-use nimue::IOPattern;
-use nimue::{
-    ark_plugins::{Absorbs, FieldChallenges},
-    Arthur, DuplexHash, InvalidTag, Merlin,
-};
+use nimue::{Arthur, Merlin, IOPattern, InvalidTag, DuplexHash};
+use nimue::plugins::arkworks::prelude::*;
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -49,47 +45,46 @@ struct Bulletproof<G: CurveGroup> {
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
 /// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
 trait BulletproofIOPattern {
-    fn bulletproof_statement<G, S: DuplexHash>(&self) -> Self
+    fn bulletproof_statement<G, S: DuplexHash>(self) -> Self
     where
-        G: CurveGroup + Absorbable<S::L>;
+        G: CurveGroup;
 
-    fn bulletproof_io<G, S: DuplexHash>(&self, len: usize) -> Self
+    fn bulletproof_io<G, S: DuplexHash>(self, len: usize) -> Self
     where
-        G: CurveGroup + Absorbable<S::L>;
+        G: CurveGroup;
 }
 
-impl BulletproofIOPattern for IOPattern {
+impl<H: DuplexHash> BulletproofIOPattern for IOPattern<H> {
     /// The IO of the bulletproof statement (the sole commitment)
-    fn bulletproof_statement<G, S: DuplexHash>(&self) -> Self
+    fn bulletproof_statement<G, S: DuplexHash>(self) -> Self
     where
-        G: CurveGroup + Absorbable<S::L>,
+        G: CurveGroup,
     {
-        AlgebraicIO::<S>::from(self).absorb_point::<G>(1).into()
+        self.absorb_serializable::<G>(1, "Pedersen-commitment")
     }
 
     /// The IO of the bulletproof protocol
-    fn bulletproof_io<G, S>(&self, len: usize) -> Self
+    fn bulletproof_io<G, S>(mut self, len: usize) -> Self
     where
-        G: CurveGroup + Absorbable<S::L>,
+        G: CurveGroup,
         S: DuplexHash,
     {
-        let mut io_pattern = AlgebraicIO::<S>::from(self);
         for _ in 0..log2(len) {
-            io_pattern = io_pattern.absorb_point::<G>(2).squeeze_bytes(16);
+            self = self.absorb_serializable::<G>(2, "round-message").squeeze_pfelt::<G::ScalarField>(1, "challenge");
         }
-        io_pattern.into()
+        self
     }
 }
 
-fn prove<S, G>(
-    transcript: &mut Arthur<S>,
+fn prove<H, G>(
+    transcript: &mut Arthur<H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G::Affine, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> Result<Bulletproof<G>, InvalidTag>
 where
-    S: DuplexHash,
-    G: CurveGroup + Absorbable<S::L>,
+    H: DuplexHash<U=u8>,
+    G: CurveGroup,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -117,8 +112,8 @@ where
         + G::msm(g_left, a_right).unwrap()
         + G::msm(h_right, b_left).unwrap();
 
-    transcript.absorb_slice(&[left, right])?;
-    let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
+    transcript.absorb_serializable(&[left, right]).unwrap();
+    let x = transcript.squeeze_pfelt::<G::ScalarField>()?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
     let new_g = fold_generators(g_left, g_right, &x_inv, &x);
@@ -137,15 +132,15 @@ where
     Ok(bulletproof)
 }
 
-fn verify<G, S>(
-    transcript: &mut Merlin<S>,
+fn verify<G, H>(
+    transcript: &mut Merlin<H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G::Affine,
     bulletproof: &Bulletproof<G>,
 ) -> Result<(), InvalidTag>
 where
-    S: DuplexHash,
-    G: CurveGroup + Absorbable<S::L>,
+    H: DuplexHash<U=u8>,
+    G: CurveGroup,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
@@ -154,21 +149,20 @@ where
 
     let mut n = 1 << bulletproof.round_msgs.len();
     assert_eq!(g.len(), n);
-    for (left, right) in bulletproof.round_msgs.iter().rev() {
+    for &(left, right) in bulletproof.round_msgs.iter().rev() {
         n /= 2;
 
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
 
-        transcript.absorb(left)?;
-        transcript.absorb(right)?;
+        transcript.absorb_serializable(&[left, right]).unwrap();
 
-        let x = transcript.short_field_challenge::<G::ScalarField>(16)?;
+        let x = transcript.squeeze_pfelt::<G::ScalarField>()?;
         let x_inv = x.inverse().expect("You just won the lottery!");
 
         g = fold_generators(g_left, g_right, &x_inv, &x);
         h = fold_generators(h_left, h_right, &x, &x_inv);
-        statement = (statement + *left * x.square() + *right * x_inv.square()).into_affine();
+        statement = (statement + left * x.square() + right * x_inv.square()).into_affine();
     }
     let (a, b) = bulletproof.last;
     let c = a * b;
@@ -218,14 +212,14 @@ fn main() {
     let witness = (&a[..], &b[..]);
 
     let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
-    prover_transcript.absorb_slice(&[statement]).unwrap();
+    prover_transcript.absorb_serializable(&[statement]).unwrap();
     prover_transcript.ratchet().unwrap();
     let bulletproof =
         prove::<nimue::DefaultHash, G>(&mut prover_transcript, generators, &statement, witness)
             .expect("Error proving");
 
     let mut verifier_transcript = Merlin::<nimue::DefaultHash>::new(&io_pattern);
-    verifier_transcript.absorb(&statement).unwrap();
+    verifier_transcript.absorb_serializable(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
     verify(
         &mut verifier_transcript,
