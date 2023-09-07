@@ -52,11 +52,11 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
 }
 
 /// Builder for the prover state.
-pub struct ArthurBuilder<S: DuplexHash<U = U>, U: Unit>
+pub struct ArthurBuilder<H: DuplexHash<U = U>, U: Unit>
 where
-    S: DuplexHash,
+    H: DuplexHash,
 {
-    merlin: Merlin<S, U>,
+    merlin: Merlin<H, U>,
     u8sponge: Keccak,
 }
 
@@ -89,13 +89,14 @@ impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
         Arthur {
             merlin: self.merlin,
             arthur,
+            transcript: Vec::new()
         }
     }
 }
 
-impl<R: RngCore + CryptoRng + Default, H: DuplexHash> From<&IOPattern<H>> for Arthur<H, R, H::U> {
+impl<H: DuplexHash> From<&IOPattern<H>> for Arthur<H, DefaultRng, H::U> {
     fn from(pattern: &IOPattern<H>) -> Self {
-        ArthurBuilder::new(pattern).finalize_with_rng(R::default())
+        Arthur::new(pattern, DefaultRng::default())
     }
 }
 
@@ -109,7 +110,10 @@ where
 {
     /// The randomness state of the prover.
     pub(crate) arthur: ProverRng<R>,
+    /// The public coins for the protocol
     pub(crate) merlin: Merlin<H, H::U>,
+    /// The encoded data.
+    transcript: Vec<u8>,
 }
 
 impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
@@ -121,17 +125,21 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
     pub fn absorb_native(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
+        let old_len = self.transcript.len();
+        // write never fails on Vec<u8>
+        H::U::write(input, &mut self.transcript).unwrap();
+        self.arthur.sponge.absorb_unchecked(&self.transcript[old_len .. ]);
         self.merlin.absorb_native(input)?;
 
         Ok(())
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
         self.merlin.ratchet()
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn rng<'a>(&'a mut self) -> &'a mut (impl CryptoRng + RngCore) {
         &mut self.arthur
     }
@@ -139,7 +147,7 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<R: RngCore + CryptoRng, H: DuplexHash> ::core::fmt::Debug for Arthur<H, R, H::U> {
+impl<R: RngCore + CryptoRng, H: DuplexHash> core::fmt::Debug for Arthur<H, R, H::U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.merlin.fmt(f)
     }

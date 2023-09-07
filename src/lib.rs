@@ -12,12 +12,12 @@
 //! # Example
 //!
 //! ```
-//! use nimue::{IOPattern, Merlin};
+//! use nimue::{IOPattern, Merlin, DefaultHash};
 //!
-//! // create a new protocol that will absorb 1 byte and squeeze 1 byte.
-//! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
-//! // by default we use keccak, but `nimue::legacy::DigestBridge<sha2::Sha256>` works too.
-//! let mut merlin = Merlin::<nimue::DefaultHash>::new(&io);
+//! // create a new protocol that will absorb 1 byte and squeeze 16 bytes.
+//! // by default we use keccak, but things like `DigestBridge<sha2::Sha256>` will work too.
+//! let io = IOPattern::<DefaultHash>::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
+//! let mut merlin = Merlin::new(&io);
 //! merlin.absorb_native(&[0x42]).expect("Absorbing one byte");
 //! let mut chal = [0u8; 16];
 //! merlin.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
@@ -34,16 +34,17 @@
 //! use nimue::{IOPattern, Arthur};
 //! use rand::{Rng, rngs::OsRng};
 //!
-//! let io = IOPattern::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
-//! // by default, arthur is seeded with `rand::rngs::OsRng`.
-//! let mut arthur = Arthur::<nimue::DefaultHash>::new(&io, OsRng);
+//! let io = IOPattern::<nimue::DefaultHash>::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
+//! // We could also use Arthur::from(&io) and have it seeded by `nimue::DefaultRng`
+//! // which is an alias for `rand::rngs::OsRng`.
+//! let mut arthur = Arthur::from(&io);
 //! arthur.absorb_bytes(&[0x42]).expect("Absorbing one byte");
 //!
 //! // generate 32 bytes of private randomness.
 //! let mut rnd = arthur.rng().gen::<[u8; 32]>();
-//! let mut chal = [0u8; 16];
 //!
 //! // continue with the protocol.
+//! let mut chal = [0u8; 16];
 //! arthur.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
@@ -107,5 +108,8 @@ pub use hash::DuplexHash;
 pub use merlin::Merlin;
 pub use safe::{IOPattern, Safe};
 
+// Default random number generator used ([`rand::rngs::OsRng`])
 pub type DefaultRng = rand::rngs::OsRng;
+
+/// Default hash function used ([`hash::Keccak`])
 pub type DefaultHash = hash::Keccak;

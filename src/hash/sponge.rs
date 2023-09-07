@@ -6,9 +6,17 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// The basic state of a cryptographic sponge.
 ///
-/// A cryptographic sponge operates over some domain `SpongeConfig::L` of lanes.
+/// A cryptographic sponge operates over some domain `SpongeConfig::U` units.
 /// It has a capacity `CAPACITY` and a rate `RATE`,
 /// and it permutes its internal state using `SpongeConfig::permute()`.
+///
+/// For implementors:
+///
+/// - we write the state in *the first* `Self::RATE` bytes of the state.
+/// The last [`Self::CAPACITY`] bytes are never touched directly.
+/// - the duplex sponge is in *overwrite mode*.
+/// This mode is not known to affect the security levels and removes assumptions on [`Self::U`]
+/// as well as constraints in the final zero-knowledge proof implementing the hash function.
 pub trait Sponge:
     Zeroize
     + Default
@@ -37,8 +45,8 @@ pub struct DuplexSponge<C: Sponge> {
     squeeze_pos: usize,
 }
 
-impl<F: Unit, C: Sponge<U = F>> DuplexHash for DuplexSponge<C> {
-    type U = F;
+impl<U: Unit, C: Sponge<U = U>> DuplexHash for DuplexSponge<C> {
+    type U = U;
 
     fn new(tag: [u8; 32]) -> Self {
         Self {
@@ -87,7 +95,7 @@ impl<F: Unit, C: Sponge<U = F>> DuplexHash for DuplexSponge<C> {
     }
 
     fn tag(&self) -> &[Self::U] {
-        &self.state[C::CAPACITY..]
+        &self.state[C::RATE..]
     }
 
     fn ratchet_unchecked(&mut self) -> &mut Self {

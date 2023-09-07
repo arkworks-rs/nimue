@@ -1,20 +1,29 @@
+/// Hash functions traits and implmentations.
+
 /// SHA3 sponge function.
 pub mod keccak;
 /// Support for legacy hash functions (SHA2).
 pub mod legacy;
+/// Sponge functions.
 pub mod sponge;
 
 pub use keccak::Keccak;
-use zeroize::Zeroize;
+
 
 /// Basic units over which a sponge operates.
-pub trait Unit: Clone + Default + Sized + Zeroize {}
+///
+/// We require the units to have a precise size in memory, to be clonable,
+/// and that we can zeroize them.
+pub trait Unit: Clone + Sized + zeroize::Zeroize {
+    /// Write a bunch of units in the wire.
+    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error>;
+}
 
 /// A DuplexHash is an abstract interface for absorbing and squeezing data.
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.
-pub trait DuplexHash: Default + Clone + Zeroize {
+pub trait DuplexHash: Default + Clone + zeroize::Zeroize {
     /// The basic unit that the sponge works with.
     /// Must support packing and unpacking to bytes.
     type U: Unit;
@@ -46,7 +55,12 @@ pub trait DuplexHash: Default + Clone + Zeroize {
     fn tag(&self) -> &[Self::U];
 }
 
-impl Unit for u8 {}
+impl Unit for u8 {
+    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error> {
+        w.write_all(bunch)
+    }
+
+}
 
 //     /// Return the number of random bytes that can be extracted from a random lane.
 //     ///
