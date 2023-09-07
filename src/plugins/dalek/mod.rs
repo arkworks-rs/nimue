@@ -1,7 +1,7 @@
-mod prelude;
+pub mod prelude;
 
-use prelude::*;
 use curve25519_dalek::{RistrettoPoint, Scalar};
+use prelude::*;
 
 impl<H: DuplexHash> DalekIO for IOPattern<H> {
     fn absorb_scalars(self, count: usize, label: &'static str) -> Self {

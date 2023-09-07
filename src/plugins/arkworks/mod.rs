@@ -12,13 +12,21 @@ use ark_serialize::CanonicalSerialize;
 use prelude::*;
 use rand::{CryptoRng, RngCore};
 
-impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {}
+impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {
+    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error> {
+        bunch
+            .serialize_compressed(w)
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "oh no!"))
+    }
+}
 
 impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
     fn absorb_serializable<S: CanonicalSerialize>(&mut self, input: &[S]) -> Result<(), SerTagErr> {
         let mut u8input = Vec::new();
         input
-            .serialize_compressed(&mut u8input)
+            .iter()
+            .map(|i| i.serialize_compressed(&mut u8input))
+            .collect::<Result<(), _>>()
             .map_err(|e| SerTagErr::Ser(e))?;
         self.absorb_native(&u8input).map_err(|e| SerTagErr::Tag(e))
     }

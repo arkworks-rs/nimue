@@ -89,7 +89,7 @@ impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
         Arthur {
             merlin: self.merlin,
             arthur,
-            transcript: Vec::new()
+            transcript: Vec::new(),
         }
     }
 }
@@ -128,7 +128,9 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
         let old_len = self.transcript.len();
         // write never fails on Vec<u8>
         H::U::write(input, &mut self.transcript).unwrap();
-        self.arthur.sponge.absorb_unchecked(&self.transcript[old_len .. ]);
+        self.arthur
+            .sponge
+            .absorb_unchecked(&self.transcript[old_len..]);
         self.merlin.absorb_native(input)?;
 
         Ok(())

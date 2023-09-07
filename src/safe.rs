@@ -9,6 +9,8 @@ use super::hash::{DuplexHash, Keccak};
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
 
+const SEP_BYTE: &'static str = " ";
+
 /// Sponge operations.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Op {
@@ -33,14 +35,16 @@ impl Op {
     /// Create a new OP from the portion of a tag.
     fn new(id: char, count: Option<usize>) -> Result<Self, InvalidTag> {
         match (id, count) {
-            ('S', Some(c)) if c > 0 => Ok(Op::Squeeze(c)),
             ('A', Some(c)) if c > 0 => Ok(Op::Absorb(c)),
             ('R', None) | ('R', Some(0)) => Ok(Op::Ratchet),
+            ('S', Some(c)) if c > 0 => Ok(Op::Squeeze(c)),
             _ => Err("Invalid tag".into()),
         }
     }
 }
 
+/// The IO Pattern of an interactive protocol.
+///
 /// A builder for tag strings to be used within the SAFE API,
 /// to construct the verifier transcript.
 #[derive(Clone)]
@@ -56,27 +60,31 @@ impl<H: DuplexHash> IOPattern<H> {
             _hash: PhantomData::default(),
         }
     }
+
+    /// Create a new IOPattern with the domain separator.
     pub fn new(domsep: &str) -> Self {
-        assert!(!domsep.contains(" "));
+        assert!(!domsep.contains(SEP_BYTE));
         Self::from_string(domsep.to_string())
     }
 
     pub fn absorb(self, count: usize, label: &'static str) -> Self {
         assert!(count > 0, "Count must be positive");
-        assert!(!label.contains(' '));
+        assert!(!label.contains(SEP_BYTE));
+        assert!(!label[..1].parse::<u8>().is_ok());
 
-        Self::from_string(self.io + &format!(" A{}{}", count, label))
+        Self::from_string(self.io + SEP_BYTE + &format!("A{}", count) + label)
     }
 
     pub fn squeeze(self, count: usize, label: &'static str) -> Self {
         assert!(count > 0, "Count must be positive");
-        assert!(!label.contains(' '));
+        assert!(!label.contains(SEP_BYTE));
+        assert!(!label[..1].parse::<u8>().is_ok());
 
-        Self::from_string(self.io + &format!(" S{}{}", count, label))
+        Self::from_string(self.io + SEP_BYTE + &format!("S{}", count) + label)
     }
 
     pub fn ratchet(self) -> Self {
-        Self::from_string(self.io + &" R")
+        Self::from_string(self.io + SEP_BYTE + &"R")
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -93,7 +101,11 @@ impl<H: DuplexHash> IOPattern<H> {
         let mut stack = VecDeque::new();
 
         // skip the domain separator
-        for part in io_pattern.split(|&b| b as char == ' ').into_iter().skip(1) {
+        for part in io_pattern
+            .split(|&b| b == SEP_BYTE.as_bytes()[0])
+            .into_iter()
+            .skip(1)
+        {
             let next_id = part[0] as char;
             let next_length = part[1..]
                 .iter()
@@ -210,7 +222,7 @@ impl<H: DuplexHash> Safe<H> {
             Some(op) => {
                 self.stack.clear();
                 Err(format!(
-                    "Invalid tag. Expected {:?}, got {:?}",
+                    "Invalid tag. Got {:?}, expected {:?}",
                     Op::Absorb(input.len()),
                     op
                 )

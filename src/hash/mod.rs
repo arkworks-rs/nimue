@@ -9,7 +9,6 @@ pub mod sponge;
 
 pub use keccak::Keccak;
 
-
 /// Basic units over which a sponge operates.
 ///
 /// We require the units to have a precise size in memory, to be clonable,
@@ -59,7 +58,6 @@ impl Unit for u8 {
     fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error> {
         w.write_all(bunch)
     }
-
 }
 
 //     /// Return the number of random bytes that can be extracted from a random lane.
