@@ -145,6 +145,10 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
     pub fn rng<'a>(&'a mut self) -> &'a mut (impl CryptoRng + RngCore) {
         &mut self.arthur
     }
+
+    pub fn transcript(&self) -> &[u8] {
+        self.transcript.as_slice()
+    }
 }
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}

@@ -83,6 +83,10 @@ impl<C: FpConfig<N>, const N: usize, H: DuplexHash<U = Fp<C, N>>> BridgeField
 }
 
 impl<H: DuplexHash> ArkIOPattern for IOPattern<H> {
+    /// This function will add `count` object of size `S::default().compressed()`.
+    ///
+    /// *WARNING* This way of estimating size is not accurate and is guaranteed to work
+    /// properly only for field and group elements. For example, it won't work properly for [`std::vec::Vec`].
     fn absorb_serializable<S: Default + CanonicalSerialize>(
         self,
         count: usize,
