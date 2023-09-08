@@ -93,6 +93,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for Digest
 
     fn new(tag: [u8; 32]) -> Self {
         let mut bridge = Self::default();
+        Digest::update(&mut bridge.hasher, &tag);
         Digest::update(&mut bridge.hasher, &Self::mask_squeeze(0, &tag));
         bridge
     }
