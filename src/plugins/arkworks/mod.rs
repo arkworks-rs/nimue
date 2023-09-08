@@ -25,7 +25,7 @@ impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
         let mut u8input = Vec::new();
         input
             .iter()
-            .map(|i| i.serialize_compressed(&mut u8input))
+            .map(|s| s.serialize_compressed(&mut u8input))
             .collect::<Result<(), _>>()
             .map_err(|e| SerTagErr::Ser(e))?;
         self.absorb_native(&u8input).map_err(|e| SerTagErr::Tag(e))
@@ -43,7 +43,9 @@ impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Bridgeu8 for Arthur<H, R, u8
     fn absorb_serializable<S: CanonicalSerialize>(&mut self, input: &[S]) -> Result<(), SerTagErr> {
         let mut u8input = Vec::new();
         input
-            .serialize_compressed(&mut u8input)
+            .iter()
+            .map(|s| s.serialize_compressed(&mut u8input))
+            .collect::<Result<(), _>>()
             .map_err(|e| SerTagErr::Ser(e))?;
         self.absorb_native(&u8input).map_err(|e| SerTagErr::Tag(e))
     }
