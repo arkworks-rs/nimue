@@ -160,10 +160,12 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> core::fmt::Debug for Arthur<H, R, H:
 }
 
 impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
+    #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
         self.absorb_native(input)
     }
 
+    #[inline(always)]
     pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
         self.merlin.squeeze_native(output)
     }
