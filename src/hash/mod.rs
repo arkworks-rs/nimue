@@ -16,6 +16,8 @@ pub use keccak::Keccak;
 pub trait Unit: Clone + Sized + zeroize::Zeroize {
     /// Write a bunch of units in the wire.
     fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error>;
+    /// Read a bunch of units from the wire
+    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error>;
 }
 
 /// A DuplexHash is an abstract interface for absorbing and squeezing data.
@@ -57,6 +59,10 @@ pub trait DuplexHash: Default + Clone + zeroize::Zeroize {
 impl Unit for u8 {
     fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error> {
         w.write_all(bunch)
+    }
+
+    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error> {
+        r.read_exact(bunch)
     }
 }
 

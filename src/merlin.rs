@@ -14,12 +14,7 @@ where
     U: Unit,
 {
     safe: Safe<H>,
-}
-
-impl<H: DuplexHash> From<&IOPattern<H>> for Merlin<H, H::U> {
-    fn from(io_pattern: &IOPattern<H>) -> Self {
-        Merlin::new(io_pattern)
-    }
+    transcript: Vec<u8>
 }
 
 impl<U: Unit, H: DuplexHash<U = U>> Merlin<H, U> {
@@ -28,7 +23,21 @@ impl<U: Unit, H: DuplexHash<U = U>> Merlin<H, U> {
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
     pub fn new(io_pattern: &IOPattern<H>) -> Self {
         let safe = Safe::new(io_pattern);
-        Self { safe }
+        let transcript = Vec::new();
+        Self { safe, transcript }
+    }
+
+    fn absorb(&mut self, input: &mut [H::U]) -> Result<(), InvalidTag> {
+        H::U::read(&mut self.transcript.as_slice(), input).unwrap();
+        self.safe.absorb(input)
+    }
+
+    fn absorb_common(&mut self, input: &[H::U], ) -> Result<(), InvalidTag> {
+        self.safe.absorb(input)
+    }
+
+    fn squeeze(&mut self, input: &mut [H::U]) -> Result<(), InvalidTag> {
+        self.safe.squeeze(input)
     }
 
     /// Absorb a slice of lanes into the sponge.
@@ -44,11 +53,13 @@ impl<U: Unit, H: DuplexHash<U = U>> Merlin<H, U> {
     }
 
     /// Signals the end of the statement and returns the (compressed) sponge state.
+    #[inline(always)]
     pub fn ratchet_and_store(self) -> Result<Vec<H::U>, InvalidTag> {
         self.safe.ratchet_and_store()
     }
 
     /// Get a challenge of `count` elements.
+    #[inline(always)]
     pub fn squeeze_native(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
         self.safe.squeeze(output)
     }
@@ -61,10 +72,12 @@ impl<H: DuplexHash<U = U>, U: Unit> core::fmt::Debug for Merlin<H, U> {
 }
 
 impl<H: DuplexHash<U = u8>> Merlin<H, u8> {
+    #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
         self.absorb_native(input)
     }
 
+    #[inline(always)]
     pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
         self.squeeze_native(output)
     }

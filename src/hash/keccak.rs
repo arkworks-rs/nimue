@@ -36,9 +36,6 @@ impl Sponge for AlignedKeccakState {
     }
 
     fn permute(&mut self) {
-        // self.state[self.pos as usize] ^= self.pos_begin;
-        // self.state[(self.pos + 1) as usize] ^= 0x04;
-        // self.state[(RATE + 1) as usize] ^= 0x80;
         keccak::f1600(transmute_state(self));
     }
 }

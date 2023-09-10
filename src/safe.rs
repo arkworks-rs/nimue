@@ -9,25 +9,25 @@ use super::hash::{DuplexHash, Keccak};
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
 
-const SEP_BYTE: &'static str = " ";
+const SEP_BYTE: &'static str = "\x00";
 
 /// Sponge operations.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Op {
+pub(crate) enum Op {
     /// Indicates absorption of `usize` lanes.
     ///
-    /// In a tag, absorption is indicated with an alphabetic string,
-    /// most commonly 'A'.
+    /// In a tag, absorb is indicated with 'A'.
     Absorb(usize),
     /// Indicates squeezing of `usize` lanes.
     ///
     /// In a tag, squeeze is indicated with 'S'.
     Squeeze(usize),
     /// Indicates a ratchet operation.
-    /// Dividing here means finishing the block and absorbing new elements from here.
-    /// For sponge functions, we squeeze sizeof(capacity) lanes
+    ///
+    /// For sponge functions, we this means squeeze sizeof(capacity) lanes
     /// and initialize a new state filling the capacity.
-    /// This allows for a more efficient preprocessing, and for removal of the secrets.
+    /// This allows for a more efficient preprocessing, and for removal of
+    /// private information stored in the rate.
     Ratchet,
 }
 
@@ -45,8 +45,22 @@ impl Op {
 
 /// The IO Pattern of an interactive protocol.
 ///
-/// A builder for tag strings to be used within the SAFE API,
-/// to construct the verifier transcript.
+/// An IO Pattern is a string denoting a
+/// sequence of operations to be performed on a [`crate::DuplexHash`].
+/// The IO Pattern is prepended by a domain separator, a NULL-terminated string
+/// that is used to prevent collisions between different protocols.
+/// Each operation (absorb, squeeze, ratchet) is identified by a
+/// single character, followed by the number of units (bytes, or field elements)
+/// to be absorbed/squeezed, and a NULL-terminated label identifying the element.
+/// The whole is separated by a NULL byte.
+///
+/// For example, the IO Pattern
+/// ```text
+/// iacr.org\0A32\0S64\0A32\0A32
+/// ```
+///
+/// Denotes a protocol absorbing 32 native elements, squeezing 64 native elements,
+/// and finally absorbing 64 native elements.
 #[derive(Clone)]
 pub struct IOPattern<H: DuplexHash> {
     io: String,
@@ -157,8 +171,8 @@ impl<H: DuplexHash> IOPattern<H> {
     }
 }
 
-impl<H: DuplexHash> ::core::fmt::Debug for IOPattern<H> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+impl<H: DuplexHash> core::fmt::Debug for IOPattern<H> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Ensure that the state isn't accidentally logged
         write!(f, "IOPattern({:?})", self.io)
     }
@@ -176,16 +190,14 @@ pub struct Safe<H: DuplexHash> {
 impl<H: DuplexHash> Safe<H> {
     /// Initialise a SAFE sponge,
     /// setting up the state of the sponge function and parsing the tag string.
-    pub(crate) fn new(io_pattern: &IOPattern<H>) -> Self {
+    pub fn new(io_pattern: &IOPattern<H>) -> Self {
         let stack = io_pattern.finalize();
         let tag = Self::generate_tag(io_pattern.as_bytes());
         Self::unchecked_load_with_stack(tag, stack)
     }
 
     /// Finish the block and compress the state.
-    ///
-    /// Dividing allows for a more efficient preprocessing.
-    pub(crate) fn ratchet(&mut self) -> Result<(), InvalidTag> {
+    pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
         if self.stack.pop_front().unwrap() != Op::Ratchet {
             Err("Invalid tag".into())
         } else {
@@ -194,15 +206,16 @@ impl<H: DuplexHash> Safe<H> {
         }
     }
 
-    /// Divide and return the sponge state.
+    /// Ratchet and return the sponge state.
     pub(crate) fn ratchet_and_store(mut self) -> Result<Vec<H::U>, InvalidTag> {
         self.ratchet()?;
         Ok(self.sponge.tag().to_vec())
     }
 
     /// Perform secure absorption of the elements in `input`.
+    ///
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
-    pub(crate) fn absorb(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+    pub fn absorb(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Absorb(length)) if length >= input.len() => {
                 if length > input.len() {
@@ -236,7 +249,7 @@ impl<H: DuplexHash> Safe<H> {
     /// For byte-oriented sponges, this operation is equivalent to the squeeze operation.
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
-    pub(crate) fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Squeeze(length)) if output.len() <= length => {
                 self.sponge.squeeze_unchecked(output);
@@ -256,7 +269,7 @@ impl<H: DuplexHash> Safe<H> {
             Some(op) => {
                 self.stack.clear();
                 Err(format!(
-                    "Invalid tag. Expected {:?}, got {:?}",
+                    "Invalid tag. Got {:?}, expected {:?}",
                     Op::Squeeze(output.len()),
                     op
                 )

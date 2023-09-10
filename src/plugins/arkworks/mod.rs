@@ -1,4 +1,4 @@
-use crate::{errors::InvalidTag, hash::Unit, Arthur, DuplexHash, IOPattern, Merlin};
+use crate::{errors::InvalidTag, hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, Safe};
 
 pub mod prelude;
 
@@ -6,21 +6,34 @@ pub mod prelude;
 // It doesn't work and is left here in this repository only for backlog.
 // mod hazmat;
 
+use std::io;
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{Fp, FpConfig, PrimeField};
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 use prelude::*;
 use rand::{CryptoRng, RngCore};
 
+const fn f_bytes<F: PrimeField>() -> usize {
+    (F::MODULUS_BIT_SIZE as usize + 128) / 8
+}
+
 impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {
-    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error> {
-        bunch
-            .serialize_compressed(w)
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "oh no!"))
+    fn write(bunch: &[Self], w: &mut impl io::Write) -> Result<(), io::Error> {
+        bunch.iter().map(|b| {
+            b.serialize_compressed(w)
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))
+        }).collect()
+    }
+
+    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error> {
+        for b in bunch.iter_mut() {
+            *b = ark_ff::Fp::<C, N>::deserialize_compressed(r).map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))?
+        }
+        Ok(())
     }
 }
 
-impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
+impl<H: DuplexHash<U = u8>> Bridgeu8 for Safe<H> {
     fn absorb_serializable<S: CanonicalSerialize>(&mut self, input: &[S]) -> Result<(), SerTagErr> {
         let mut u8input = Vec::new();
         input
@@ -28,13 +41,12 @@ impl<H: DuplexHash<U = u8>> Bridgeu8 for Merlin<H, u8> {
             .map(|s| s.serialize_compressed(&mut u8input))
             .collect::<Result<(), _>>()
             .map_err(|e| SerTagErr::Ser(e))?;
-        self.absorb_native(&u8input).map_err(|e| SerTagErr::Tag(e))
+        self.absorb(&u8input).map_err(|e| SerTagErr::Tag(e))
     }
 
     fn squeeze_pfelt<F: PrimeField>(&mut self) -> Result<F, InvalidTag> {
-        let len = ((F::BasePrimeField::MODULUS_BIT_SIZE + 128) / 8) as usize;
-        let mut bytes = vec![0; len];
-        self.squeeze_bytes(&mut bytes)?;
+        let mut bytes = vec![0; f_bytes::<F>()];
+        self.squeeze(&mut bytes)?;
         Ok(F::from_le_bytes_mod_order(&bytes))
     }
 }
@@ -47,11 +59,14 @@ impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Bridgeu8 for Arthur<H, R, u8
             .map(|s| s.serialize_compressed(&mut u8input))
             .collect::<Result<(), _>>()
             .map_err(|e| SerTagErr::Ser(e))?;
-        self.absorb_native(&u8input).map_err(|e| SerTagErr::Tag(e))
+        match self.absorb(&u8input) {
+            Err(e) => Err(SerTagErr::Tag(e)),
+            Ok(()) => Ok(())
+        }
     }
 
     fn squeeze_pfelt<F: PrimeField>(&mut self) -> Result<F, InvalidTag> {
-        self.merlin.squeeze_pfelt()
+        self.safe.squeeze_pfelt()
     }
 }
 
@@ -98,6 +113,7 @@ impl<H: DuplexHash> ArkIOPattern for IOPattern<H> {
     }
 
     fn squeeze_pfelt<F: PrimeField>(self, count: usize, label: &'static str) -> Self {
-        self.absorb(count * (F::MODULUS_BIT_SIZE as usize + 128) / 8, label)
+        println!("IO: {} * {}", f_bytes::<F>(), count);
+        self.squeeze(count * f_bytes::<F>(), label)
     }
 }
