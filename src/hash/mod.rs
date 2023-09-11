@@ -9,15 +9,17 @@ pub mod sponge;
 
 pub use keccak::Keccak;
 
+use std::io;
+
 /// Basic units over which a sponge operates.
 ///
 /// We require the units to have a precise size in memory, to be clonable,
 /// and that we can zeroize them.
 pub trait Unit: Clone + Sized + zeroize::Zeroize {
     /// Write a bunch of units in the wire.
-    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error>;
+    fn write(bunch: &[Self], w: &mut impl io::Write) -> Result<(), io::Error>;
     /// Read a bunch of units from the wire
-    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error>;
+    fn read(r: &mut impl io::Read, bunch: &mut [Self]) -> Result<(), io::Error>;
 }
 
 /// A DuplexHash is an abstract interface for absorbing and squeezing data.
@@ -48,12 +50,12 @@ pub trait DuplexHash: Default + Clone + zeroize::Zeroize {
     /// The resulting state is compressed.
     fn ratchet_unchecked(&mut self) -> &mut Self;
 
-    /// Exports the hash state, allowing for preprocessing.
-    ///
-    /// This function can be used for duplicating the state of the sponge,
-    /// but is limited to exporting the state in a way that is compatible
-    /// with the `load` function.
-    fn tag(&self) -> &[Self::U];
+    // /// Exports the hash state, allowing for preprocessing.
+    // ///
+    // /// This function can be used for duplicating the state of the sponge,
+    // /// but is limited to exporting the state in a way that is compatible
+    // /// with the `load` function.
+    // fn tag(self) -> &'static [Self::U];
 }
 
 impl Unit for u8 {
@@ -65,16 +67,3 @@ impl Unit for u8 {
         r.read_exact(bunch)
     }
 }
-
-//     /// Return the number of random bytes that can be extracted from a random lane.
-//     ///
-//     /// If `L` is randomly distributed, how many bytes can be extracted from it?
-//     fn extractable_bytelen() -> usize;
-
-//     /// Return the number of bytes needed to express a lane.
-//     fn compressed_size() -> usize;
-
-//     /// Assuming `a` is randomly distributed in `L`, write
-//     /// `a` with random bytes.
-//     /// This function assumes that `src` contains enough bytes to fill `dst`.
-//     fn to_random_bytes(src: &[Self], dst: &mut [u8]);

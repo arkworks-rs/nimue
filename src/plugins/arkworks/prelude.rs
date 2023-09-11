@@ -32,7 +32,7 @@ impl Display for SerTagErr {
 
 pub trait BridgeField {
     type U: Unit + Field;
-    fn absorb_scalars(&mut self, input: &[Self::U]) -> Result<(), InvalidTag>;
+    fn read_scalars<const N: usize>(&mut self) -> Result<[Self::U; N], InvalidTag>;
     fn absorb_points<G>(&mut self, input: &[G]) -> Result<(), InvalidTag>
     where
         G: CurveGroup<BaseField = Self::U>;

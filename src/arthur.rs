@@ -134,14 +134,14 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
         Ok(())
     }
 
-    fn absorb_common(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+    pub fn absorb_common(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
         let len = self.transcript.len();
         self.absorb(input)?;
         self.transcript.truncate(len);
         Ok(())
     }
 
-    pub fn squeeze_native(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
         self.safe.squeeze(output)
     }
 

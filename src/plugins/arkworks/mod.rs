@@ -6,12 +6,12 @@ pub mod prelude;
 // It doesn't work and is left here in this repository only for backlog.
 // mod hazmat;
 
-use std::io;
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{Fp, FpConfig, PrimeField};
-use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use prelude::*;
 use rand::{CryptoRng, RngCore};
+use std::io;
 
 const fn f_bytes<F: PrimeField>() -> usize {
     (F::MODULUS_BIT_SIZE as usize + 128) / 8
@@ -19,15 +19,19 @@ const fn f_bytes<F: PrimeField>() -> usize {
 
 impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {
     fn write(bunch: &[Self], w: &mut impl io::Write) -> Result<(), io::Error> {
-        bunch.iter().map(|b| {
-            b.serialize_compressed(w)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))
-        }).collect()
+        bunch
+            .iter()
+            .map(|b| {
+                b.serialize_compressed(w)
+                    .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))
+            })
+            .collect()
     }
 
     fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error> {
         for b in bunch.iter_mut() {
-            *b = ark_ff::Fp::<C, N>::deserialize_compressed(r).map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))?
+            *b = ark_ff::Fp::<C, N>::deserialize_compressed(r)
+                .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))?
         }
         Ok(())
     }
@@ -61,7 +65,7 @@ impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Bridgeu8 for Arthur<H, R, u8
             .map_err(|e| SerTagErr::Ser(e))?;
         match self.absorb(&u8input) {
             Err(e) => Err(SerTagErr::Tag(e)),
-            Ok(()) => Ok(())
+            Ok(()) => Ok(()),
         }
     }
 
@@ -75,8 +79,9 @@ impl<C: FpConfig<N>, const N: usize, H: DuplexHash<U = Fp<C, N>>> BridgeField
 {
     type U = Fp<C, N>;
 
-    fn absorb_scalars(&mut self, input: &[Self::U]) -> Result<(), InvalidTag> {
-        self.absorb_native(input)
+    fn read_scalars<const Len: usize>(&mut self) -> Result<[Self::U; Len], InvalidTag> {
+        let mut input = [Self::U::default(); Len];
+        self.absorb(&mut input).map(|()| input)
     }
 
     fn absorb_points<G>(&mut self, input: &[G]) -> Result<(), InvalidTag>
@@ -88,7 +93,7 @@ impl<C: FpConfig<N>, const N: usize, H: DuplexHash<U = Fp<C, N>>> BridgeField
             .map(|i| match i.into_affine().xy() {
                 // clone here is a hack for the API change
                 // .xy() returning &(x, y) vs (x, y)
-                Some((x, y)) => self.absorb_native(&[x.clone(), y.clone()]),
+                Some((x, y)) => self.absorb(&[x.clone(), y.clone()]),
                 None => unimplemented!(),
             })
             .collect()

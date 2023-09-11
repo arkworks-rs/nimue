@@ -207,9 +207,10 @@ impl<H: DuplexHash> Safe<H> {
     }
 
     /// Ratchet and return the sponge state.
-    pub(crate) fn ratchet_and_store(mut self) -> Result<Vec<H::U>, InvalidTag> {
-        self.ratchet()?;
-        Ok(self.sponge.tag().to_vec())
+    pub fn preprocess(self) -> Result<&'static [H::U], InvalidTag> {
+        unimplemented!()
+        // self.ratchet()?;
+        // Ok(self.sponge.tag().clone())
     }
 
     /// Perform secure absorption of the elements in `input`.
@@ -301,6 +302,7 @@ impl<H: DuplexHash> Drop for Safe<H> {
         if self.stack.is_empty() {
             log::error!("Unfinished operations:\n {:?}", self.stack)
         }
+        // XXX. is the compiler going to optimize this out?
         self.sponge.zeroize();
     }
 }

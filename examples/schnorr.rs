@@ -23,8 +23,6 @@ impl<H: DuplexHash<U = u8>> SchnorrIOPattern for IOPattern<H> {
         // the statement: generator and public key
         self.absorb_serializable::<G>(1, "generator")
             .absorb_serializable::<G>(1, "public-key")
-            // (optional) allow for preprocessing of the generators
-            .ratchet()
     }
 
     /// A Schnorr signature's IO Pattern.
@@ -37,7 +35,6 @@ impl<H: DuplexHash<U = u8>> SchnorrIOPattern for IOPattern<H> {
             .absorb_serializable::<G>(1, "commitment")
             // challenge in bytes
             .absorb_serializable::<G::ScalarField>(1, "challenge")
-            .ratchet()
     }
 }
 

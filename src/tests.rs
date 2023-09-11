@@ -1,6 +1,6 @@
 use crate::hash::keccak::Keccak;
 use crate::safe::IOPattern;
-use crate::Merlin;
+use crate::Safe;
 
 /// How should a protocol without IOPattern be handled?
 #[test]
@@ -15,8 +15,8 @@ fn test_iopattern() {
 #[should_panic]
 fn test_invalid_io_sequence() {
     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
-    let mut merlin = Merlin::<Keccak>::new(&iop);
-    merlin.squeeze_bytes(&mut [0u8; 16]).unwrap();
+    let mut merlin = Safe::<Keccak>::new(&iop);
+    merlin.squeeze(&mut [0u8; 16]).unwrap();
 }
 
 // Hiding for now. Should it panic ?
@@ -33,18 +33,18 @@ fn test_invalid_io_sequence() {
 fn test_deterministic() {
     let iop = IOPattern::new("example.com")
         .absorb(3, "elt")
-        .squeeze(16, "elt");
-    let mut first_merlin = Merlin::<Keccak>::new(&iop);
-    let mut second_merlin = Merlin::<Keccak>::new(&iop);
+        .squeeze(16, "another_elt");
+    let mut first_merlin = Safe::<Keccak>::new(&iop);
+    let mut second_merlin = Safe::<Keccak>::new(&iop);
 
     let mut first = [0u8; 16];
     let mut second = [0u8; 16];
 
-    first_merlin.absorb_native(b"123").unwrap();
-    second_merlin.absorb_native(b"123").unwrap();
+    first_merlin.absorb(b"123").unwrap();
+    second_merlin.absorb(b"123").unwrap();
 
-    first_merlin.squeeze_bytes(&mut first).unwrap();
-    second_merlin.squeeze_bytes(&mut second).unwrap();
+    first_merlin.squeeze(&mut first).unwrap();
+    second_merlin.squeeze(&mut second).unwrap();
     assert_eq!(first, second);
 }
 

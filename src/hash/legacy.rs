@@ -127,9 +127,9 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for Digest
         self
     }
 
-    fn tag(&self) -> &[u8] {
-        &self.cv
-    }
+    // fn tag(self) -> &'static [u8] {
+    //     self.cv.clone().as_ref()
+    // }
 
     fn squeeze_unchecked(&mut self, output: &mut [Self::U]) -> &mut Self {
         // Nothing to squeeze

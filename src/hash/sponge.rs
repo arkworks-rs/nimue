@@ -94,13 +94,14 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash for DuplexSponge<C> {
         self.squeeze_unchecked(rest)
     }
 
-    fn tag(&self) -> &[Self::U] {
-        &self.state[C::RATE..]
-    }
+    // fn tag(self) -> &'static [Self::U] {
+    //     &self.state[C::RATE..]
+    // }
 
     fn ratchet_unchecked(&mut self) -> &mut Self {
         self.state.permute();
         // set to zero the state up to rate
+        // XXX. is the compiler really going to do this?
         self.state[0..C::RATE].iter_mut().for_each(|x| x.zeroize());
         self.squeeze_pos = C::RATE;
         self

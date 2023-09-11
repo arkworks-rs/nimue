@@ -15,16 +15,13 @@ impl<H: DuplexHash> DalekIO for IOPattern<H> {
 
 impl<H: DuplexHash<U = u8>> prelude::DalekBridge for Merlin<H> {
     fn absorb_scalars(&mut self, scalars: &[Scalar]) -> Result<(), InvalidTag> {
-        scalars
-            .iter()
-            .map(|s| self.absorb_native(s.as_bytes()))
-            .collect()
+        scalars.iter().map(|s| self.absorb(s.as_bytes())).collect()
     }
 
     fn absorb_points(&mut self, points: &[RistrettoPoint]) -> Result<(), InvalidTag> {
         points
             .iter()
-            .map(|p| self.absorb_native(p.compress().as_bytes()))
+            .map(|p| self.absorb(p.compress().as_bytes()))
             .collect()
     }
 }
