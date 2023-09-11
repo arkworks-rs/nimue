@@ -6,7 +6,7 @@ pub trait DalekIO {
     fn absorb_points(self, count: usize, label: &'static str) -> Self;
 }
 
-pub trait DalekBridge {
-    fn absorb_scalars(&mut self, scalars: &[Scalar]) -> Result<(), InvalidTag>;
-    fn absorb_points(&mut self, points: &[RistrettoPoint]) -> Result<(), InvalidTag>;
+pub trait DalekMerlin {
+    fn absorb_scalars<const N: usize>(&mut self) -> Result<[Scalar; N], InvalidTag>;
+    fn absorb_points<const N: usize>(&mut self) -> Result<[RistrettoPoint; N], InvalidTag>;
 }

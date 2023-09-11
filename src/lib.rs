@@ -120,25 +120,9 @@ This crate doesn't support big-endian targets.
 "#
 );
 
-/// Extensions for arkworks types.
-// #[cfg(feature = "arkworks")]
-// pub mod ark_plugins;
-
-/// Error types.
-mod errors;
-
-/// Prover's internal state.
-mod arthur;
 /// Support for hash functions.
 pub mod hash;
-/// Verifier transcript.
-mod merlin;
-/// SAFE API
-mod safe;
-/// Unit-tests.
-#[cfg(test)]
-mod tests;
-
+/// APIs for common zkp libraries.
 pub mod plugins;
 
 pub use arthur::{Arthur, ArthurBuilder};
@@ -152,3 +136,15 @@ pub type DefaultRng = rand::rngs::OsRng;
 
 /// Default hash function used ([`hash::Keccak`])
 pub type DefaultHash = hash::Keccak;
+
+/// Prover's internal state.
+mod arthur;
+/// Error types.
+mod errors;
+/// Verifier transcript.
+mod merlin;
+/// SAFE API
+mod safe;
+/// Unit-tests.
+#[cfg(test)]
+mod tests;

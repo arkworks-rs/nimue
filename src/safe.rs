@@ -9,7 +9,7 @@ use super::hash::{DuplexHash, Keccak};
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
 
-const SEP_BYTE: &'static str = "\x00";
+const SEP_BYTE: &'static str = "\0";
 
 /// Sponge operations.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
