@@ -8,16 +8,15 @@ use crate::safe::{IOPattern, Safe};
 /// Merlin is wrapper around a sponge that provides a secure
 /// Fiat-Shamir implementation for public-coin protocols.
 #[derive(Clone)]
-pub struct Merlin<'a, H = DefaultHash, U = u8>
+pub struct Merlin<'a, H = DefaultHash>
 where
-    H: DuplexHash<U = U>,
-    U: Unit,
+    H: DuplexHash,
 {
     safe: Safe<H>,
     transcript: &'a [u8],
 }
 
-impl<'a, U: Unit, H: DuplexHash<U = U>> Merlin<'a, H, U> {
+impl<'a, U: Unit, H: DuplexHash<U = U>> Merlin<'a, H> {
     /// Creates a new [`Merlin`] instance with the given sponge and IO Pattern.
     ///
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
@@ -57,13 +56,13 @@ impl<'a, U: Unit, H: DuplexHash<U = U>> Merlin<'a, H, U> {
     }
 }
 
-impl<'a, H: DuplexHash<U = U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
+impl<'a, H: DuplexHash<U = U>, U: Unit> core::fmt::Debug for Merlin<'a, H> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Merlin").field(&self.safe).finish()
     }
 }
 
-impl<'a, H: DuplexHash<U = u8>> Merlin<'a, H, u8> {
+impl<'a, H: DuplexHash<U = u8>> Merlin<'a, H> {
     #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
         self.absorb(input)

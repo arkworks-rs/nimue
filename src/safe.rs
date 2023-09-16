@@ -9,6 +9,9 @@ use super::hash::{DuplexHash, Keccak};
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
 
+
+/// This is the separator between operations in the IO Pattern
+/// and as such is the only forbidden characted in labels.
 const SEP_BYTE: &'static str = "\0";
 
 /// Sponge operations.
@@ -312,5 +315,23 @@ impl<H: DuplexHash> ::core::fmt::Debug for Safe<H> {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
         write!(f, "SAFE sponge with IO: {:?}", self.stack)
+    }
+}
+
+impl<H:DuplexHash, B: core::borrow::Borrow<IOPattern<H>>> From<B> for Safe<H> {
+    fn from(value: B) -> Self {
+        Self::new(value.borrow())
+    }
+}
+
+impl<H: DuplexHash<U = u8>> Safe<H> {
+    #[inline(always)]
+    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+        self.absorb(input)
+    }
+
+    #[inline(always)]
+    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+        self.squeeze(output)
     }
 }
