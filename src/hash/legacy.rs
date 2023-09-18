@@ -88,9 +88,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Default for DigestBri
     }
 }
 
-impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for DigestBridge<D> {
-    type U = u8;
-
+impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for DigestBridge<D> {
     fn new(tag: [u8; 32]) -> Self {
         let mut bridge = Self::default();
         Digest::update(&mut bridge.hasher, &tag);
@@ -98,7 +96,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for Digest
         bridge
     }
 
-    fn absorb_unchecked(&mut self, input: &[Self::U]) -> &mut Self {
+    fn absorb_unchecked(&mut self, input: &[u8]) -> &mut Self {
         if let Mode::Ratcheted(count) = self.mode {
             // append to the state the squeeze mask
             // with the length of the data read so far
@@ -131,7 +129,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash for Digest
     //     self.cv.clone().as_ref()
     // }
 
-    fn squeeze_unchecked(&mut self, output: &mut [Self::U]) -> &mut Self {
+    fn squeeze_unchecked(&mut self, output: &mut [u8]) -> &mut Self {
         // Nothing to squeeze
         if output.is_empty() {
             self

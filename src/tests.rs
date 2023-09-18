@@ -1,6 +1,6 @@
 use crate::hash::keccak::Keccak;
 use crate::safe::IOPattern;
-use crate::{Safe, Merlin, Arthur};
+use crate::{Arthur, Merlin, Safe};
 
 /// How should a protocol without IOPattern be handled?
 #[test]
@@ -70,16 +70,16 @@ fn test_statistics() {
         .all(|&x| x < frequencies[0] + 16 && x > 0));
 }
 
-
 #[test]
 fn test_merlin() {
-    let io = IOPattern::new("domain separator").absorb(10, "hello").squeeze(10, "bye bye");
+    let io = IOPattern::new("domain separator")
+        .absorb(10, "hello")
+        .squeeze(10, "bye bye");
 
     let mut arthur = Arthur::<Keccak>::from(&io);
     arthur.absorb(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
     arthur.squeeze(&mut [0u8; 10]).unwrap();
     let transcript = arthur.transcript();
-
 
     let mut merlin = Merlin::<Keccak>::new(&io, transcript);
     let mut input = [0u8; 5];

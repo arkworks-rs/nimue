@@ -50,16 +50,16 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
 }
 
 /// Builder for the prover state.
-pub struct ArthurBuilder<H: DuplexHash<U = U>, U: Unit>
+pub struct ArthurBuilder<H: DuplexHash<U>, U: Unit>
 where
-    H: DuplexHash,
+    H: DuplexHash<U>,
 {
-    safe: Safe<H>,
+    safe: Safe<H, U>,
     u8sponge: Keccak,
 }
 
-impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
-    pub(crate) fn new(io_pattern: &IOPattern<H>) -> Self {
+impl<H: DuplexHash<U>, U: Unit> ArthurBuilder<H, U> {
+    pub(crate) fn new(io_pattern: &IOPattern<H, U>) -> Self {
         let safe = Safe::new(io_pattern);
 
         let mut u8sponge = Keccak::default();
@@ -78,7 +78,7 @@ impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
 
     // Finalize the state integrating a cryptographically-secure
     // random number generator that will be used to seed the state before future squeezes.
-    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<H, R, H::U> {
+    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<H, R, U> {
         let rng = ProverRng {
             sponge: self.u8sponge,
             csrng,
@@ -92,8 +92,8 @@ impl<H: DuplexHash<U = U>, U: Unit> ArthurBuilder<H, U> {
     }
 }
 
-impl<H: DuplexHash> From<&IOPattern<H>> for Arthur<H, DefaultRng, H::U> {
-    fn from(pattern: &IOPattern<H>) -> Self {
+impl<U: Unit, H: DuplexHash<U>> From<&IOPattern<H, U>> for Arthur<H, DefaultRng, U> {
+    fn from(pattern: &IOPattern<H, U>) -> Self {
         Arthur::new(pattern, DefaultRng::default())
     }
 }
@@ -102,30 +102,30 @@ impl<H: DuplexHash> From<&IOPattern<H>> for Arthur<H, DefaultRng, H::U> {
 /// Holds the state of the verifier, and provides the random coins for the prover.
 pub struct Arthur<H = DefaultHash, R = DefaultRng, U = u8>
 where
-    H: DuplexHash<U = U>,
+    H: DuplexHash<U>,
     R: RngCore + CryptoRng,
     U: Unit,
 {
     /// The randomness state of the prover.
     pub(crate) rng: ProverRng<R>,
     /// The public coins for the protocol
-    pub(crate) safe: Safe<H>,
+    pub(crate) safe: Safe<H, U>,
     /// The encoded data.
-    transcript: Vec<u8>,
+    pub(crate) transcript: Vec<u8>,
 }
 
-impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
-    pub fn new(io_pattern: &IOPattern<H>, csrng: R) -> Self {
+impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
+    pub fn new(io_pattern: &IOPattern<H, U>, csrng: R) -> Self {
         ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)
     }
 
     #[inline(always)]
-    pub fn absorb(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+    pub fn absorb(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
         let old_len = self.transcript.len();
         // write never fails on Vec<u8>
-        H::U::write(input, &mut self.transcript).unwrap();
+        U::write(input, &mut self.transcript).unwrap();
         self.rng
             .sponge
             .absorb_unchecked(&self.transcript[old_len..]);
@@ -134,14 +134,14 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
         Ok(())
     }
 
-    pub fn absorb_common(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+    pub fn absorb_common(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         let len = self.transcript.len();
         self.absorb(input)?;
         self.transcript.truncate(len);
         Ok(())
     }
 
-    pub fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
         self.safe.squeeze(output)
     }
 
@@ -162,13 +162,13 @@ impl<R: RngCore + CryptoRng, H: DuplexHash> Arthur<H, R, H::U> {
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<R: RngCore + CryptoRng, H: DuplexHash> core::fmt::Debug for Arthur<H, R, H::U> {
+impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> core::fmt::Debug for Arthur<H, R, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.safe.fmt(f)
     }
 }
 
-impl<H: DuplexHash<U = u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
+impl<H: DuplexHash<u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
     #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
         self.absorb(input)

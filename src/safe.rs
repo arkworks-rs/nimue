@@ -1,6 +1,8 @@
 use core::marker::PhantomData;
 use std::collections::vec_deque::VecDeque;
 
+use crate::hash::Unit;
+
 use super::errors::InvalidTag;
 use super::hash::{DuplexHash, Keccak};
 
@@ -8,7 +10,6 @@ use super::hash::{DuplexHash, Keccak};
 // use ::core::num::NonZeroUsize;
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
-
 
 /// This is the separator between operations in the IO Pattern
 /// and as such is the only forbidden characted in labels.
@@ -65,12 +66,16 @@ impl Op {
 /// Denotes a protocol absorbing 32 native elements, squeezing 64 native elements,
 /// and finally absorbing 64 native elements.
 #[derive(Clone)]
-pub struct IOPattern<H: DuplexHash> {
+pub struct IOPattern<H, U = u8>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+{
     io: String,
-    _hash: PhantomData<H>,
+    _hash: PhantomData<(H, U)>,
 }
 
-impl<H: DuplexHash> IOPattern<H> {
+impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     fn from_string(io: String) -> Self {
         Self {
             io,
@@ -174,7 +179,7 @@ impl<H: DuplexHash> IOPattern<H> {
     }
 }
 
-impl<H: DuplexHash> core::fmt::Debug for IOPattern<H> {
+impl<U: Unit, H: DuplexHash<U>> core::fmt::Debug for IOPattern<H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Ensure that the state isn't accidentally logged
         write!(f, "IOPattern({:?})", self.io)
@@ -185,15 +190,20 @@ impl<H: DuplexHash> core::fmt::Debug for IOPattern<H> {
 ///
 /// Operations in the SAFE API provide a secure interface for using sponges.
 #[derive(Clone)]
-pub struct Safe<H: DuplexHash> {
+pub struct Safe<H, U = u8>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+{
     sponge: H,
     stack: VecDeque<Op>,
+    _unit: PhantomData<U>,
 }
 
-impl<H: DuplexHash> Safe<H> {
+impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     /// Initialise a SAFE sponge,
     /// setting up the state of the sponge function and parsing the tag string.
-    pub fn new(io_pattern: &IOPattern<H>) -> Self {
+    pub fn new(io_pattern: &IOPattern<H, U>) -> Self {
         let stack = io_pattern.finalize();
         let tag = Self::generate_tag(io_pattern.as_bytes());
         Self::unchecked_load_with_stack(tag, stack)
@@ -210,7 +220,7 @@ impl<H: DuplexHash> Safe<H> {
     }
 
     /// Ratchet and return the sponge state.
-    pub fn preprocess(self) -> Result<&'static [H::U], InvalidTag> {
+    pub fn preprocess(self) -> Result<&'static [U], InvalidTag> {
         unimplemented!()
         // self.ratchet()?;
         // Ok(self.sponge.tag().clone())
@@ -219,7 +229,7 @@ impl<H: DuplexHash> Safe<H> {
     /// Perform secure absorption of the elements in `input`.
     ///
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
-    pub fn absorb(&mut self, input: &[H::U]) -> Result<(), InvalidTag> {
+    pub fn absorb(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Absorb(length)) if length >= input.len() => {
                 if length > input.len() {
@@ -253,7 +263,7 @@ impl<H: DuplexHash> Safe<H> {
     /// For byte-oriented sponges, this operation is equivalent to the squeeze operation.
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
-    pub fn squeeze(&mut self, output: &mut [H::U]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
         match self.stack.pop_front() {
             Some(Op::Squeeze(length)) if output.len() <= length => {
                 self.sponge.squeeze_unchecked(output);
@@ -294,11 +304,12 @@ impl<H: DuplexHash> Safe<H> {
         Self {
             sponge: H::new(tag),
             stack,
+            _unit: PhantomData::default(),
         }
     }
 }
 
-impl<H: DuplexHash> Drop for Safe<H> {
+impl<U: Unit, H: DuplexHash<U>> Drop for Safe<H, U> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
         // assert!(self.stack.is_empty());
@@ -310,7 +321,7 @@ impl<H: DuplexHash> Drop for Safe<H> {
     }
 }
 
-impl<H: DuplexHash> ::core::fmt::Debug for Safe<H> {
+impl<U: Unit, H: DuplexHash<U>> ::core::fmt::Debug for Safe<H, U> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
@@ -318,13 +329,13 @@ impl<H: DuplexHash> ::core::fmt::Debug for Safe<H> {
     }
 }
 
-impl<H:DuplexHash, B: core::borrow::Borrow<IOPattern<H>>> From<B> for Safe<H> {
+impl<U: Unit, H: DuplexHash<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B> for Safe<H, U> {
     fn from(value: B) -> Self {
         Self::new(value.borrow())
     }
 }
 
-impl<H: DuplexHash<U = u8>> Safe<H> {
+impl<H: DuplexHash<u8>> Safe<H, u8> {
     #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
         self.absorb(input)

@@ -45,9 +45,7 @@ pub struct DuplexSponge<C: Sponge> {
     squeeze_pos: usize,
 }
 
-impl<U: Unit, C: Sponge<U = U>> DuplexHash for DuplexSponge<C> {
-    type U = U;
-
+impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
     fn new(tag: [u8; 32]) -> Self {
         Self {
             state: C::new(tag),
@@ -56,7 +54,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash for DuplexSponge<C> {
         }
     }
 
-    fn absorb_unchecked(&mut self, input: &[Self::U]) -> &mut Self {
+    fn absorb_unchecked(&mut self, input: &[U]) -> &mut Self {
         if input.len() == 0 {
             self.squeeze_pos = C::RATE;
             self
@@ -75,7 +73,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash for DuplexSponge<C> {
         }
     }
 
-    fn squeeze_unchecked(&mut self, output: &mut [Self::U]) -> &mut Self {
+    fn squeeze_unchecked(&mut self, output: &mut [U]) -> &mut Self {
         if output.len() == 0 {
             return self;
         }

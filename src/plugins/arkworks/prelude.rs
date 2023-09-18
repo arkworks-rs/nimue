@@ -1,46 +1,27 @@
+pub use super::iopattern::AlgebraicIOPattern;
+pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, InvalidTag, Merlin, Safe};
 use ark_ec::CurveGroup;
-use ark_ff::{Field, PrimeField};
-use ark_serialize::{CanonicalSerialize, SerializationError};
-use core::fmt::{Debug, Display, Formatter};
 
-use crate::{hash::Unit, InvalidTag};
-
-#[derive(Debug)]
-pub enum SerTagErr {
-    Ser(SerializationError),
-    Tag(InvalidTag),
+pub trait ArkIOPattern<G: CurveGroup, U: Unit> {
+    fn absorb_scalars(self, count: usize, label: &'static str) -> Self;
+    fn absorb_points(self, count: usize, label: &'static str) -> Self;
+    fn squeeze_scalars(self, count: usize, label: &'static str) -> Self;
 }
 
-pub trait ArkIOPattern {
-    fn absorb_serializable<S: Default + CanonicalSerialize>(
-        self,
-        count: usize,
-        label: &'static str,
-    ) -> Self;
-
-    fn squeeze_pfelt<F: PrimeField>(self, count: usize, label: &'static str) -> Self;
+pub trait ArkSafe<G: CurveGroup, U: Unit> {
+    fn absorb_scalars(&mut self, input: &[G::ScalarField]) -> Result<(), InvalidTag>;
+    fn absorb_points(&mut self, input: &[G]) -> Result<(), InvalidTag>;
+    fn squeeze_scalars(&mut self, output: &mut [G::ScalarField]) -> Result<(), InvalidTag>;
 }
 
-impl Display for SerTagErr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SerTagErr::Tag(e) => Debug::fmt(e, f),
-            SerTagErr::Ser(e) => Display::fmt(e, f),
-        }
-    }
+pub trait ArkMerlin<G: CurveGroup, U: Unit> {
+    fn absorb_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag>;
+    fn absorb_points<const N: usize>(&mut self) -> Result<[G; N], InvalidTag>;
+    fn squeeze_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag>;
 }
 
-pub trait BridgeField {
-    type U: Unit + Field;
-    fn read_scalars<const N: usize>(&mut self) -> Result<[Self::U; N], InvalidTag>;
-    fn absorb_points<G>(&mut self, input: &[G]) -> Result<(), InvalidTag>
-    where
-        G: CurveGroup<BaseField = Self::U>;
-
-    fn squeeze_scalars(&mut self, output: &mut [Self::U]) -> Result<(), InvalidTag>;
-}
-
-pub trait Bridgeu8 {
-    fn absorb_serializable<S: CanonicalSerialize>(&mut self, input: &[S]) -> Result<(), SerTagErr>;
-    fn squeeze_pfelt<F: PrimeField>(&mut self) -> Result<F, InvalidTag>;
+pub trait ArkArthur<G: CurveGroup, U: Unit> {
+    fn absorb_scalars(&mut self, input: &[G::ScalarField]) -> Result<(), InvalidTag>;
+    fn absorb_points(&mut self, input: &[G]) -> Result<(), InvalidTag>;
+    fn squeeze_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag>;
 }
