@@ -92,9 +92,14 @@ impl<H: DuplexHash<U>, U: Unit> ArthurBuilder<H, U> {
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>> From<&IOPattern<H, U>> for Arthur<H, DefaultRng, U> {
-    fn from(pattern: &IOPattern<H, U>) -> Self {
-        Arthur::new(pattern, DefaultRng::default())
+impl<U, H, D> From<D> for Arthur<H, DefaultRng, U>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+    D: core::ops::Deref<Target = IOPattern<H, U>>,
+{
+    fn from(pattern: D) -> Self {
+        Arthur::new(pattern.deref(), DefaultRng::default())
     }
 }
 

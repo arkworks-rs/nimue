@@ -1,5 +1,4 @@
 use super::prelude::*;
-use super::DuplexHash;
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{Fp, FpConfig, PrimeField};
 use ark_serialize::CanonicalSerialize;
@@ -41,7 +40,7 @@ where
     }
 
     fn squeeze_scalars(&mut self, output: &mut [<G>::ScalarField]) -> Result<(), InvalidTag> {
-        for mut o in output.iter_mut() {
+        for o in output.iter_mut() {
             let mut buf = vec![0u8; super::f_bytes::<G::ScalarField>()];
             self.squeeze(&mut buf)?;
             *o = <G>::ScalarField::from_le_bytes_mod_order(&buf);

@@ -1,4 +1,4 @@
-use crate::{hash::Unit, DuplexHash};
+use crate::hash::Unit;
 
 use ark_ff::{Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};

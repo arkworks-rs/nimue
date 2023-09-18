@@ -140,7 +140,6 @@ where
 
 #[test]
 fn test_iopattern() {
-
     // OPTION 1 (fails)
     // let io_pattern = IOPattern::new("github.com/mmaker/nimue")
     //     .absorb_points(1, "g")
@@ -150,29 +149,30 @@ fn test_iopattern() {
     //     .squeeze_scalars(1, "chal")
     //     .absorb_scalars(1, "resp");
 
-    // OPTION 2
-    fn foo<G: ark_ec::CurveGroup, H: DuplexHash<u8>>() -> IOPattern<H, u8>
-    where
-        IOPattern<H, u8>: ArkIOPattern<G, u8>,
-    {
-        IOPattern::new("github.com/mmaker/nimue")
+    // // OPTION 2
+    // fn foo<G: ark_ec::CurveGroup, H: DuplexHash<u8>>() -> IOPattern<H, u8>
+    // where
+    //     IOPattern<H, u8>: ArkIOPattern<G, u8>,
+    // {
+    //     IOPattern::new("github.com/mmaker/nimue")
+    //         .absorb_points(1, "g")
+    //         .absorb_points(1, "pk")
+    //         .ratchet()
+    //         .absorb_points(1, "com")
+    //         .squeeze_scalars(1, "chal")
+    //         .absorb_scalars(1, "resp")
+    // }
+    // let io_pattern = foo::<ark_curve25519::EdwardsProjective, crate::DefaultHash>();
+
+    // OPTION 3 (extra type, trait extensions should be on IOPattern or AlgebraicIOPattern?)
+    let io_pattern =
+        AlgebraicIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
             .absorb_points(1, "g")
             .absorb_points(1, "pk")
             .ratchet()
             .absorb_points(1, "com")
             .squeeze_scalars(1, "chal")
-            .absorb_scalars(1, "resp")
-    }
-    let io_pattern = foo::<ark_curve25519::EdwardsProjective, crate::DefaultHash>();
-
-    // OPTION 3 (extra type, trait extensions should be on IOPattern or AlgebraicIOPattern?)
-    let io_pattern = AlgebraicIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
-        .absorb_points(1, "g")
-        .absorb_points(1, "pk")
-        .ratchet()
-        .absorb_points(1, "com")
-        .squeeze_scalars(1, "chal")
-        .absorb_scalars(1, "resp");
+            .absorb_scalars(1, "resp");
 
     assert_eq!(
         io_pattern.as_bytes(),

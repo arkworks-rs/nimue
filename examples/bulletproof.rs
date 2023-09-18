@@ -1,5 +1,6 @@
+use anyhow::Result;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{Field, Zero};
+use ark_ff::Field;
 use ark_std::log2;
 use nimue::plugins::arkworks::prelude::*;
 use nimue::{Arthur, DuplexHash, IOPattern, InvalidTag};
@@ -32,13 +33,6 @@ fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
         .collect()
 }
 
-// The bulletproof proof.
-struct Bulletproof<G: CurveGroup> {
-    /// the prover's messages
-    round_msgs: Vec<(G, G)>,
-    /// the last round message
-    last: (G::ScalarField, G::ScalarField),
-}
 
 /// The IO Pattern of a bulleproof.
 ///
@@ -72,16 +66,16 @@ where
                 .absorb_points(2, "round-message")
                 .squeeze_scalars(1, "challenge");
         }
-        self
+        self.absorb_scalars(2, "final-message")
     }
 }
 
-fn prove<H, G>(
-    transcript: &mut Arthur<H>,
+fn prove<'a, H, G>(
+    arthur: &'a mut Arthur<H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
-) -> Result<Bulletproof<G>, InvalidTag>
+) -> Result<&'a [u8], anyhow::Error>
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
@@ -92,10 +86,8 @@ where
     if witness.0.len() == 1 {
         assert_eq!(generators.0.len(), 1);
 
-        return Ok(Bulletproof {
-            round_msgs: vec![],
-            last: (witness.0[0], witness.1[0]),
-        });
+        arthur.absorb_scalars(&[witness.0[0], witness.1[0]])?;
+        return Ok(arthur.transcript());
     }
 
     let n = witness.0.len() / 2;
@@ -113,8 +105,8 @@ where
         + G::msm(g_left, a_right).unwrap()
         + G::msm(h_right, b_left).unwrap();
 
-    transcript.absorb_points(&[left, right])?;
-    let [x] = transcript.squeeze_scalars()?;
+    arthur.absorb_points(&[left, right])?;
+    let [x] = arthur.squeeze_scalars()?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
     let new_g = fold_generators(g_left, g_right, &x_inv, &x);
@@ -127,53 +119,52 @@ where
 
     let new_statement = *statement + left * x.square() + right * x_inv.square();
 
-    let mut bulletproof = prove(transcript, new_generators, &new_statement, new_witness)?;
-    // proof will be reverse-order
-    bulletproof.round_msgs.push((left, right));
+    let bulletproof = prove(arthur, new_generators, &new_statement, new_witness)?;
     Ok(bulletproof)
 }
 
-// fn verify<G, H>(
-//     transcript: &mut Merlin<H>,
-//     generators: (&[G::Affine], &[G::Affine], &G::Affine),
-//     statement: &G::Affine,
-//     bulletproof: &Bulletproof<G>,
-// ) -> Result<(), InvalidTag>
-// where
-//     H: DuplexHash<u8>,
-//     G: CurveGroup,
-// {
-//     let mut g = generators.0.to_vec();
-//     let mut h = generators.1.to_vec();
-//     let u = *generators.2;
-//     let mut statement = *statement;
+fn verify<G, H>(
+    merlin: &mut Merlin<H>,
+    generators: (&[G::Affine], &[G::Affine], &G::Affine),
+    statement: &G,
+) -> Result<(), InvalidTag>
+where
+    H: DuplexHash<u8>,
+    G: CurveGroup,
+    for<'a> Merlin<'a, H, u8>: ArkMerlin<G, u8>,
+{
+    let mut g = generators.0.to_vec();
+    let mut h = generators.1.to_vec();
+    let u = generators.2.clone();
+    let mut statement = statement.clone();
 
-//     let mut n = 1 << bulletproof.round_msgs.len();
-//     assert_eq!(g.len(), n);
-//     for &(left, right) in bulletproof.round_msgs.iter().rev() {
-//         n /= 2;
+    let mut n =  1 << ark_std::log2(generators.0.len());
+    assert_eq!(g.len(), n);
+    while n != 1 {
+        let [left, right]: [G; 2] = merlin.absorb_points().unwrap();
 
-//         let (g_left, g_right) = g.split_at(n);
-//         let (h_left, h_right) = h.split_at(n);
+        n /= 2;
 
-//         transcript.absorb_points(&[left, right]).unwrap();
+        let (g_left, g_right) = g.split_at(n);
+        let (h_left, h_right) = h.split_at(n);
 
-//         let mut x = G::ScalarField::zero();
-//         transcript.squeeze_scalars(&[x])?;
-//         let x_inv = x.inverse().expect("You just won the lottery!");
 
-//         g = fold_generators(g_left, g_right, &x_inv, &x);
-//         h = fold_generators(h_left, h_right, &x, &x_inv);
-//         statement = (statement + left * x.square() + right * x_inv.square()).into_affine();
-//     }
-//     let (a, b) = bulletproof.last;
-//     let c = a * b;
-//     if (g[0] * a + h[0] * b + u * c - statement).is_zero() {
-//         Ok(())
-//     } else {
-//         Err("Invalid proof".into())
-//     }
-// }
+        let [x]: [G::ScalarField; 1] = merlin.squeeze_scalars().unwrap();
+        let x_inv = x.inverse().expect("You just won the lottery!");
+
+        g = fold_generators(g_left, g_right, &x_inv, &x);
+        h = fold_generators(h_left, h_right, &x, &x_inv);
+        statement = statement + left * x.square() + right * x_inv.square();
+    }
+    let [a, b]: [G::ScalarField; 2] = merlin.absorb_scalars().unwrap();
+
+    let c = a * b;
+    if (g[0] * a + h[0] * b + u * c - statement).is_zero() {
+        Ok(())
+    } else {
+        Err("Invalid proof".into())
+    }
+}
 
 fn main() {
     use ark_bls12_381::g1::G1Projective as G;
@@ -213,23 +204,22 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut prover_transcript = Arthur::new(&io_pattern, OsRng);
-    prover_transcript.absorb_points(&[statement]).unwrap();
-    prover_transcript.ratchet().unwrap();
-    let bulletproof =
-        prove::<nimue::DefaultHash, G>(&mut prover_transcript, generators, &statement, witness)
+    let mut arthur = Arthur::new(&io_pattern, OsRng);
+    arthur.public_points(&[statement]).unwrap();
+    arthur.ratchet().unwrap();
+    let proof =
+        prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
             .expect("Error proving");
 
-    // let mut verifier_transcript = Merlin::new(&io_pattern);
-    // verifier_transcript
-    //     .absorb_points(&[statement])
-    //     .unwrap();
-    // verifier_transcript.ratchet().unwrap();
-    // verify(
-    //     &mut verifier_transcript,
-    //     generators,
-    //     &statement,
-    //     &bulletproof,
-    // )
-    // .expect("Invalid proof");
+    let mut verifier_transcript = Merlin::new(&io_pattern, proof);
+    verifier_transcript
+        .public_points(&[statement])
+        .unwrap();
+    verifier_transcript.ratchet().unwrap();
+    verify(
+        &mut verifier_transcript,
+        generators,
+        &statement,
+    )
+    .expect("Invalid proof");
 }
