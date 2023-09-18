@@ -33,7 +33,6 @@ fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
         .collect()
 }
 
-
 /// The IO Pattern of a bulleproof.
 ///
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
@@ -48,11 +47,11 @@ where
     fn bulletproof_io(self, len: usize) -> Self;
 }
 
-impl<H, G> BulletproofIOPattern<G, H, u8> for IOPattern<H>
+impl<H, G> BulletproofIOPattern<G, H, u8> for AlgebraicIOPattern<G, H>
 where
     G: CurveGroup,
     H: DuplexHash<u8>,
-    Self: ArkIOPattern<G, u8>,
+    IOPattern<H, u8>: ArkIOPattern<G, u8>,
 {
     /// The IO of the bulletproof statement (the sole commitment)
     fn bulletproof_statement(self) -> Self {
@@ -138,7 +137,7 @@ where
     let u = generators.2.clone();
     let mut statement = statement.clone();
 
-    let mut n =  1 << ark_std::log2(generators.0.len());
+    let mut n = 1 << ark_std::log2(generators.0.len());
     assert_eq!(g.len(), n);
     while n != 1 {
         let [left, right]: [G; 2] = merlin.absorb_points().unwrap();
@@ -147,7 +146,6 @@ where
 
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
-
 
         let [x]: [G::ScalarField; 1] = merlin.squeeze_scalars().unwrap();
         let x_inv = x.inverse().expect("You just won the lottery!");
@@ -179,13 +177,13 @@ fn main() {
     let size = 8u64;
 
     // initialize the IO Pattern putting the domain separator ("example.com")
-    let io_pattern = IOPattern::new("example.com");
-    // add the IO of the bulletproof statement (the commitment)
-    let io_pattern = BulletproofIOPattern::<G, H, u8>::bulletproof_statement(io_pattern);
-    // (optional) process the data so far, filling the block till the end.
-    let io_pattern = io_pattern.ratchet();
-    // add the IO of the bulletproof protocol (the transcript)
-    let io_pattern = BulletproofIOPattern::<G, H, u8>::bulletproof_io(io_pattern, size as usize);
+    let io_pattern = AlgebraicIOPattern::<G>::new("example.com")
+        // add the IO of the bulletproof statement (the commitment)
+        .bulletproof_statement()
+        // (optional) process the data so far, filling the block till the end.
+        .ratchet()
+        // add the IO of the bulletproof protocol (the transcript)
+        .bulletproof_io(size as usize);
 
     // the test vectors
     let a = (0..size).map(|x| F::from(x)).collect::<Vec<_>>();
@@ -200,26 +198,18 @@ fn main() {
         .collect::<Vec<_>>();
     let u = GAffine::rand(&mut OsRng);
 
-    let generators = (&g[..], &h[..], &u);
+    let generators = (&g, &h, &u);
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
-    let witness = (&a[..], &b[..]);
+    let witness = (&a, &b);
 
     let mut arthur = Arthur::new(&io_pattern, OsRng);
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
-    let proof =
-        prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
-            .expect("Error proving");
+    let proof = prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
+        .expect("Error proving");
 
     let mut verifier_transcript = Merlin::new(&io_pattern, proof);
-    verifier_transcript
-        .public_points(&[statement])
-        .unwrap();
+    verifier_transcript.public_points(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
-    verify(
-        &mut verifier_transcript,
-        generators,
-        &statement,
-    )
-    .expect("Invalid proof");
+    verify(&mut verifier_transcript, generators, &statement).expect("Invalid proof");
 }

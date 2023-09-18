@@ -65,7 +65,6 @@ fn main() {
         .squeeze_scalars(1, "challenge")
         .absorb_scalars(1, "response");
 
-
     let mut arthur = Arthur::<H>::new(&io, OsRng);
     arthur.public_points(&[g, pk]).unwrap();
     arthur.ratchet().unwrap();

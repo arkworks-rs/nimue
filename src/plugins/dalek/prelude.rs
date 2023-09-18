@@ -1,5 +1,5 @@
 pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, InvalidTag, Merlin, Safe};
-use curve25519_dalek::{Scalar, ristretto::RistrettoPoint};
+use curve25519_dalek::{ristretto::RistrettoPoint, Scalar};
 
 pub trait DalekIOPattern {
     fn absorb_points(self, count: usize, label: &'static str) -> Self;

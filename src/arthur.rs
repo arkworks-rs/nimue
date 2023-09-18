@@ -156,7 +156,7 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
     }
 
     #[inline(always)]
-    pub fn rng<'a>(&'a mut self) -> &'a mut (impl CryptoRng + RngCore) {
+    pub fn rng(&mut self) -> &mut (impl CryptoRng + RngCore) {
         &mut self.rng
     }
 

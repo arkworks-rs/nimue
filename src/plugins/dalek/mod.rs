@@ -1,6 +1,6 @@
 use curve25519_dalek::{ristretto::CompressedRistretto, RistrettoPoint, Scalar};
-use rand::{CryptoRng, RngCore};
 use prelude::*;
+use rand::{CryptoRng, RngCore};
 
 pub mod prelude;
 

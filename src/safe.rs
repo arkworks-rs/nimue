@@ -13,7 +13,7 @@ use super::hash::{DuplexHash, Keccak};
 
 /// This is the separator between operations in the IO Pattern
 /// and as such is the only forbidden characted in labels.
-const SEP_BYTE: &'static str = "\0";
+const SEP_BYTE: &str = "\0";
 
 /// Sponge operations.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -79,7 +79,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     fn from_string(io: String) -> Self {
         Self {
             io,
-            _hash: PhantomData::default(),
+            _hash: PhantomData,
         }
     }
 
@@ -92,7 +92,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     pub fn absorb(self, count: usize, label: &'static str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
-        assert!(label.len() == 0 || !label[..1].parse::<u8>().is_ok());
+        assert!(label.is_empty() || label[..1].parse::<u8>().is_err());
 
         Self::from_string(self.io + SEP_BYTE + &format!("A{}", count) + label)
     }
@@ -100,13 +100,13 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     pub fn squeeze(self, count: usize, label: &'static str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
-        assert!(label.len() == 0 || !label[..1].parse::<u8>().is_ok());
+        assert!(label.is_empty() || label[..1].parse::<u8>().is_err());
 
         Self::from_string(self.io + SEP_BYTE + &format!("S{}", count) + label)
     }
 
     pub fn ratchet(self) -> Self {
-        Self::from_string(self.io + SEP_BYTE + &"R")
+        Self::from_string(self.io + SEP_BYTE + "R")
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -125,7 +125,6 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         // skip the domain separator
         for part in io_pattern
             .split(|&b| b == SEP_BYTE.as_bytes()[0])
-            .into_iter()
             .skip(1)
         {
             let next_id = part[0] as char;
@@ -154,7 +153,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
             Ok(dst)
         } else {
             // guaranteed never to fail, since:
-            assert!(dst.len() > 0 && !stack.is_empty());
+            assert!(!dst.is_empty() && !stack.is_empty());
             let previous = dst.pop_back().unwrap();
             let next = stack.pop_front().unwrap();
 
@@ -304,7 +303,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
         Self {
             sponge: H::new(tag),
             stack,
-            _unit: PhantomData::default(),
+            _unit: PhantomData,
         }
     }
 }

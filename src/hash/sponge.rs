@@ -55,7 +55,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
     }
 
     fn absorb_unchecked(&mut self, input: &[U]) -> &mut Self {
-        if input.len() == 0 {
+        if input.is_empty() {
             self.squeeze_pos = C::RATE;
             self
         } else if self.absorb_pos == C::RATE {
@@ -63,18 +63,18 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
             self.absorb_pos = 0;
             self.absorb_unchecked(input)
         } else {
-            assert!(0 < input.len() && self.absorb_pos < C::RATE);
+            assert!(!input.is_empty() && self.absorb_pos < C::RATE);
             let chunk_len = usize::min(input.len(), C::RATE - self.absorb_pos);
             let (input, rest) = input.split_at(chunk_len);
 
-            self.state[self.absorb_pos..self.absorb_pos + chunk_len].clone_from_slice(&input);
+            self.state[self.absorb_pos..self.absorb_pos + chunk_len].clone_from_slice(input);
             self.absorb_pos += chunk_len;
             self.absorb_unchecked(rest)
         }
     }
 
     fn squeeze_unchecked(&mut self, output: &mut [U]) -> &mut Self {
-        if output.len() == 0 {
+        if output.is_empty() {
             return self;
         }
 
@@ -84,7 +84,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
             self.state.permute();
         }
 
-        assert!(self.squeeze_pos < C::RATE && output.len() > 0);
+        assert!(self.squeeze_pos < C::RATE && !output.is_empty());
         let chunk_len = usize::min(output.len(), C::RATE - self.squeeze_pos);
         let (output, rest) = output.split_at_mut(chunk_len);
         output.clone_from_slice(&self.state[self.squeeze_pos..self.squeeze_pos + chunk_len]);
