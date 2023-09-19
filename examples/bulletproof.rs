@@ -125,6 +125,7 @@ where
 fn verify<G, H>(
     merlin: &mut Merlin<H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
+    mut n: usize,
     statement: &G,
 ) -> Result<(), InvalidTag>
 where
@@ -137,8 +138,6 @@ where
     let u = generators.2.clone();
     let mut statement = statement.clone();
 
-    let mut n = 1 << ark_std::log2(generators.0.len());
-    assert_eq!(g.len(), n);
     while n != 1 {
         let [left, right]: [G; 2] = merlin.absorb_points().unwrap();
 
@@ -173,7 +172,7 @@ fn main() {
     type GAffine = <G as CurveGroup>::Affine;
 
     // the vector size
-    let size = 8u64;
+    let size = 8;
 
     // initialize the IO Pattern putting the domain separator ("example.com")
     let io_pattern = AlgebraicIOPattern::<G>::new("example.com")
@@ -182,11 +181,11 @@ fn main() {
         // (optional) process the data so far, filling the block till the end.
         .ratchet()
         // add the IO of the bulletproof protocol (the transcript)
-        .bulletproof_io(size as usize);
+        .bulletproof_io(size);
 
     // the test vectors
-    let a = (0..size).map(|x| F::from(x)).collect::<Vec<_>>();
-    let b = (0..size).map(|x| F::from(x + 42)).collect::<Vec<_>>();
+    let a = (0..size).map(|x| F::from(x as u32)).collect::<Vec<_>>();
+    let b = (0..size).map(|x| F::from(x as u32 + 42)).collect::<Vec<_>>();
     let ab = inner_prod(&a, &b);
     // the generators to be used for respectively a, b, ip
     let g = (0..a.len())
@@ -210,5 +209,5 @@ fn main() {
     let mut verifier_transcript = Merlin::new(&io_pattern, proof);
     verifier_transcript.public_points(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
-    verify(&mut verifier_transcript, generators, &statement).expect("Invalid proof");
+    verify(&mut verifier_transcript, generators, size, &statement).expect("Invalid proof");
 }
