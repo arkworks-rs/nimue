@@ -172,7 +172,6 @@ fn main() {
     type F = <G as Group>::ScalarField;
     type GAffine = <G as CurveGroup>::Affine;
 
-    type H = nimue::DefaultHash;
     // the vector size
     let size = 8u64;
 
@@ -198,9 +197,9 @@ fn main() {
         .collect::<Vec<_>>();
     let u = GAffine::rand(&mut OsRng);
 
-    let generators = (&g, &h, &u);
+    let generators = (&g[..], &h[..], &u);
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
-    let witness = (&a, &b);
+    let witness = (&a[..], &b[..]);
 
     let mut arthur = Arthur::new(&io_pattern, OsRng);
     arthur.public_points(&[statement]).unwrap();

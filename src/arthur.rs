@@ -5,7 +5,10 @@ use crate::{IOPattern, Safe};
 
 use super::hash::{DuplexHash, Keccak};
 use super::{DefaultHash, DefaultRng, InvalidTag};
-/// Arthur is a cryptographically-secure random number generator that is bound to the protocol transcript.
+
+
+
+/// A cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
 /// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.
 /// For this reason, we construct a Rng that will absorb whatever the verifier absorbs, and that in addition

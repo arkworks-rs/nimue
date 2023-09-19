@@ -137,11 +137,11 @@ pub type DefaultRng = rand::rngs::OsRng;
 /// Default hash function used ([`hash::Keccak`])
 pub type DefaultHash = hash::Keccak;
 
-/// Prover's internal state.
+/// Prover's internal state and transcript generation.
 mod arthur;
 /// Error types.
 mod errors;
-/// Verifier transcript.
+/// Verifier state and transcript deserialization.
 mod merlin;
 /// SAFE API
 mod safe;
