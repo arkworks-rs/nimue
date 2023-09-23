@@ -89,7 +89,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         Self::from_string(domsep.to_string())
     }
 
-    pub fn absorb(self, count: usize, label: &'static str) -> Self {
+    pub fn absorb(self, count: usize, label: &str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
         assert!(label.is_empty() || label[..1].parse::<u8>().is_err());
@@ -97,7 +97,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         Self::from_string(self.io + SEP_BYTE + &format!("A{}", count) + label)
     }
 
-    pub fn squeeze(self, count: usize, label: &'static str) -> Self {
+    pub fn squeeze(self, count: usize, label: &str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
         assert!(label.is_empty() || label[..1].parse::<u8>().is_err());

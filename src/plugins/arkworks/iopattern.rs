@@ -11,15 +11,15 @@ where
     G: CurveGroup,
     G::ScalarField: PrimeField,
 {
-    fn absorb_points(self, count: usize, label: &'static str) -> Self {
+    fn absorb_points(self, count: usize, label: &str) -> Self {
         self.absorb(count * G::Affine::generator().compressed_size(), label)
     }
 
-    fn absorb_scalars(self, count: usize, label: &'static str) -> Self {
+    fn absorb_scalars(self, count: usize, label: &str) -> Self {
         self.absorb(count * G::ScalarField::zero().compressed_size(), label)
     }
 
-    fn squeeze_scalars(self, count: usize, label: &'static str) -> Self {
+    fn squeeze_scalars(self, count: usize, label: &str) -> Self {
         self.squeeze(count * super::f_bytes::<G::ScalarField>(), label)
     }
 }
@@ -30,15 +30,15 @@ where
     H: DuplexHash<Fp<C, N>>,
     G: CurveGroup<BaseField = Fp<C, N>>,
 {
-    fn absorb_scalars(self, _count: usize, _label: &'static str) -> Self {
+    fn absorb_scalars(self, _count: usize, _label: &str) -> Self {
         unimplemented!()
     }
 
-    fn absorb_points(self, count: usize, label: &'static str) -> Self {
+    fn absorb_points(self, count: usize, label: &str) -> Self {
         self.absorb(count * 2, label)
     }
 
-    fn squeeze_scalars(self, _count: usize, _label: &'static str) -> Self {
+    fn squeeze_scalars(self, _count: usize, _label: &str) -> Self {
         unimplemented!()
     }
 }
@@ -61,7 +61,7 @@ where
     U: Unit,
     IOPattern<H, U>: ArkIOPattern<G, U>,
 {
-    pub fn new(domsep: &'static str) -> Self {
+    pub fn new(domsep: &str) -> Self {
         Self {
             io: IOPattern::new(domsep),
             _group: std::marker::PhantomData::default(),
@@ -72,15 +72,15 @@ where
         self.io.ratchet().into()
     }
 
-    pub fn absorb_scalars(self, count: usize, label: &'static str) -> Self {
+    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
         self.io.absorb_scalars(count, label).into()
     }
 
-    pub fn absorb_points(self, count: usize, label: &'static str) -> Self {
+    pub fn absorb_points(self, count: usize, label: &str) -> Self {
         self.io.absorb_points(count, label).into()
     }
 
-    pub fn squeeze_scalars(self, count: usize, label: &'static str) -> Self {
+    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
         self.io.squeeze_scalars(count, label).into()
     }
 

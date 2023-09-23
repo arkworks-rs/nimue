@@ -139,7 +139,7 @@ where
     let mut statement = statement.clone();
 
     while n != 1 {
-        let [left, right]: [G; 2] = merlin.absorb_points().unwrap();
+        let [left, right]: [G; 2] = merlin.next_points().unwrap();
 
         n /= 2;
 
@@ -153,7 +153,7 @@ where
         h = fold_generators(h_left, h_right, &x, &x_inv);
         statement = statement + left * x.square() + right * x_inv.square();
     }
-    let [a, b]: [G::ScalarField; 2] = merlin.absorb_scalars().unwrap();
+    let [a, b]: [G::ScalarField; 2] = merlin.next_scalars().unwrap();
 
     let c = a * b;
     if (g[0] * a + h[0] * b + u * c - statement).is_zero() {

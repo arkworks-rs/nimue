@@ -3,9 +3,9 @@ pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, InvalidTag, Merlin, S
 use ark_ec::CurveGroup;
 
 pub trait ArkIOPattern<G: CurveGroup, U: Unit> {
-    fn absorb_scalars(self, count: usize, label: &'static str) -> Self;
-    fn absorb_points(self, count: usize, label: &'static str) -> Self;
-    fn squeeze_scalars(self, count: usize, label: &'static str) -> Self;
+    fn absorb_scalars(self, count: usize, label: &str) -> Self;
+    fn absorb_points(self, count: usize, label: &str) -> Self;
+    fn squeeze_scalars(self, count: usize, label: &str) -> Self;
 }
 
 pub trait ArkSafe<G: CurveGroup, U: Unit> {

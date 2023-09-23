@@ -30,21 +30,20 @@ where
     Ok(arthur.transcript())
 }
 
-fn verify<H, G>(merlin: &mut Merlin<H, u8>, g: G, pk: G) -> Result<(), &'static str>
+fn verify<H, G>(merlin: &mut Merlin<H>, g: G, pk: G) -> Result<(), &'static str>
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
     for<'a> Merlin<'a, H, u8>: ArkMerlin<G, u8>,
 {
-    let [commitment] = merlin.absorb_points().unwrap();
+    let [commitment] = merlin.next_points().unwrap();
     let [challenge] = merlin.squeeze_scalars().unwrap();
-    let [response] = merlin.absorb_scalars().unwrap();
+    let [response] = merlin.next_scalars().unwrap();
 
-    let expected = g * response - pk * challenge;
-    if commitment == expected {
+    if commitment == g * response - pk * challenge {
         Ok(())
     } else {
-        Err("Invalid proof".into())
+        Err("Invalid proof")
     }
 }
 
