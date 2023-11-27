@@ -123,10 +123,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         let mut stack = VecDeque::new();
 
         // skip the domain separator
-        for part in io_pattern
-            .split(|&b| b == SEP_BYTE.as_bytes()[0])
-            .skip(1)
-        {
+        for part in io_pattern.split(|&b| b == SEP_BYTE.as_bytes()[0]).skip(1) {
             let next_id = part[0] as char;
             let next_length = part[1..]
                 .iter()

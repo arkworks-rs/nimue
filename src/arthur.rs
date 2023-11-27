@@ -6,8 +6,6 @@ use crate::{IOPattern, Safe};
 use super::hash::{DuplexHash, Keccak};
 use super::{DefaultHash, DefaultRng, InvalidTag};
 
-
-
 /// A cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
 /// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.

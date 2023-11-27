@@ -185,7 +185,9 @@ fn main() {
 
     // the test vectors
     let a = (0..size).map(|x| F::from(x as u32)).collect::<Vec<_>>();
-    let b = (0..size).map(|x| F::from(x as u32 + 42)).collect::<Vec<_>>();
+    let b = (0..size)
+        .map(|x| F::from(x as u32 + 42))
+        .collect::<Vec<_>>();
     let ab = inner_prod(&a, &b);
     // the generators to be used for respectively a, b, ip
     let g = (0..a.len())

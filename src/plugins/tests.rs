@@ -5,7 +5,6 @@ use super::dalek::prelude::*;
 
 #[test]
 fn compatible_scalars() {
-
     type G = ark_curve25519::EdwardsProjective;
 
     let ark_scalar = ark_curve25519::Fr::from(0x42);
@@ -14,9 +13,10 @@ fn compatible_scalars() {
     let dalek_scalar = curve25519_dalek::Scalar::from(0x42u8);
     // let dalek_point = curve25519_dalek::constants::ED25519_BASEPOINT_POINT * dalek_scalar;
 
-    let ark_io = AlgebraicIOPattern::<ark_curve25519::EdwardsProjective, DefaultHash>::new("ark-dalek")
-        .absorb_scalars(1, "scalar")
-        .squeeze(16, "challenge");
+    let ark_io =
+        AlgebraicIOPattern::<ark_curve25519::EdwardsProjective, DefaultHash>::new("ark-dalek")
+            .absorb_scalars(1, "scalar")
+            .squeeze(16, "challenge");
     let dalek_io = IOPattern::<DefaultHash>::new("ark-dalek");
     let dalek_io = DalekIOPattern::absorb_scalars(dalek_io, 1, "scalar");
     let dalek_io = dalek_io.squeeze(16, "challenge");

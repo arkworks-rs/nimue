@@ -31,7 +31,7 @@ impl Sponge for AlignedKeccakState {
 
     fn new(tag: [u8; 32]) -> Self {
         let mut state = Self::default();
-        state[..32].copy_from_slice(&tag);
+        state[Self::RATE..Self::RATE + 32].copy_from_slice(&tag);
         state
     }
 
