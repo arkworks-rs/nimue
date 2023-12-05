@@ -1,6 +1,6 @@
 use ark_ec::{CurveGroup, Group};
 use ark_std::UniformRand;
-use nimue::{Arthur, DuplexHash, InvalidTag};
+use nimue::{DuplexHash, InvalidTag};
 
 use nimue::plugins::arkworks::prelude::*;
 use rand::rngs::OsRng;
@@ -12,17 +12,14 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 }
 
 fn prove<H: DuplexHash<u8>, G: CurveGroup>(
-    arthur: &mut Arthur<H>,
+    arthur: &mut ArkGroupArthur<G, H>,
     witness: G::ScalarField,
-) -> Result<&[u8], InvalidTag>
-where
-    Arthur<H>: ArkArthur<G, u8>,
-{
+) -> Result<&[u8], InvalidTag> {
     let k = G::ScalarField::rand(&mut arthur.rng());
     let commitment = G::generator() * k;
     arthur.absorb_points(&[commitment])?;
 
-    let [challenge] = arthur.squeeze_scalars()?;
+    let [challenge]: [G::ScalarField; 1] = arthur.squeeze_scalars()?;
 
     let response = k + challenge * witness;
     arthur.absorb_scalars(&[response])?;
@@ -30,11 +27,10 @@ where
     Ok(arthur.transcript())
 }
 
-fn verify<H, G>(merlin: &mut Merlin<H>, g: G, pk: G) -> Result<(), &'static str>
+fn verify<H, G>(merlin: &mut ArkGroupMerlin<G, H>, g: G, pk: G) -> Result<(), &'static str>
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
-    for<'a> Merlin<'a, H, u8>: ArkMerlin<G, u8>,
 {
     let [commitment] = merlin.next_points().unwrap();
     let [challenge] = merlin.squeeze_scalars().unwrap();
@@ -56,7 +52,7 @@ fn main() {
     let g = G::generator();
     let (sk, pk) = keygen();
 
-    let io = AlgebraicIOPattern::<G, H>::new("nimue::examples::schnorr")
+    let io = ArkGroupIOPattern::<G, H>::new("nimue::examples::schnorr")
         .absorb_points(1, "g")
         .absorb_points(1, "pk")
         .ratchet()
@@ -64,14 +60,14 @@ fn main() {
         .squeeze_scalars(1, "challenge")
         .absorb_scalars(1, "response");
 
-    let mut arthur = Arthur::<H>::new(&io, OsRng);
+    let mut arthur = ArkGroupArthur::<G, H>::new(&io, OsRng);
     arthur.public_points(&[g, pk]).unwrap();
     arthur.ratchet().unwrap();
-    let proof = prove::<H, G>(&mut arthur, sk).expect("Valid proof");
+    let proof = prove(&mut arthur, sk).expect("Valid proof");
 
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
-    let mut merlin = Merlin::new(&io, proof);
+    let mut merlin = ArkGroupMerlin::new(&io, proof);
     merlin.public_points(&[g, pk]).unwrap();
     merlin.ratchet().unwrap();
     verify::<H, G>(&mut merlin, g, pk).expect("Valid proof");

@@ -37,7 +37,7 @@ impl<'a, H: DuplexHash<u8>> DalekMerlin for Merlin<'a, H, u8> {
         let mut scalars = [Scalar::default(); N];
         let mut buf = [0u8; 32];
         for i in 0..N {
-            self.absorb(&mut buf)?;
+            self.next(&mut buf)?;
             scalars[i] = Scalar::from_canonical_bytes(buf).unwrap();
         }
         Ok(scalars)
@@ -47,7 +47,7 @@ impl<'a, H: DuplexHash<u8>> DalekMerlin for Merlin<'a, H, u8> {
         let mut points = [RistrettoPoint::default(); N];
         let mut buf = [0u8; 32];
         for i in 0..N {
-            self.absorb(&mut buf)?;
+            self.next(&mut buf)?;
             points[i] = CompressedRistretto(buf).decompress().unwrap();
         }
         Ok(points)

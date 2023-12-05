@@ -83,8 +83,8 @@ fn test_merlin() {
 
     let mut merlin = Merlin::<Keccak>::new(&io, transcript);
     let mut input = [0u8; 5];
-    merlin.absorb(&mut input).unwrap();
+    merlin.next(&mut input).unwrap();
     assert_eq!(input, [0, 1, 2, 3, 4]);
-    merlin.absorb(&mut input).unwrap();
+    merlin.next(&mut input).unwrap();
     assert_eq!(input, [5, 6, 7, 8, 9]);
 }

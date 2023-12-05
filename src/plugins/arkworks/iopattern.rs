@@ -1,108 +1,23 @@
-use ark_ec::{AffineRepr, CurveGroup};
-use ark_ff::{Fp, FpConfig, PrimeField, Zero};
-use ark_serialize::CanonicalSerialize;
+use ark_ec::CurveGroup;
+use ark_ff::{Field, PrimeField};
 use core::ops::Deref;
 
 use super::prelude::*;
 
-impl<H, G> ArkIOPattern<G, u8> for IOPattern<H, u8>
-where
-    H: DuplexHash<u8>,
-    G: CurveGroup,
-    G::ScalarField: PrimeField,
-{
-    fn absorb_points(self, count: usize, label: &str) -> Self {
-        self.absorb(count * G::Affine::generator().compressed_size(), label)
-    }
-
-    fn absorb_scalars(self, count: usize, label: &str) -> Self {
-        self.absorb(count * G::ScalarField::zero().compressed_size(), label)
-    }
-
-    fn squeeze_scalars(self, count: usize, label: &str) -> Self {
-        self.squeeze(count * super::f_bytes::<G::ScalarField>(), label)
-    }
-}
-
-impl<C, const N: usize, H, G> ArkIOPattern<G, Fp<C, N>> for IOPattern<H, G::BaseField>
-where
-    C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
-    G: CurveGroup<BaseField = Fp<C, N>>,
-{
-    fn absorb_scalars(self, _count: usize, _label: &str) -> Self {
-        unimplemented!()
-    }
-
-    fn absorb_points(self, count: usize, label: &str) -> Self {
-        self.absorb(count * 2, label)
-    }
-
-    fn squeeze_scalars(self, _count: usize, _label: &str) -> Self {
-        unimplemented!()
-    }
-}
-
-pub struct AlgebraicIOPattern<G, H = crate::DefaultHash, U = u8>
+pub struct ArkFieldIOPattern<F: Field, H = crate::DefaultHash, U = u8>
 where
     H: DuplexHash<U>,
-    G: CurveGroup,
     U: Unit,
-    IOPattern<H, U>: ArkIOPattern<G, U>,
 {
     io: IOPattern<H, U>,
-    _group: std::marker::PhantomData<G>,
+    _base: std::marker::PhantomData<F>,
 }
 
-impl<G, H, U> AlgebraicIOPattern<G, H, U>
+impl<F, H, U> Deref for ArkFieldIOPattern<F, H, U>
 where
     H: DuplexHash<U>,
-    G: CurveGroup,
     U: Unit,
-    IOPattern<H, U>: ArkIOPattern<G, U>,
-{
-    pub fn new(domsep: &str) -> Self {
-        Self {
-            io: IOPattern::new(domsep),
-            _group: std::marker::PhantomData::default(),
-        }
-    }
-
-    pub fn ratchet(self) -> Self {
-        self.io.ratchet().into()
-    }
-
-    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
-        self.io.absorb_scalars(count, label).into()
-    }
-
-    pub fn absorb_points(self, count: usize, label: &str) -> Self {
-        self.io.absorb_points(count, label).into()
-    }
-
-    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
-        self.io.squeeze_scalars(count, label).into()
-    }
-
-    pub fn absorb(self, count: usize, label: &'static str) -> Self {
-        self.io.absorb(count, label).into()
-    }
-
-    pub fn squeeze(self, count: usize, label: &'static str) -> Self {
-        self.io.squeeze(count, label).into()
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.io.as_bytes()
-    }
-}
-
-impl<G, H, U> Deref for AlgebraicIOPattern<G, H, U>
-where
-    H: DuplexHash<U>,
-    G: CurveGroup,
-    U: Unit,
-    IOPattern<H, U>: ArkIOPattern<G, U>,
+    F: Field,
 {
     type Target = IOPattern<H, U>;
 
@@ -111,30 +26,142 @@ where
     }
 }
 
-impl<G, H, U> From<IOPattern<H, U>> for AlgebraicIOPattern<G, H, U>
+impl<F, H, U> From<IOPattern<H, U>> for ArkFieldIOPattern<F, H, U>
 where
+    F: Field,
     H: DuplexHash<U>,
-    G: CurveGroup,
     U: Unit,
-    IOPattern<H, U>: ArkIOPattern<G, U>,
 {
     fn from(value: IOPattern<H, U>) -> Self {
         Self {
             io: value,
-            _group: std::marker::PhantomData::default(),
+            _base: std::marker::PhantomData::default(),
         }
     }
 }
 
-impl<G, H, U> From<AlgebraicIOPattern<G, H, U>> for IOPattern<H, U>
+impl<F, H> ArkFieldIOPattern<F, H, u8>
 where
-    H: DuplexHash<U>,
-    G: CurveGroup,
-    U: Unit,
-    IOPattern<H, U>: ArkIOPattern<G, U>,
+    F: PrimeField,
+    H: DuplexHash<u8>,
 {
-    fn from(value: AlgebraicIOPattern<G, H, U>) -> Self {
-        value.io
+    pub fn new(label: &str) -> Self {
+        IOPattern::new(label).into()
+    }
+
+    pub fn absorb(self, count: usize, label: &str) -> Self {
+        self.io.absorb(count, label).into()
+    }
+
+    pub fn squeeze(self, count: usize, label: &str) -> Self {
+        self.io.squeeze(count, label).into()
+    }
+
+    pub fn ratchet(self) -> Self {
+        self.io.ratchet().into()
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.io.as_bytes()
+    }
+
+    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
+        self.absorb(count * F::ZERO.compressed_size(), label)
+    }
+
+    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
+        self.squeeze(count * (F::MODULUS_BIT_SIZE as usize / 8 + 16), label)
+    }
+}
+
+pub struct ArkGroupIOPattern<G, H = crate::DefaultHash, U = u8>
+where
+    G: CurveGroup,
+    H: DuplexHash<U>,
+    U: Unit,
+{
+    io: ArkFieldIOPattern<G::ScalarField, H, U>,
+    _base: std::marker::PhantomData<G>,
+}
+
+impl<G, H, U> Deref for ArkGroupIOPattern<G, H, U>
+where
+    G: CurveGroup,
+    H: DuplexHash<U>,
+    U: Unit,
+{
+    type Target = IOPattern<H, U>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.io
+    }
+}
+
+impl<G, H, U> From<IOPattern<H, U>> for ArkGroupIOPattern<G, H, U>
+where
+    G: CurveGroup,
+    H: DuplexHash<U>,
+    U: Unit,
+{
+    fn from(value: IOPattern<H, U>) -> Self {
+        Self {
+            io: value.into(),
+            _base: std::marker::PhantomData::default(),
+        }
+    }
+}
+
+impl<G, H, U> From<ArkFieldIOPattern<G::ScalarField, H, U>> for ArkGroupIOPattern<G, H, U>
+where
+    G: CurveGroup,
+    H: DuplexHash<U>,
+    U: Unit,
+{
+    fn from(value: ArkFieldIOPattern<G::ScalarField, H, U>) -> Self {
+        Self {
+            io: value,
+            _base: std::marker::PhantomData::default(),
+        }
+    }
+}
+
+impl<G, H> ArkGroupIOPattern<G, H, u8>
+where
+    G: CurveGroup,
+    H: DuplexHash<u8>,
+{
+    pub fn new(label: &str) -> Self {
+        IOPattern::new(label).into()
+    }
+
+    pub fn absorb(self, count: usize, label: &str) -> Self {
+        self.io.absorb(count, label).into()
+    }
+
+    pub fn squeeze(self, count: usize, label: &str) -> Self {
+        self.io.squeeze(count, label).into()
+    }
+
+    pub fn ratchet(self) -> Self {
+        self.io.ratchet().into()
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.io.as_bytes()
+    }
+
+    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
+        self.io.absorb_scalars(count, label).into()
+    }
+
+    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
+        self.io.squeeze_scalars(count, label).into()
+    }
+
+    pub fn absorb_points(self, count: usize, label: &str) -> Self {
+        self.io
+            .absorb(count * G::default().compressed_size(), label)
+            .into()
     }
 }
 
@@ -166,7 +193,7 @@ fn test_iopattern() {
 
     // OPTION 3 (extra type, trait extensions should be on IOPattern or AlgebraicIOPattern?)
     let io_pattern =
-        AlgebraicIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
+        ArkGroupIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
             .absorb_points(1, "g")
             .absorb_points(1, "pk")
             .ratchet()

@@ -3,7 +3,7 @@ use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
 use nimue::plugins::arkworks::prelude::*;
-use nimue::{Arthur, DuplexHash, IOPattern, InvalidTag};
+use nimue::{DuplexHash, InvalidTag};
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -47,11 +47,10 @@ where
     fn bulletproof_io(self, len: usize) -> Self;
 }
 
-impl<H, G> BulletproofIOPattern<G, H, u8> for AlgebraicIOPattern<G, H>
+impl<H, G> BulletproofIOPattern<G, H, u8> for ArkGroupIOPattern<G, H>
 where
     G: CurveGroup,
     H: DuplexHash<u8>,
-    IOPattern<H, u8>: ArkIOPattern<G, u8>,
 {
     /// The IO of the bulletproof statement (the sole commitment)
     fn bulletproof_statement(self) -> Self {
@@ -70,7 +69,7 @@ where
 }
 
 fn prove<'a, H, G>(
-    arthur: &'a mut Arthur<H>,
+    arthur: &'a mut ArkGroupArthur<G, H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
@@ -78,7 +77,6 @@ fn prove<'a, H, G>(
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
-    Arthur<H>: ArkArthur<G, u8>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -105,7 +103,7 @@ where
         + G::msm(h_right, b_left).unwrap();
 
     arthur.absorb_points(&[left, right])?;
-    let [x] = arthur.squeeze_scalars()?;
+    let [x]: [G::ScalarField; 1] = arthur.squeeze_scalars()?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
     let new_g = fold_generators(g_left, g_right, &x_inv, &x);
@@ -123,7 +121,7 @@ where
 }
 
 fn verify<G, H>(
-    merlin: &mut Merlin<H>,
+    merlin: &mut ArkGroupMerlin<G, H>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
@@ -131,7 +129,6 @@ fn verify<G, H>(
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
-    for<'a> Merlin<'a, H, u8>: ArkMerlin<G, u8>,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
@@ -164,7 +161,7 @@ where
 }
 
 fn main() {
-    use ark_bls12_381::g1::G1Projective as G;
+    use ark_curve25519::EdwardsProjective as G;
     use ark_ec::Group;
     use ark_std::UniformRand;
 
@@ -175,7 +172,7 @@ fn main() {
     let size = 8;
 
     // initialize the IO Pattern putting the domain separator ("example.com")
-    let io_pattern = AlgebraicIOPattern::<G>::new("example.com")
+    let io_pattern = ArkGroupIOPattern::<G>::new("example.com")
         // add the IO of the bulletproof statement (the commitment)
         .bulletproof_statement()
         // (optional) process the data so far, filling the block till the end.
@@ -202,13 +199,13 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut arthur = Arthur::new(&io_pattern, OsRng);
+    let mut arthur = ArkGroupArthur::new(&io_pattern, OsRng);
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
         .expect("Error proving");
 
-    let mut verifier_transcript = Merlin::new(&io_pattern, proof);
+    let mut verifier_transcript = ArkGroupMerlin::new(&io_pattern, proof);
     verifier_transcript.public_points(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
     verify(&mut verifier_transcript, generators, size, &statement).expect("Invalid proof");

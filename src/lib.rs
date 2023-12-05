@@ -95,12 +95,12 @@
 //!
 //! // Read the first message.
 //! let mut first_message = [0u8];
-//! merlin.absorb(&mut first_message).unwrap();
+//! merlin.absorb_bytes(&mut first_message).unwrap();
 //! assert_eq!(first_message, [0x42]);
 //!
 //! // Squeeze out randomness.
 //! let mut chal = [0u8; 16];
-//! merlin.squeeze(&mut chal).expect("Squeezing 128 bits");
+//! merlin.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
 //! ```
 //!
 //! # Contributing

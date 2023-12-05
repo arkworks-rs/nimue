@@ -28,13 +28,13 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
 
     /// Read `input.len()` elements from the transcript.
     #[inline(always)]
-    pub fn absorb(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn next(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
         U::read(&mut self.transcript, input).unwrap();
         self.safe.absorb(input)
     }
 
     #[inline(always)]
-    pub fn absorb_common(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn public_input(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         self.safe.absorb(input)
     }
 
@@ -66,7 +66,7 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
 impl<'a, H: DuplexHash<u8>> Merlin<'a, H, u8> {
     #[inline(always)]
     pub fn absorb_bytes(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.absorb(input)
+        self.next(input)
     }
 
     #[inline(always)]

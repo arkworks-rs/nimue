@@ -9,7 +9,7 @@ pub mod prelude;
 mod arthur;
 mod iopattern;
 mod merlin;
-mod safe;
+// mod safe;
 
 const fn f_bytes<F: PrimeField>() -> usize {
     (F::MODULUS_BIT_SIZE as usize + 128) / 8

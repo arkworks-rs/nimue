@@ -14,7 +14,7 @@ fn compatible_scalars() {
     // let dalek_point = curve25519_dalek::constants::ED25519_BASEPOINT_POINT * dalek_scalar;
 
     let ark_io =
-        AlgebraicIOPattern::<ark_curve25519::EdwardsProjective, DefaultHash>::new("ark-dalek")
+        ArkGroupIOPattern::<ark_curve25519::EdwardsProjective, DefaultHash>::new("ark-dalek")
             .absorb_scalars(1, "scalar")
             .squeeze(16, "challenge");
     let dalek_io = IOPattern::<DefaultHash>::new("ark-dalek");

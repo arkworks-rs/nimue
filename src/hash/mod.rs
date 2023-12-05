@@ -23,14 +23,11 @@ pub trait Unit: Clone + Sized + zeroize::Zeroize {
 }
 
 /// A DuplexHash is an abstract interface for absorbing and squeezing data.
+/// The type parameter `U` represents basic unit that the sponge works with.
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.
 pub trait DuplexHash<U: Unit>: Default + Clone + zeroize::Zeroize {
-    // /// The basic unit that the sponge works with.
-    // /// Must support packing and unpacking to bytes.
-    // type U: Unit;
-
     /// Initializes a new sponge, setting up the state.
     fn new(tag: [u8; 32]) -> Self;
 
