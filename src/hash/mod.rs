@@ -7,6 +7,9 @@ pub mod legacy;
 /// Sponge functions.
 pub mod sponge;
 
+#[cfg(feature="arkworks")]
+pub mod anemoi;
+
 pub use keccak::Keccak;
 
 use std::io;
