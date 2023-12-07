@@ -49,11 +49,11 @@ where
         IOPattern::new(label).into()
     }
 
-    pub fn absorb(self, count: usize, label: &str) -> Self {
+    pub fn add_bytes(self, count: usize, label: &str) -> Self {
         self.io.absorb(count, label).into()
     }
 
-    pub fn squeeze(self, count: usize, label: &str) -> Self {
+    pub fn challenge_bytes(self, count: usize, label: &str) -> Self {
         self.io.squeeze(count, label).into()
     }
 
@@ -65,12 +65,20 @@ where
         self.io.as_bytes()
     }
 
-    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
-        self.absorb(count * F::ZERO.compressed_size(), label)
+    pub fn add_scalars(self, count: usize, label: &str) -> Self {
+        self.add_bytes(count * F::ZERO.compressed_size(), label)
     }
 
-    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
-        self.squeeze(count * (F::MODULUS_BIT_SIZE as usize / 8 + 16), label)
+    pub fn challenge_scalars(self, count: usize, label: &str) -> Self {
+        self.challenge_bytes(count * (F::MODULUS_BIT_SIZE as usize / 8 + 16), label)
+    }
+
+    pub fn to_arthur(&self) -> ArkFieldArthur<F, H, u8> {
+        ArkFieldArthur::new(self, crate::DefaultRng::default())
+    }
+
+    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> ArkFieldMerlin<'a, F, H, u8> {
+        ArkFieldMerlin::new(&self, transcript)
     }
 }
 
@@ -134,12 +142,12 @@ where
         IOPattern::new(label).into()
     }
 
-    pub fn absorb(self, count: usize, label: &str) -> Self {
-        self.io.absorb(count, label).into()
+    pub fn add_bytes(self, count: usize, label: &str) -> Self {
+        self.io.add_bytes(count, label).into()
     }
 
-    pub fn squeeze(self, count: usize, label: &str) -> Self {
-        self.io.squeeze(count, label).into()
+    pub fn challenge_bytes(self, count: usize, label: &str) -> Self {
+        self.io.challenge_bytes(count, label).into()
     }
 
     pub fn ratchet(self) -> Self {
@@ -150,18 +158,26 @@ where
         self.io.as_bytes()
     }
 
-    pub fn absorb_scalars(self, count: usize, label: &str) -> Self {
-        self.io.absorb_scalars(count, label).into()
+    pub fn add_scalars(self, count: usize, label: &str) -> Self {
+        self.io.add_scalars(count, label).into()
     }
 
-    pub fn squeeze_scalars(self, count: usize, label: &str) -> Self {
-        self.io.squeeze_scalars(count, label).into()
+    pub fn challenge_scalars(self, count: usize, label: &str) -> Self {
+        self.io.challenge_scalars(count, label).into()
     }
 
-    pub fn absorb_points(self, count: usize, label: &str) -> Self {
+    pub fn add_points(self, count: usize, label: &str) -> Self {
         self.io
-            .absorb(count * G::default().compressed_size(), label)
+            .add_bytes(count * G::default().compressed_size(), label)
             .into()
+    }
+
+    pub fn to_arthur(&self) -> ArkGroupArthur<G, H, u8> {
+        ArkGroupArthur::new(self, crate::DefaultRng::default())
+    }
+
+    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> ArkGroupMerlin<'a, G, H, u8> {
+        ArkGroupMerlin::new(&self, transcript)
     }
 }
 
@@ -194,12 +210,12 @@ fn test_iopattern() {
     // OPTION 3 (extra type, trait extensions should be on IOPattern or AlgebraicIOPattern?)
     let io_pattern =
         ArkGroupIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
-            .absorb_points(1, "g")
-            .absorb_points(1, "pk")
+            .add_points(1, "g")
+            .add_points(1, "pk")
             .ratchet()
-            .absorb_points(1, "com")
-            .squeeze_scalars(1, "chal")
-            .absorb_scalars(1, "resp");
+            .add_points(1, "com")
+            .challenge_scalars(1, "chal")
+            .add_scalars(1, "resp");
 
     assert_eq!(
         io_pattern.as_bytes(),

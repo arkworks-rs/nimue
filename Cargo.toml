@@ -7,6 +7,20 @@ edition = "2021"
 license = "MIT/Apache-2.0"
 resolver = "2"
 
+
+[patch.crates-io]
+ark-std = {git = "https://github.com/arkworks-rs/utils"}
+ark-ec = {git = "https://github.com/arkworks-rs/algebra"}
+ark-ff = {git = "https://github.com/arkworks-rs/algebra"}
+ark-serialize = {git = "https://github.com/arkworks-rs/algebra"}
+ark-serialize-derive = {git = "https://github.com/arkworks-rs/algebra"}
+ark-bls12-381 = {git = "https://github.com/arkworks-rs/algebra"}
+ark-bls12-377 = {git = "https://github.com/arkworks-rs/algebra"}
+ark-bn254 = {git = "https://github.com/arkworks-rs/algebra"}
+ark-pallas = {git = "https://github.com/arkworks-rs/algebra"}
+ark-algebra-test-templates = {git = "https://github.com/arkworks-rs/algebra"}
+
+
 [dependencies]
 zeroize = {version="1.6.0", features=["zeroize_derive"]}
 rand = {version="0.8.5", features=["getrandom"]}
@@ -22,8 +36,6 @@ ark-serialize = {version="0.4.2", optional=true}
 ark-crypto-primitives = {version="0.4.0", optional=true}
 curve25519-dalek = {version="4.0.0", optional=true}
 group = {version="0.13.0", optional=true}
-
-# anemoi = {git="https://github.com/mmaker/anemoi"}
 
 [features]
 default = []

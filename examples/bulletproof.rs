@@ -54,17 +54,17 @@ where
 {
     /// The IO of the bulletproof statement (the sole commitment)
     fn bulletproof_statement(self) -> Self {
-        self.absorb_points(1, "Ped-commit")
+        self.add_points(1, "Ped-commit")
     }
 
     /// The IO of the bulletproof protocol
     fn bulletproof_io(mut self, len: usize) -> Self {
         for _ in 0..log2(len) {
             self = self
-                .absorb_points(2, "round-message")
-                .squeeze_scalars(1, "challenge");
+                .add_points(2, "round-message")
+                .challenge_scalars(1, "challenge");
         }
-        self.absorb_scalars(2, "final-message")
+        self.add_scalars(2, "final-message")
     }
 }
 
@@ -83,7 +83,7 @@ where
     if witness.0.len() == 1 {
         assert_eq!(generators.0.len(), 1);
 
-        arthur.absorb_scalars(&[witness.0[0], witness.1[0]])?;
+        arthur.add_scalars(&[witness.0[0], witness.1[0]])?;
         return Ok(arthur.transcript());
     }
 
@@ -102,8 +102,8 @@ where
         + G::msm(g_left, a_right).unwrap()
         + G::msm(h_right, b_left).unwrap();
 
-    arthur.absorb_points(&[left, right])?;
-    let [x]: [G::ScalarField; 1] = arthur.squeeze_scalars()?;
+    arthur.add_points(&[left, right])?;
+    let [x]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
     let new_g = fold_generators(g_left, g_right, &x_inv, &x);
@@ -199,13 +199,13 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut arthur = ArkGroupArthur::new(&io_pattern, OsRng);
+    let mut arthur = io_pattern.to_arthur();
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
         .expect("Error proving");
 
-    let mut verifier_transcript = ArkGroupMerlin::new(&io_pattern, proof);
+    let mut verifier_transcript = io_pattern.to_merlin(proof);
     verifier_transcript.public_points(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
     verify(&mut verifier_transcript, generators, size, &statement).expect("Invalid proof");

@@ -28,7 +28,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
 
     /// Read `input.len()` elements from the transcript.
     #[inline(always)]
-    pub fn next(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn fill_next(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
         U::read(&mut self.transcript, input).unwrap();
         self.safe.absorb(input)
     }
@@ -40,7 +40,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
 
     /// Get a challenge of `count` elements.
     #[inline(always)]
-    pub fn squeeze(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn fill_challenges(&mut self, input: &mut [U]) -> Result<(), InvalidTag> {
         self.safe.squeeze(input)
     }
 
@@ -65,12 +65,22 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
 
 impl<'a, H: DuplexHash<u8>> Merlin<'a, H, u8> {
     #[inline(always)]
-    pub fn absorb_bytes(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.next(input)
+    pub fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+        self.fill_next(input)
     }
 
     #[inline(always)]
-    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
-        self.squeeze(output)
+    pub fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+        self.fill_challenges(output)
+    }
+
+    pub fn next_bytes<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+        let mut input = [0u8; N];
+        self.fill_next_bytes(&mut input).map(|()| input)
+    }
+
+    pub fn challenge_bytes<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+        let mut output = [0u8; N];
+        self.fill_challenge_bytes(&mut output).map(|()| output)
     }
 }

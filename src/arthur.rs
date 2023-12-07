@@ -50,46 +50,21 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
     }
 }
 
-/// Builder for the prover state.
-pub struct ArthurBuilder<H: DuplexHash<U>, U: Unit>
+
+impl<H, R, U> Arthur<H, R, U>
 where
     H: DuplexHash<U>,
+    R: RngCore + CryptoRng,
+    U: Unit,
 {
-    safe: Safe<H, U>,
-    u8sponge: Keccak,
-}
-
-impl<H: DuplexHash<U>, U: Unit> ArthurBuilder<H, U> {
-    pub(crate) fn new(io_pattern: &IOPattern<H, U>) -> Self {
+    pub fn new(io_pattern: &IOPattern<H, U>, csrng: R) -> Self {
         let safe = Safe::new(io_pattern);
 
-        let mut u8sponge = Keccak::default();
-        u8sponge.absorb_unchecked(io_pattern.as_bytes());
+        let mut sponge = Keccak::default();
+        sponge.absorb_unchecked(io_pattern.as_bytes());
+        let rng = ProverRng { sponge, csrng};
 
-        Self { u8sponge, safe }
-    }
-
-    // rekey the private sponge with some additional secrets (i.e. with the witness)
-    // and divide
-    pub fn rekey(mut self, data: &[u8]) -> Self {
-        self.u8sponge.absorb_unchecked(data);
-        self.u8sponge.ratchet_unchecked();
-        self
-    }
-
-    // Finalize the state integrating a cryptographically-secure
-    // random number generator that will be used to seed the state before future squeezes.
-    pub fn finalize_with_rng<R: RngCore + CryptoRng>(self, csrng: R) -> Arthur<H, R, U> {
-        let rng = ProverRng {
-            sponge: self.u8sponge,
-            csrng,
-        };
-
-        Arthur {
-            safe: self.safe,
-            rng,
-            transcript: Vec::new(),
-        }
+        Self { rng, safe, transcript: Vec::new() }
     }
 }
 
@@ -121,12 +96,8 @@ where
 }
 
 impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
-    pub fn new(io_pattern: &IOPattern<H, U>, csrng: R) -> Self {
-        ArthurBuilder::new(io_pattern).finalize_with_rng(csrng)
-    }
-
     #[inline(always)]
-    pub fn absorb(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn add(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
         let old_len = self.transcript.len();
@@ -140,14 +111,14 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
         Ok(())
     }
 
-    pub fn absorb_common(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn public(&mut self, input: &[U]) -> Result<(), InvalidTag> {
         let len = self.transcript.len();
-        self.absorb(input)?;
+        self.add(input)?;
         self.transcript.truncate(len);
         Ok(())
     }
 
-    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn challenge(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
         self.safe.squeeze(output)
     }
 
@@ -176,12 +147,12 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> core::fmt::Debug for Art
 
 impl<H: DuplexHash<u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
     #[inline(always)]
-    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
-        self.absorb(input)
+    pub fn add_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+        self.add(input)
     }
 
     #[inline(always)]
-    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
         self.safe.squeeze(output)
     }
 }

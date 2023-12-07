@@ -173,6 +173,14 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
             }
         }
     }
+
+    pub fn to_arthur(&self) -> crate::Arthur <H, crate::DefaultRng, U>{
+        crate::Arthur::new(self, crate::DefaultRng::default())
+    }
+
+    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> crate::Merlin<'a, H, U> {
+        crate::Merlin::<H, U>::new(self, transcript)
+    }
 }
 
 impl<U: Unit, H: DuplexHash<U>> core::fmt::Debug for IOPattern<H, U> {

@@ -1,7 +1,6 @@
 use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use core::ops::Deref;
+use ark_serialize::CanonicalSerialize;
 
 use crate::hash::Unit;
 use crate::{DuplexHash, IOPattern, InvalidTag, Merlin};
@@ -16,7 +15,7 @@ where
     _base: std::marker::PhantomData<F>,
 }
 
-impl<'a, F, H, U> Deref for ArkFieldMerlin<'a, F, H, U>
+impl<'a, F, H, U> core::ops::Deref for ArkFieldMerlin<'a, F, H, U>
 where
     F: Field,
     H: DuplexHash<U>,
@@ -54,21 +53,28 @@ where
     }
 }
 
+impl<'a, F, H, U> ArkFieldMerlin<'a, F, H, U>
+where
+    F: PrimeField,
+    H: DuplexHash<U>,
+    U: Unit,
+{
+    pub fn new(io: &IOPattern<H, U>, transcript: &'a [u8]) -> Self {
+        Merlin::new(io, transcript).into()
+    }
+}
+
 impl<'a, F, H> ArkFieldMerlin<'a, F, H, u8>
 where
     F: PrimeField,
     H: DuplexHash<u8>,
 {
-    pub fn new(io: &IOPattern<H>, transcript: &'a [u8]) -> Self {
-        Merlin::new(io, transcript).into()
+    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.fill_next_bytes(input)
     }
 
-    pub fn next_fill(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.next(input)
-    }
-
-    pub fn squeeze_fill(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.squeeze(input)
+    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.fill_challenge_bytes(input)
     }
 
     pub fn transcript(&self) -> &[u8] {
@@ -79,21 +85,21 @@ where
         self.merlin.public_input(input)
     }
 
-    pub fn next_fill_scalars(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
+    pub fn fill_next_scalars(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
         let point_size = F::default().compressed_size();
         let mut buf = vec![0u8; point_size];
 
         for o in output.iter_mut() {
-            self.merlin.next(&mut buf)?;
+            self.merlin.fill_next(&mut buf)?;
             *o = F::deserialize_compressed(buf.as_slice()).expect("Invalid");
         }
         Ok(())
     }
 
-    pub fn squeeze_scalars_fill(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
+    pub fn fill_next_challenges(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
         for o in output.iter_mut() {
             let mut buf = vec![0u8; F::MODULUS_BIT_SIZE as usize / 8 + 16];
-            self.merlin.squeeze(&mut buf)?;
+            self.merlin.fill_challenges(&mut buf)?;
             *o = F::from_be_bytes_mod_order(&buf);
         }
         Ok(())
@@ -101,17 +107,17 @@ where
 
     pub fn next<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
         let mut output = [0u8; N];
-        self.next_fill(&mut output).map(|()| output)
+        self.fill_next(&mut output).map(|()| output)
     }
 
-    pub fn squeeze<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
         let mut output = [0u8; N];
-        self.squeeze_fill(&mut output).map(|()| output)
+        self.fill_challenges(&mut output).map(|()| output)
     }
 
     pub fn next_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
         let mut output = [F::default(); N];
-        self.next_fill_scalars(&mut output).map(|()| output)
+        self.fill_next_scalars(&mut output).map(|()| output)
     }
 
     pub fn public_scalars(&mut self, input: &[F]) -> Result<(), InvalidTag> {
@@ -123,9 +129,9 @@ where
         self.merlin.public_input(&buf)
     }
 
-    pub fn squeeze_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
         let mut output = [F::zero(); N];
-        self.squeeze_scalars_fill(&mut output).map(|()| output)
+        self.fill_next_challenges(&mut output).map(|()| output)
     }
 }
 
@@ -138,17 +144,17 @@ where
     _base: std::marker::PhantomData<G>,
 }
 
-impl<'a, G, H, U> Deref for ArkGroupMerlin<'a, G, H, U>
+impl<'a, G, H, U> core::ops::Deref for ArkGroupMerlin<'a, G, H, U>
 where
     G: CurveGroup,
     H: DuplexHash<U>,
     U: Unit,
 {
+    type Target = ArkFieldMerlin<'a, G::ScalarField, H, U>;
+
     fn deref(&self) -> &Self::Target {
         &self.merlin
     }
-
-    type Target = ArkFieldMerlin<'a, G::ScalarField, H, U>;
 }
 
 impl<'a, G, H, U> core::ops::DerefMut for ArkGroupMerlin<'a, G, H, U>
@@ -210,35 +216,35 @@ where
         Merlin::new(io, transcript).into()
     }
 
-    pub fn next_fill(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.next_fill(input)
+    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.fill_next(input)
     }
 
-    pub fn squeeze_fill(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
-        self.merlin.squeeze_fill(input)
+    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+        self.merlin.fill_challenges(input)
     }
 
     pub fn transcript(&self) -> &[u8] {
         &self.merlin.transcript
     }
 
-    pub fn next_fill_scalars(&mut self, output: &mut [G::ScalarField]) -> Result<(), InvalidTag> {
-        self.merlin.next_fill_scalars(output)
+    pub fn fill_next_scalars(&mut self, output: &mut [G::ScalarField]) -> Result<(), InvalidTag> {
+        self.merlin.fill_next_scalars(output)
     }
 
-    pub fn squeeze_scalars_fill(
+    pub fn fill_next_challenge_scalars(
         &mut self,
         output: &mut [G::ScalarField],
     ) -> Result<(), InvalidTag> {
-        self.merlin.squeeze_scalars_fill(output)
+        self.merlin.fill_next_challenges(output)
     }
 
     pub fn next<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
         self.merlin.next()
     }
 
-    pub fn squeeze<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
-        self.merlin.squeeze()
+    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+        self.merlin.challenge()
     }
 
     pub fn next_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag> {
@@ -250,21 +256,22 @@ where
     }
 
     pub fn squeeze_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag> {
-        self.merlin.squeeze_scalars()
+        self.merlin.challenge_scalars()
     }
 
-    pub fn next_points<const N: usize>(&mut self) -> Result<[G; N], InvalidTag> {
-        let mut output = [G::default(); N];
+    pub fn fill_next_points(&mut self, output: &mut [G]) -> Result<(), InvalidTag> {
         let point_size = G::default().compressed_size();
         let mut buf = vec![0u8; point_size];
 
         for o in output.iter_mut() {
-            self.merlin.next_fill(&mut buf)?;
-            *o = G::Affine::deserialize_compressed_unchecked(buf.as_slice())
-                .expect("Invalid")
-                .into();
+            self.merlin.fill_next(&mut buf)?;
+            *o = G::deserialize_compressed(buf.as_slice()).expect("Invalid");
         }
-        Ok(output)
+        Ok(())
+    }
+    pub fn next_points<const N: usize>(&mut self) -> Result<[G; N], InvalidTag> {
+        let mut output = [G::default(); N];
+        self.fill_next_points(&mut output).map(|()| output)
     }
 
     pub fn public_points(&mut self, input: &[G]) -> Result<(), InvalidTag> {

@@ -17,12 +17,12 @@ fn prove<H: DuplexHash<u8>, G: CurveGroup>(
 ) -> Result<&[u8], InvalidTag> {
     let k = G::ScalarField::rand(&mut arthur.rng());
     let commitment = G::generator() * k;
-    arthur.absorb_points(&[commitment])?;
+    arthur.add_points(&[commitment])?;
 
-    let [challenge]: [G::ScalarField; 1] = arthur.squeeze_scalars()?;
+    let [challenge] = arthur.challenge_scalars()?;
 
     let response = k + challenge * witness;
-    arthur.absorb_scalars(&[response])?;
+    arthur.add_scalars(&[response])?;
 
     Ok(arthur.transcript())
 }
@@ -53,22 +53,22 @@ fn main() {
     let (sk, pk) = keygen();
 
     let io = ArkGroupIOPattern::<G, H>::new("nimue::examples::schnorr")
-        .absorb_points(1, "g")
-        .absorb_points(1, "pk")
+        .add_points(1, "g")
+        .add_points(1, "pk")
         .ratchet()
-        .absorb_points(1, "commitment")
-        .squeeze_scalars(1, "challenge")
-        .absorb_scalars(1, "response");
+        .add_points(1, "commitment")
+        .challenge_scalars(1, "challenge")
+        .add_scalars(1, "response");
 
-    let mut arthur = ArkGroupArthur::<G, H>::new(&io, OsRng);
+    let mut arthur = io.to_arthur();
     arthur.public_points(&[g, pk]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove(&mut arthur, sk).expect("Valid proof");
 
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
-    let mut merlin = ArkGroupMerlin::new(&io, proof);
+    let mut merlin = io.to_merlin(proof);
     merlin.public_points(&[g, pk]).unwrap();
     merlin.ratchet().unwrap();
-    verify::<H, G>(&mut merlin, g, pk).expect("Valid proof");
+    verify(&mut merlin, g, pk).expect("Valid proof");
 }

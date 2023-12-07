@@ -66,12 +66,12 @@
 //! // create a new protocol that will absorb 1 byte and squeeze 16 bytes.
 //! // by default we use keccak, but things like `DigestBridge<sha2::Sha256>` will work too.
 //! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "send").squeeze(16, "receive");
-//! let mut arthur = Arthur::from(&io);
+//! let mut arthur = io.to_arthur();
 //! // the prover sends the byte 0x42.
-//! arthur.absorb(&[0x42]).expect("Absorbing one byte");
+//! arthur.add(&[0x42]).expect("Absorbing one byte");
 //! // the prover receive a 128-bit challenge.
 //! let mut chal = [0u8; 16];
-//! arthur.squeeze(&mut chal).expect("Squeezing 128 bits");
+//! arthur.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
 //! assert_eq!(arthur.transcript(), [0x42]);
 //! // generate some private randomness bound to the protocol transcript.
 //! let private = arthur.rng().gen::<[u8; 2]>();
@@ -91,16 +91,14 @@
 //!
 //! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
 //! let transcript = [0x42];
-//! let mut merlin = Merlin::new(&io, &transcript);
+//! let mut merlin = io.to_merlin(&transcript);
 //!
 //! // Read the first message.
-//! let mut first_message = [0u8];
-//! merlin.absorb_bytes(&mut first_message).unwrap();
-//! assert_eq!(first_message, [0x42]);
+//! let [first_message] = merlin.next_bytes().unwrap();
+//! assert_eq!(first_message, 0x42);
 //!
 //! // Squeeze out randomness.
-//! let mut chal = [0u8; 16];
-//! merlin.squeeze_bytes(&mut chal).expect("Squeezing 128 bits");
+//! let chal = merlin.challenge_bytes::<16>().expect("Squeezing 128 bits");
 //! ```
 //!
 //! # Contributing
@@ -125,7 +123,7 @@ pub mod hash;
 /// APIs for common zkp libraries.
 pub mod plugins;
 
-pub use arthur::{Arthur, ArthurBuilder};
+pub use arthur::Arthur;
 pub use errors::InvalidTag;
 pub use hash::DuplexHash;
 pub use merlin::Merlin;

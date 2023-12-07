@@ -15,10 +15,10 @@ fn compatible_scalars() {
 
     let ark_io =
         ArkGroupIOPattern::<ark_curve25519::EdwardsProjective, DefaultHash>::new("ark-dalek")
-            .absorb_scalars(1, "scalar")
-            .squeeze(16, "challenge");
+            .add_scalars(1, "scalar")
+            .challenge_bytes(16, "challenge");
     let dalek_io = IOPattern::<DefaultHash>::new("ark-dalek");
-    let dalek_io = DalekIOPattern::absorb_scalars(dalek_io, 1, "scalar");
+    let dalek_io = DalekIOPattern::add_scalars(dalek_io, 1, "scalar");
     let dalek_io = dalek_io.squeeze(16, "challenge");
 
     let mut ark_safe = Safe::new(&ark_io);
@@ -27,7 +27,7 @@ fn compatible_scalars() {
     ark_safe.squeeze(&mut ark_chal).unwrap();
     let mut dalek_safe = Safe::new(&dalek_io);
     let mut dalek_chal = [0u8; 16];
-    dalek_safe.absorb_scalars(&[dalek_scalar]).unwrap();
+    dalek_safe.add_scalars(&[dalek_scalar]).unwrap();
     dalek_safe.squeeze_bytes(&mut dalek_chal).unwrap();
 
     assert_eq!(ark_chal, dalek_chal);
