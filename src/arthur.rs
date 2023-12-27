@@ -50,7 +50,6 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
     }
 }
 
-
 impl<H, R, U> Arthur<H, R, U>
 where
     H: DuplexHash<U>,
@@ -62,9 +61,13 @@ where
 
         let mut sponge = Keccak::default();
         sponge.absorb_unchecked(io_pattern.as_bytes());
-        let rng = ProverRng { sponge, csrng};
+        let rng = ProverRng { sponge, csrng };
 
-        Self { rng, safe, transcript: Vec::new() }
+        Self {
+            rng,
+            safe,
+            transcript: Vec::new(),
+        }
     }
 }
 

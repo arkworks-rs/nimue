@@ -174,7 +174,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
-    pub fn to_arthur(&self) -> crate::Arthur <H, crate::DefaultRng, U>{
+    pub fn to_arthur(&self) -> crate::Arthur<H, crate::DefaultRng, U> {
         crate::Arthur::new(self, crate::DefaultRng::default())
     }
 

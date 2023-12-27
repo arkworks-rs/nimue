@@ -1,5 +1,5 @@
+use ark_ff::Field;
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
-use ark_ff::{PrimeField, Field};
 use zeroize::Zeroize;
 
 use super::sponge::Sponge;
@@ -27,7 +27,7 @@ impl<F: Field, const R: usize, const N: usize> IndexMut<usize> for AnemoiState<F
     }
 }
 
-impl<F: Field, const R: usize, const N: usize>  Index<RangeFrom<usize>> for AnemoiState<F, R, N> {
+impl<F: Field, const R: usize, const N: usize> Index<RangeFrom<usize>> for AnemoiState<F, R, N> {
     type Output = [F];
 
     fn index(&self, index: RangeFrom<usize>) -> &Self::Output {
@@ -35,13 +35,13 @@ impl<F: Field, const R: usize, const N: usize>  Index<RangeFrom<usize>> for Anem
     }
 }
 
-impl<F: Field, const R: usize, const N: usize>  IndexMut<RangeFrom<usize>> for AnemoiState<F, R, N> {
+impl<F: Field, const R: usize, const N: usize> IndexMut<RangeFrom<usize>> for AnemoiState<F, R, N> {
     fn index_mut(&mut self, index: RangeFrom<usize>) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
 
-impl<F: Field, const R: usize, const N: usize>  Index<RangeTo<usize>> for AnemoiState<F, R, N> {
+impl<F: Field, const R: usize, const N: usize> Index<RangeTo<usize>> for AnemoiState<F, R, N> {
     type Output = [F];
 
     fn index(&self, index: RangeTo<usize>) -> &Self::Output {
@@ -63,19 +63,23 @@ impl<F: Field, const R: usize, const N: usize> Index<Range<usize>> for AnemoiSta
     }
 }
 
-impl<F: Field, const R: usize, const N: usize>  IndexMut<Range<usize>> for AnemoiState<F, R, N> {
-
+impl<F: Field, const R: usize, const N: usize> IndexMut<Range<usize>> for AnemoiState<F, R, N> {
     fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
 
-
 pub type AnemoiBls12_381_2_1 = AnemoiState<anemoi::bls12_381::Felt, 2, 1>;
-use anemoi::Anemoi;
 use anemoi::bls12_381::anemoi_2_1::AnemoiBls12_381_2_1 as _AnemoiBls12_381_2_1;
+use anemoi::Anemoi;
 
-impl Sponge for AnemoiState<anemoi::bls12_381::Felt, { _AnemoiBls12_381_2_1::RATE }, { _AnemoiBls12_381_2_1::WIDTH }> {
+impl Sponge
+    for AnemoiState<
+        anemoi::bls12_381::Felt,
+        { _AnemoiBls12_381_2_1::RATE },
+        { _AnemoiBls12_381_2_1::WIDTH },
+    >
+{
     type U = anemoi::bls12_381::Felt;
 
     const CAPACITY: usize = _AnemoiBls12_381_2_1::WIDTH - _AnemoiBls12_381_2_1::RATE;

@@ -7,7 +7,7 @@ pub mod legacy;
 /// Sponge functions.
 pub mod sponge;
 
-#[cfg(feature="arkworks")]
+#[cfg(feature = "anemoi")]
 pub mod anemoi;
 
 pub use keccak::Keccak;

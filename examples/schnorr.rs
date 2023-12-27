@@ -1,4 +1,4 @@
-use ark_ec::{CurveGroup, Group};
+use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
 use nimue::{DuplexHash, InvalidTag};
 

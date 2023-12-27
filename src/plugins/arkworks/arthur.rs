@@ -85,8 +85,8 @@ where
     }
 
     fn add_scalars(&mut self, input: &[F]) -> Result<(), InvalidTag> {
-        let serialized = self.public_scalars(input)?;
-        self.arthur.transcript.extend(serialized);
+        let serialized = self.public_scalars(input);
+        self.arthur.transcript.extend(serialized?);
         Ok(())
     }
 
@@ -99,7 +99,7 @@ where
         Ok(())
     }
 
-    fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
         let mut output = [F::default(); N];
         self.fill_challenge_scalars(&mut output)?;
         Ok(output)
@@ -198,8 +198,8 @@ where
     }
 
     pub fn add_points(&mut self, input: &[G]) -> Result<(), InvalidTag> {
-        let serialized = self.public_points(input)?;
-        self.arthur.transcript.extend(serialized);
+        let serialized = self.public_points(input);
+        self.arthur.transcript.extend(serialized?);
         Ok(())
     }
 }
