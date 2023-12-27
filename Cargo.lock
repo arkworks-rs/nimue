@@ -524,7 +524,7 @@ dependencies = [
 
 [[package]]
 name = "nimue"
-version = "0.0.1-alpha7"
+version = "0.0.1-beta1"
 dependencies = [
  "anemoi",
  "anyhow",
