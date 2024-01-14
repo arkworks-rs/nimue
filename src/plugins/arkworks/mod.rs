@@ -1,16 +1,16 @@
-use crate::hash::Unit;
+mod arthur;
+mod iopattern;
+mod merlin;
+pub mod prelude;
 
 use ark_ff::{Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use std::io;
 
-pub mod prelude;
+pub use prelude::*;
 
-mod arthur;
-mod iopattern;
-mod merlin;
-// mod safe;
-
+/// Compute the bits needed in order to obtain a
+/// (pseudo-random) uniform distribution in F.
 const fn f_bytes<F: PrimeField>() -> usize {
     (F::MODULUS_BIT_SIZE as usize + 128) / 8
 }
