@@ -88,9 +88,8 @@ where
     pub fn fill_next_scalars(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
         let point_size = F::default().compressed_size();
         let mut buf = vec![0u8; point_size];
-
         for o in output.iter_mut() {
-            self.merlin.fill_next(&mut buf)?;
+            self.merlin.fill_next_bytes(&mut buf)?;
             *o = F::deserialize_compressed(buf.as_slice()).expect("Invalid");
         }
         Ok(())

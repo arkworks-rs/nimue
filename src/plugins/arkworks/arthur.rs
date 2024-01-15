@@ -81,7 +81,7 @@ where
                 .serialize_compressed(&mut buf)
                 .expect("serialization failed");
         }
-        self.add_bytes(&buf).map(|()| buf)
+        self.public(&buf).map(|()| buf)
     }
 
     fn add_scalars(&mut self, input: &[F]) -> Result<(), InvalidTag> {
@@ -94,7 +94,7 @@ where
         let mut buf = vec![0u8; super::f_bytes::<F>()];
         for o in output.iter_mut() {
             self.arthur.challenge_bytes(&mut buf)?;
-            *o = F::from_le_bytes_mod_order(&buf);
+            *o = F::from_be_bytes_mod_order(&buf);
         }
         Ok(())
     }
@@ -188,13 +188,13 @@ where
     }
 
     pub fn public_points(&mut self, input: &[G]) -> Result<Vec<u8>, InvalidTag> {
-        let mut buf = Vec::<u8>::new();
+        let mut buf = Vec::new();
         for point in input {
             point
                 .serialize_compressed(&mut buf)
                 .expect("serialization failed");
         }
-        self.arthur.add(&buf).map(|()| buf)
+        self.arthur.public(&buf).map(|()| buf)
     }
 
     pub fn add_points(&mut self, input: &[G]) -> Result<(), InvalidTag> {
