@@ -448,7 +448,7 @@ dependencies = [
 
 [[package]]
 name = "nimue"
-version = "0.0.1-beta1"
+version = "0.0.1-beta2"
 dependencies = [
  "anyhow",
  "ark-crypto-primitives",
