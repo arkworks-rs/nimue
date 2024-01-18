@@ -2,7 +2,7 @@ use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
 use core::ops::Deref;
 
-use super::prelude::*;
+use super::*;
 
 pub struct ArkFieldIOPattern<F: Field, H = crate::DefaultHash, U = u8>
 where

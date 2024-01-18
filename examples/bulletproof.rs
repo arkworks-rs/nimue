@@ -4,7 +4,7 @@ use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
 use nimue::plugins::arkworks::prelude::*;
-use nimue::{DuplexHash, InvalidTag};
+use nimue::{DuplexHash, IOPatternError};
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -126,7 +126,7 @@ fn verify<G, H>(
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
-) -> Result<(), InvalidTag>
+) -> Result<(), IOPatternError>
 where
     H: DuplexHash<u8>,
     G: CurveGroup,

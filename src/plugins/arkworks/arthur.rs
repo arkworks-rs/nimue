@@ -2,7 +2,7 @@ use ark_ec::CurveGroup;
 use ark_ff::{Field, PrimeField};
 use rand::CryptoRng;
 
-use super::prelude::*;
+use crate::{Arthur, DuplexHash, IOPattern, ProofResult, Unit};
 
 pub struct ArkFieldArthur<F: Field, H = crate::DefaultHash, U = u8, R = crate::DefaultRng>
 where
@@ -73,24 +73,22 @@ where
     H: DuplexHash<u8>,
     R: rand::RngCore + CryptoRng,
 {
-    pub fn public_scalars(&mut self, input: &[F]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn public_scalars(&mut self, input: &[F]) -> ProofResult<Vec<u8>> {
         let mut buf = Vec::<u8>::new();
 
         for scalar in input {
-            scalar
-                .serialize_compressed(&mut buf)
-                .expect("serialization failed");
+            scalar.serialize_compressed(&mut buf)?
         }
-        self.public(&buf).map(|()| buf)
+        self.public(&buf).map(|()| buf).map_err(|x| x.into())
     }
 
-    fn add_scalars(&mut self, input: &[F]) -> Result<(), InvalidTag> {
+    fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
         let serialized = self.public_scalars(input);
         self.arthur.transcript.extend(serialized?);
         Ok(())
     }
 
-    fn fill_challenge_scalars(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
+    fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let mut buf = vec![0u8; super::f_bytes::<F>()];
         for o in output.iter_mut() {
             self.arthur.challenge_bytes(&mut buf)?;
@@ -99,7 +97,7 @@ where
         Ok(())
     }
 
-    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> ProofResult<[F; N]> {
         let mut output = [F::default(); N];
         self.fill_challenge_scalars(&mut output)?;
         Ok(output)
@@ -168,36 +166,31 @@ where
         Arthur::new(io, csrng).into()
     }
 
-    pub fn public_scalars(&mut self, input: &[G::ScalarField]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn public_scalars(&mut self, input: &[G::ScalarField]) -> ProofResult<Vec<u8>> {
         self.arthur.public_scalars(input)
     }
 
-    pub fn add_scalars(&mut self, input: &[G::ScalarField]) -> Result<(), InvalidTag> {
+    pub fn add_scalars(&mut self, input: &[G::ScalarField]) -> ProofResult<()> {
         self.arthur.add_scalars(input)
     }
 
-    pub fn fill_challenge_scalars(
-        &mut self,
-        output: &mut [G::ScalarField],
-    ) -> Result<(), InvalidTag> {
+    pub fn fill_challenge_scalars(&mut self, output: &mut [G::ScalarField]) -> ProofResult<()> {
         self.arthur.fill_challenge_scalars(output)
     }
 
-    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> ProofResult<[G::ScalarField; N]> {
         self.arthur.challenge_scalars()
     }
 
-    pub fn public_points(&mut self, input: &[G]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn public_points(&mut self, input: &[G]) -> ProofResult<Vec<u8>> {
         let mut buf = Vec::new();
         for point in input {
-            point
-                .serialize_compressed(&mut buf)
-                .expect("serialization failed");
+            point.serialize_compressed(&mut buf)?
         }
-        self.arthur.public(&buf).map(|()| buf)
+        self.arthur.public(&buf).map(|()| buf).map_err(|x| x.into())
     }
 
-    pub fn add_points(&mut self, input: &[G]) -> Result<(), InvalidTag> {
+    pub fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
         let serialized = self.public_points(input);
         self.arthur.transcript.extend(serialized?);
         Ok(())

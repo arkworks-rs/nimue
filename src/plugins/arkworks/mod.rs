@@ -1,13 +1,16 @@
 mod arthur;
 mod iopattern;
 mod merlin;
-pub mod prelude;
 
 use ark_ff::{Fp, FpConfig, PrimeField};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use std::io;
 
-pub use prelude::*;
+use crate::ProofError;
+pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, IOPatternError, Merlin, Safe};
+pub use arthur::{ArkFieldArthur, ArkGroupArthur};
+pub use iopattern::{ArkFieldIOPattern, ArkGroupIOPattern};
+pub use merlin::{ArkFieldMerlin, ArkGroupMerlin};
 
 /// Compute the bits needed in order to obtain a
 /// (pseudo-random) uniform distribution in F.
@@ -30,5 +33,11 @@ impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {
                 .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))?
         }
         Ok(())
+    }
+}
+
+impl From<SerializationError> for ProofError {
+    fn from(_value: SerializationError) -> Self {
+        ProofError::SerializationError
     }
 }

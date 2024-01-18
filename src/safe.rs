@@ -3,7 +3,7 @@ use std::collections::vec_deque::VecDeque;
 
 use crate::hash::Unit;
 
-use super::errors::InvalidTag;
+use super::errors::IOPatternError;
 use super::hash::{DuplexHash, Keccak};
 
 // XXX. before, absorb and squeeze were accepting arguments of type
@@ -37,7 +37,7 @@ pub(crate) enum Op {
 
 impl Op {
     /// Create a new OP from the portion of a tag.
-    fn new(id: char, count: Option<usize>) -> Result<Self, InvalidTag> {
+    fn new(id: char, count: Option<usize>) -> Result<Self, IOPatternError> {
         match (id, count) {
             ('A', Some(c)) if c > 0 => Ok(Op::Absorb(c)),
             ('R', None) | ('R', Some(0)) => Ok(Op::Ratchet),
@@ -119,7 +119,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
             .expect("Internal error. Please submit issue to m@orru.net")
     }
 
-    fn parse_io(io_pattern: &[u8]) -> Result<VecDeque<Op>, InvalidTag> {
+    fn parse_io(io_pattern: &[u8]) -> Result<VecDeque<Op>, IOPatternError> {
         let mut stack = VecDeque::new();
 
         // skip the domain separator
@@ -145,7 +145,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     fn simplify_stack(
         mut dst: VecDeque<Op>,
         mut stack: VecDeque<Op>,
-    ) -> Result<VecDeque<Op>, InvalidTag> {
+    ) -> Result<VecDeque<Op>, IOPatternError> {
         if stack.is_empty() {
             Ok(dst)
         } else {
@@ -214,7 +214,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     }
 
     /// Finish the block and compress the state.
-    pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
+    pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
         if self.stack.pop_front().unwrap() != Op::Ratchet {
             Err("Invalid tag".into())
         } else {
@@ -224,7 +224,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     }
 
     /// Ratchet and return the sponge state.
-    pub fn preprocess(self) -> Result<&'static [U], InvalidTag> {
+    pub fn preprocess(self) -> Result<&'static [U], IOPatternError> {
         unimplemented!()
         // self.ratchet()?;
         // Ok(self.sponge.tag().clone())
@@ -233,7 +233,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     /// Perform secure absorption of the elements in `input`.
     ///
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
-    pub fn absorb(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn absorb(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         match self.stack.pop_front() {
             Some(Op::Absorb(length)) if length >= input.len() => {
                 if length > input.len() {
@@ -267,7 +267,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     /// For byte-oriented sponges, this operation is equivalent to the squeeze operation.
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
-    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
         match self.stack.pop_front() {
             Some(Op::Squeeze(length)) if output.len() <= length => {
                 self.sponge.squeeze_unchecked(output);
@@ -341,12 +341,12 @@ impl<U: Unit, H: DuplexHash<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B
 
 impl<H: DuplexHash<u8>> Safe<H, u8> {
     #[inline(always)]
-    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
         self.absorb(input)
     }
 
     #[inline(always)]
-    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         self.squeeze(output)
     }
 }

@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::DefaultRng;
-pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, InvalidTag, Merlin, Safe};
+pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, IOPatternError, Merlin, Safe};
 use curve25519_dalek::{ristretto::RistrettoPoint, Scalar};
 
 pub struct DalekIOPattern<H = crate::DefaultHash, U = u8>
@@ -117,7 +117,7 @@ impl<H: DuplexHash<u8>, R: rand::RngCore + rand::CryptoRng> DalekArthur<H, R, u8
         Arthur::new(io, csrng).into()
     }
 
-    pub fn public_scalars(&mut self, input: &[Scalar]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn public_scalars(&mut self, input: &[Scalar]) -> Result<Vec<u8>, IOPatternError> {
         let mut buf = Vec::new();
 
         for scalar in input {
@@ -128,13 +128,13 @@ impl<H: DuplexHash<u8>, R: rand::RngCore + rand::CryptoRng> DalekArthur<H, R, u8
         self.add_bytes(&buf).map(|()| buf)
     }
 
-    pub fn add_scalars(&mut self, input: &[Scalar]) -> Result<(), InvalidTag> {
+    pub fn add_scalars(&mut self, input: &[Scalar]) -> Result<(), IOPatternError> {
         let serialized = self.public_scalars(input);
         self.arthur.transcript.extend(serialized?);
         Ok(())
     }
 
-    pub fn fill_challenge_scalars(&mut self, output: &mut [Scalar]) -> Result<(), InvalidTag> {
+    pub fn fill_challenge_scalars(&mut self, output: &mut [Scalar]) -> Result<(), IOPatternError> {
         let mut buf = [[0u8; 32]; 2];
 
         for o in output.into_iter() {
@@ -145,13 +145,13 @@ impl<H: DuplexHash<u8>, R: rand::RngCore + rand::CryptoRng> DalekArthur<H, R, u8
         Ok(())
     }
 
-    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[Scalar; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[Scalar; N], IOPatternError> {
         let mut scalars = [Scalar::default(); N];
         self.fill_challenge_scalars(&mut scalars)?;
         Ok(scalars)
     }
 
-    pub fn public_points(&mut self, input: &[RistrettoPoint]) -> Result<Vec<u8>, InvalidTag> {
+    pub fn public_points(&mut self, input: &[RistrettoPoint]) -> Result<Vec<u8>, IOPatternError> {
         let mut buf = Vec::new();
 
         for point in input {
@@ -162,14 +162,11 @@ impl<H: DuplexHash<u8>, R: rand::RngCore + rand::CryptoRng> DalekArthur<H, R, u8
         self.arthur.add_bytes(&buf).map(|()| buf)
     }
 
-    pub fn add_points(&mut self, input: &[RistrettoPoint]) -> Result<(), InvalidTag> {
+    pub fn add_points(&mut self, input: &[RistrettoPoint]) -> Result<(), IOPatternError> {
         let serialized = self.public_points(input);
         self.arthur.transcript.extend(serialized?);
         Ok(())
     }
-
-
-
 }
 
 pub struct DalekMerlin<'a, H = crate::DefaultHash, U = u8>

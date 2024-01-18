@@ -1,6 +1,6 @@
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
-use nimue::{DuplexHash, InvalidTag};
+use nimue::{DuplexHash, IOPatternError};
 
 use nimue::plugins::arkworks::prelude::*;
 use rand::rngs::OsRng;
@@ -14,7 +14,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<H: DuplexHash<u8>, G: CurveGroup>(
     arthur: &mut ArkGroupArthur<G, H>,
     witness: G::ScalarField,
-) -> Result<&[u8], InvalidTag> {
+) -> Result<&[u8], IOPatternError> {
     let k = G::ScalarField::rand(&mut arthur.rng());
     let commitment = G::generator() * k;
     arthur.add_points(&[commitment])?;

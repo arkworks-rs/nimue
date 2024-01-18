@@ -118,14 +118,25 @@ This crate doesn't support big-endian targets.
 "#
 );
 
+/// Prover's internal state and transcript generation.
+mod arthur;
+/// Built-in proof results
+mod errors;
 /// Support for hash functions.
 pub mod hash;
+/// Verifier state and transcript deserialization.
+mod merlin;
 /// APIs for common zkp libraries.
 pub mod plugins;
+/// SAFE API
+mod safe;
+/// Unit-tests.
+#[cfg(test)]
+mod tests;
 
 pub use arthur::Arthur;
-pub use errors::InvalidTag;
-pub use hash::DuplexHash;
+pub use errors::{IOPatternError, ProofError, ProofResult};
+pub use hash::{DuplexHash, Unit};
 pub use merlin::Merlin;
 pub use safe::{IOPattern, Safe};
 
@@ -134,15 +145,3 @@ pub type DefaultRng = rand::rngs::OsRng;
 
 /// Default hash function used ([`hash::Keccak`])
 pub type DefaultHash = hash::Keccak;
-
-/// Prover's internal state and transcript generation.
-mod arthur;
-/// Error types.
-mod errors;
-/// Verifier state and transcript deserialization.
-mod merlin;
-/// SAFE API
-mod safe;
-/// Unit-tests.
-#[cfg(test)]
-mod tests;

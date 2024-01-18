@@ -4,7 +4,7 @@ use crate::hash::Unit;
 use crate::{IOPattern, Safe};
 
 use super::hash::{DuplexHash, Keccak};
-use super::{DefaultHash, DefaultRng, InvalidTag};
+use super::{DefaultHash, DefaultRng, IOPatternError};
 
 /// A cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
@@ -100,7 +100,7 @@ where
 
 impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
     #[inline(always)]
-    pub fn add(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn add(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
         let old_len = self.transcript.len();
@@ -114,19 +114,19 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
         Ok(())
     }
 
-    pub fn public(&mut self, input: &[U]) -> Result<(), InvalidTag> {
+    pub fn public(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         let len = self.transcript.len();
         self.add(input)?;
         self.transcript.truncate(len);
         Ok(())
     }
 
-    pub fn challenge(&mut self, output: &mut [U]) -> Result<(), InvalidTag> {
+    pub fn challenge(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
         self.safe.squeeze(output)
     }
 
     #[inline(always)]
-    pub fn ratchet(&mut self) -> Result<(), InvalidTag> {
+    pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
         self.safe.ratchet()
     }
 
@@ -150,12 +150,12 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> core::fmt::Debug for Art
 
 impl<H: DuplexHash<u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
     #[inline(always)]
-    pub fn add_bytes(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+    pub fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
         self.add(input)
     }
 
     #[inline(always)]
-    pub fn challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         self.safe.squeeze(output)
     }
 }

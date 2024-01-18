@@ -3,7 +3,7 @@ use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
 
 use crate::hash::Unit;
-use crate::{DuplexHash, IOPattern, InvalidTag, Merlin};
+use crate::{DuplexHash, IOPattern, IOPatternError, Merlin};
 
 pub struct ArkFieldMerlin<'a, F, H = crate::DefaultHash, U = u8>
 where
@@ -69,11 +69,11 @@ where
     F: PrimeField,
     H: DuplexHash<u8>,
 {
-    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.merlin.fill_next_bytes(input)
     }
 
-    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.merlin.fill_challenge_bytes(input)
     }
 
@@ -81,11 +81,11 @@ where
         &self.merlin.transcript
     }
 
-    pub fn public_input(&mut self, input: &[u8]) -> Result<(), InvalidTag> {
+    pub fn public_input(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
         self.merlin.public_input(input)
     }
 
-    pub fn fill_next_scalars(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
+    pub fn fill_next_scalars(&mut self, output: &mut [F]) -> Result<(), IOPatternError> {
         let point_size = F::default().compressed_size();
         let mut buf = vec![0u8; point_size];
         for o in output.iter_mut() {
@@ -95,7 +95,7 @@ where
         Ok(())
     }
 
-    pub fn fill_next_challenges(&mut self, output: &mut [F]) -> Result<(), InvalidTag> {
+    pub fn fill_next_challenges(&mut self, output: &mut [F]) -> Result<(), IOPatternError> {
         for o in output.iter_mut() {
             let mut buf = vec![0u8; F::MODULUS_BIT_SIZE as usize / 8 + 16];
             self.merlin.fill_challenges(&mut buf)?;
@@ -104,22 +104,22 @@ where
         Ok(())
     }
 
-    pub fn next<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+    pub fn next<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         let mut output = [0u8; N];
         self.fill_next(&mut output).map(|()| output)
     }
 
-    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         let mut output = [0u8; N];
         self.fill_challenges(&mut output).map(|()| output)
     }
 
-    pub fn next_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+    pub fn next_scalars<const N: usize>(&mut self) -> Result<[F; N], IOPatternError> {
         let mut output = [F::default(); N];
         self.fill_next_scalars(&mut output).map(|()| output)
     }
 
-    pub fn public_scalars(&mut self, input: &[F]) -> Result<(), InvalidTag> {
+    pub fn public_scalars(&mut self, input: &[F]) -> Result<(), IOPatternError> {
         let mut buf = Vec::new();
         for i in input {
             i.serialize_compressed(&mut buf)
@@ -128,7 +128,7 @@ where
         self.merlin.public_input(&buf)
     }
 
-    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], InvalidTag> {
+    pub fn challenge_scalars<const N: usize>(&mut self) -> Result<[F; N], IOPatternError> {
         let mut output = [F::zero(); N];
         self.fill_next_challenges(&mut output).map(|()| output)
     }
@@ -215,11 +215,11 @@ where
         Merlin::new(io, transcript).into()
     }
 
-    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn fill_next(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.merlin.fill_next(input)
     }
 
-    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), InvalidTag> {
+    pub fn fill_challenges(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.merlin.fill_challenges(input)
     }
 
@@ -227,38 +227,43 @@ where
         &self.merlin.transcript
     }
 
-    pub fn fill_next_scalars(&mut self, output: &mut [G::ScalarField]) -> Result<(), InvalidTag> {
+    pub fn fill_next_scalars(
+        &mut self,
+        output: &mut [G::ScalarField],
+    ) -> Result<(), IOPatternError> {
         self.merlin.fill_next_scalars(output)
     }
 
     pub fn fill_next_challenge_scalars(
         &mut self,
         output: &mut [G::ScalarField],
-    ) -> Result<(), InvalidTag> {
+    ) -> Result<(), IOPatternError> {
         self.merlin.fill_next_challenges(output)
     }
 
-    pub fn next<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+    pub fn next<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         self.merlin.next()
     }
 
-    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], InvalidTag> {
+    pub fn challenge<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         self.merlin.challenge()
     }
 
-    pub fn next_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag> {
+    pub fn next_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], IOPatternError> {
         self.merlin.next_scalars()
     }
 
-    pub fn public_scalars(&mut self, input: &[G::ScalarField]) -> Result<(), InvalidTag> {
+    pub fn public_scalars(&mut self, input: &[G::ScalarField]) -> Result<(), IOPatternError> {
         self.merlin.public_scalars(input)
     }
 
-    pub fn squeeze_scalars<const N: usize>(&mut self) -> Result<[G::ScalarField; N], InvalidTag> {
+    pub fn squeeze_scalars<const N: usize>(
+        &mut self,
+    ) -> Result<[G::ScalarField; N], IOPatternError> {
         self.merlin.challenge_scalars()
     }
 
-    pub fn fill_next_points(&mut self, output: &mut [G]) -> Result<(), InvalidTag> {
+    pub fn fill_next_points(&mut self, output: &mut [G]) -> Result<(), IOPatternError> {
         let point_size = G::default().compressed_size();
         let mut buf = vec![0u8; point_size];
 
@@ -268,12 +273,12 @@ where
         }
         Ok(())
     }
-    pub fn next_points<const N: usize>(&mut self) -> Result<[G; N], InvalidTag> {
+    pub fn next_points<const N: usize>(&mut self) -> Result<[G; N], IOPatternError> {
         let mut output = [G::default(); N];
         self.fill_next_points(&mut output).map(|()| output)
     }
 
-    pub fn public_points(&mut self, input: &[G]) -> Result<(), InvalidTag> {
+    pub fn public_points(&mut self, input: &[G]) -> Result<(), IOPatternError> {
         let mut buf = Vec::new();
         for i in input {
             i.into_affine()
