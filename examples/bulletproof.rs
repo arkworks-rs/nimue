@@ -1,10 +1,9 @@
-use anyhow::Result;
 use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::plugins::arkworks::prelude::*;
-use nimue::{DuplexHash, IOPatternError};
+use nimue::plugins::arkworks::{ArkGroupArthur, ArkGroupIOPattern, ArkGroupMerlin};
+use nimue::{ProofError, ProofResult};
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -22,7 +21,7 @@ fn fold_generators<A: AffineRepr>(
 /// Computes the inner prouct of vectors `a` and `b`.
 ///
 /// Useless once https://github.com/arkworks-rs/algebra/pull/665 gets merged.
-fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
+fn dot_prod<F: Field>(a: &[F], b: &[F]) -> F {
     a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
 }
 
@@ -38,28 +37,19 @@ fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
 ///
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
 /// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
-trait BulletproofIOPattern<G, H, U>
-where
-    G: CurveGroup,
-    U: Unit,
-    H: DuplexHash<U>,
-{
+trait BulletproofIOPattern<G: CurveGroup> {
     fn bulletproof_statement(self) -> Self;
-    fn bulletproof_io(self, len: usize) -> Self;
+    fn add_bulletproof(self, len: usize) -> Self;
 }
 
-impl<H, G> BulletproofIOPattern<G, H, u8> for ArkGroupIOPattern<G, H>
-where
-    G: CurveGroup,
-    H: DuplexHash<u8>,
-{
+impl<G: CurveGroup> BulletproofIOPattern<G> for ArkGroupIOPattern<G> {
     /// The IO of the bulletproof statement (the sole commitment)
     fn bulletproof_statement(self) -> Self {
         self.add_points(1, "Ped-commit")
     }
 
     /// The IO of the bulletproof protocol
-    fn bulletproof_io(mut self, len: usize) -> Self {
+    fn add_bulletproof(mut self, len: usize) -> Self {
         for _ in 0..log2(len) {
             self = self
                 .add_points(2, "round-message")
@@ -69,16 +59,12 @@ where
     }
 }
 
-fn prove<'a, H, G>(
-    arthur: &'a mut ArkGroupArthur<G, H>,
+fn prove<'a, G: CurveGroup>(
+    arthur: &'a mut ArkGroupArthur<G>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
-) -> Result<&'a [u8], anyhow::Error>
-where
-    H: DuplexHash<u8>,
-    G: CurveGroup,
-{
+) -> ProofResult<&'a [u8]> {
     assert_eq!(witness.0.len(), witness.1.len());
 
     if witness.0.len() == 1 {
@@ -95,13 +81,13 @@ where
     let (h_left, h_right) = generators.1.split_at(n);
     let u = *generators.2;
 
-    let left = u * inner_prod(a_left, b_right)
-        + G::msm(g_right, a_left).unwrap()
-        + G::msm(h_left, b_right).unwrap();
+    let left = u * dot_prod(a_left, b_right)
+        + G::msm_unchecked(g_right, a_left)
+        + G::msm_unchecked(h_left, b_right);
 
-    let right = u * inner_prod(a_right, b_left)
-        + G::msm(g_left, a_right).unwrap()
-        + G::msm(h_right, b_left).unwrap();
+    let right = u * dot_prod(a_right, b_left)
+        + G::msm_unchecked(g_left, a_right)
+        + G::msm_unchecked(h_right, b_left);
 
     arthur.add_points(&[left, right])?;
     let [x]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
@@ -121,16 +107,12 @@ where
     Ok(bulletproof)
 }
 
-fn verify<G, H>(
-    merlin: &mut ArkGroupMerlin<G, H>,
+fn verify<G: CurveGroup>(
+    merlin: &mut ArkGroupMerlin<G>,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
-) -> Result<(), IOPatternError>
-where
-    H: DuplexHash<u8>,
-    G: CurveGroup,
-{
+) -> ProofResult<()> {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
     let u = generators.2.clone();
@@ -157,7 +139,7 @@ where
     if (g[0] * a + h[0] * b + u * c - statement).is_zero() {
         Ok(())
     } else {
-        Err("Invalid proof".into())
+        Err(ProofError::InvalidProof)
     }
 }
 
@@ -178,14 +160,14 @@ fn main() {
         // (optional) process the data so far, filling the block till the end.
         .ratchet()
         // add the IO of the bulletproof protocol (the transcript)
-        .bulletproof_io(size);
+        .add_bulletproof(size);
 
     // the test vectors
     let a = (0..size).map(|x| F::from(x as u32)).collect::<Vec<_>>();
     let b = (0..size)
         .map(|x| F::from(x as u32 + 42))
         .collect::<Vec<_>>();
-    let ab = inner_prod(&a, &b);
+    let ab = dot_prod(&a, &b);
     // the generators to be used for respectively a, b, ip
     let g = (0..a.len())
         .map(|_| GAffine::rand(&mut OsRng))
@@ -202,8 +184,8 @@ fn main() {
     let mut arthur = io_pattern.to_arthur();
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
-    let proof = prove::<nimue::DefaultHash, G>(&mut arthur, generators, &statement, witness)
-        .expect("Error proving");
+    let proof = prove(&mut arthur, generators, &statement, witness).expect("Error proving");
+    println!("Here's a bulletproof for {} elements:\n{}", size, hex::encode(proof));
 
     let mut verifier_transcript = io_pattern.to_merlin(proof);
     verifier_transcript.public_points(&[statement]).unwrap();

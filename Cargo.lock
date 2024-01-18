@@ -752,21 +752,6 @@ version = "0.4.2"
 source = "git+https://github.com/arkworks-rs/algebra#4c994ebe1ed5654c40383cd3fc75b8105a8b62dc"
 
 [[patch.unused]]
-name = "ark-bls12-377"
-version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/algebra#4c994ebe1ed5654c40383cd3fc75b8105a8b62dc"
-
-[[patch.unused]]
 name = "ark-bls12-381"
-version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/algebra#4c994ebe1ed5654c40383cd3fc75b8105a8b62dc"
-
-[[patch.unused]]
-name = "ark-bn254"
-version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/algebra#4c994ebe1ed5654c40383cd3fc75b8105a8b62dc"
-
-[[patch.unused]]
-name = "ark-pallas"
 version = "0.4.0"
 source = "git+https://github.com/arkworks-rs/algebra#4c994ebe1ed5654c40383cd3fc75b8105a8b62dc"

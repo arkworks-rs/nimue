@@ -1,8 +1,8 @@
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
-use nimue::{DuplexHash, IOPatternError};
+use nimue::{DuplexHash, ProofResult};
 
-use nimue::plugins::arkworks::prelude::*;
+use nimue::plugins::arkworks::*;
 use rand::rngs::OsRng;
 
 fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
@@ -14,7 +14,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<H: DuplexHash<u8>, G: CurveGroup>(
     arthur: &mut ArkGroupArthur<G, H>,
     witness: G::ScalarField,
-) -> Result<&[u8], IOPatternError> {
+) -> ProofResult<&[u8]> {
     let k = G::ScalarField::rand(&mut arthur.rng());
     let commitment = G::generator() * k;
     arthur.add_points(&[commitment])?;
@@ -27,7 +27,7 @@ fn prove<H: DuplexHash<u8>, G: CurveGroup>(
     Ok(arthur.transcript())
 }
 
-fn verify<H, G>(merlin: &mut ArkGroupMerlin<G, H>, g: G, pk: G) -> Result<(), &'static str>
+fn verify<H, G>(merlin: &mut ArkGroupMerlin<G, H>, g: G, pk: G) -> ProofResult<()>
 where
     H: DuplexHash<u8>,
     G: CurveGroup,
@@ -39,7 +39,7 @@ where
     if commitment == g * response - pk * challenge {
         Ok(())
     } else {
-        Err("Invalid proof")
+        Err(nimue::ProofError::InvalidProof)
     }
 }
 
