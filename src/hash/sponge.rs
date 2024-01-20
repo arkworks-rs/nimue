@@ -12,11 +12,14 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 ///
 /// For implementors:
 ///
-/// - we write the state in *the first* `Self::RATE` bytes of the state.
+/// - State is written in *the first* `Self::RATE` bytes of the state.
 /// The last [`Self::CAPACITY`] bytes are never touched directly.
-/// - the duplex sponge is in *overwrite mode*.
+/// - The duplex sponge is in *overwrite mode*.
 /// This mode is not known to affect the security levels and removes assumptions on [`Self::U`]
 /// as well as constraints in the final zero-knowledge proof implementing the hash function.
+/// - The `std::default::Default` implementation should initialize the states to zero.
+/// - The `new(iv)` method should initialize the sponge using the entropy provided in the `iv` in the last
+///     `Self::CAPACITY` elements of the state.
 pub trait Sponge:
     Zeroize
     + Default
@@ -33,7 +36,7 @@ pub trait Sponge:
     const CAPACITY: usize;
     const RATE: usize;
 
-    fn new(tag: [u8; 32]) -> Self;
+    fn new(iv: [u8; 32]) -> Self;
     fn permute(&mut self);
 }
 

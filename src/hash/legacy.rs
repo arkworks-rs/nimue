@@ -1,5 +1,3 @@
-//! Legacy hash functions interface.
-//!
 //! This code is inspired from libsignal's poksho:
 //! <https://github.com/signalapp/libsignal/blob/main/rust/poksho/src/shosha256.rs>.
 //! With the following generalizations:

@@ -46,7 +46,7 @@
 //!         .squeeze(10, "second");
 //! assert_eq!(io.as_bytes(), b"a domain separator\0A10first\0S10second")
 //! ```
-//! An [`IOPattern`] is a string wrapper. Absorbtions are denoted as `format!(A{}, length)` and
+//! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are denoted as `format!(A{}, length)` and
 //! squeezes as `format!(S{}, length)`. A label is added at the end of the string, meant to describe the *type* and
 //! *the variable* as used in the protocol. Operations are separated by a NULL byte and therefore labels cannot contain
 //! NULL bytes themselves, nor start with an ASCII digit.
@@ -120,15 +120,15 @@ This crate doesn't support big-endian targets.
 
 /// Prover's internal state and transcript generation.
 mod arthur;
-/// Built-in proof results
+/// Built-in proof results.
 mod errors;
-/// Support for hash functions.
+/// Hash functions traits and implmentations.
 pub mod hash;
 /// Verifier state and transcript deserialization.
 mod merlin;
 /// APIs for common zkp libraries.
 pub mod plugins;
-/// SAFE API
+/// SAFE API.
 mod safe;
 /// Unit-tests.
 #[cfg(test)]
@@ -140,8 +140,8 @@ pub use hash::{DuplexHash, Unit};
 pub use merlin::Merlin;
 pub use safe::{IOPattern, Safe};
 
-// Default random number generator used ([`rand::rngs::OsRng`])
+// Default random number generator used ([`rand::rngs::OsRng`]).
 pub type DefaultRng = rand::rngs::OsRng;
 
-/// Default hash function used ([`hash::Keccak`])
+/// Default hash function used ([`hash::Keccak`]).
 pub type DefaultHash = hash::Keccak;

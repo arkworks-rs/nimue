@@ -74,11 +74,13 @@ impl<'a, H: DuplexHash<u8>> Merlin<'a, H, u8> {
         self.fill_challenges(output)
     }
 
+    #[inline(always)]
     pub fn next_bytes<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         let mut input = [0u8; N];
         self.fill_next_bytes(&mut input).map(|()| input)
     }
 
+    #[inline(always)]
     pub fn challenge_bytes<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
         let mut output = [0u8; N];
         self.fill_challenge_bytes(&mut output).map(|()| output)

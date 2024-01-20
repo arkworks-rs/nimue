@@ -14,7 +14,6 @@ ark-ff = {git = "https://github.com/arkworks-rs/algebra"}
 ark-serialize = {git = "https://github.com/arkworks-rs/algebra"}
 ark-serialize-derive = {git = "https://github.com/arkworks-rs/algebra"}
 ark-bls12-381 = {git = "https://github.com/arkworks-rs/algebra"}
-ark-algebra-test-templates = {git = "https://github.com/arkworks-rs/algebra"}
 
 [dependencies]
 zeroize = {version="1.6.0", features=["zeroize_derive"]}

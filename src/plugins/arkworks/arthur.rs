@@ -73,6 +73,8 @@ where
     H: DuplexHash<u8>,
     R: rand::RngCore + CryptoRng,
 {
+
+    #[inline(always)]
     pub fn public_scalars(&mut self, input: &[F]) -> ProofResult<Vec<u8>> {
         let mut buf = Vec::<u8>::new();
 
@@ -82,12 +84,14 @@ where
         self.public(&buf).map(|()| buf).map_err(|x| x.into())
     }
 
+    #[inline(always)]
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
         let serialized = self.public_scalars(input);
         self.arthur.transcript.extend(serialized?);
         Ok(())
     }
 
+    #[inline(always)]
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let mut buf = vec![0u8; super::f_bytes::<F>()];
         for o in output.iter_mut() {
@@ -97,6 +101,7 @@ where
         Ok(())
     }
 
+    #[inline(always)]
     pub fn challenge_scalars<const N: usize>(&mut self) -> ProofResult<[F; N]> {
         let mut output = [F::default(); N];
         self.fill_challenge_scalars(&mut output)?;
@@ -166,22 +171,27 @@ where
         Arthur::new(io, csrng).into()
     }
 
+    #[inline(always)]
     pub fn public_scalars(&mut self, input: &[G::ScalarField]) -> ProofResult<Vec<u8>> {
         self.arthur.public_scalars(input)
     }
 
+    #[inline(always)]
     pub fn add_scalars(&mut self, input: &[G::ScalarField]) -> ProofResult<()> {
         self.arthur.add_scalars(input)
     }
 
+    #[inline(always)]
     pub fn fill_challenge_scalars(&mut self, output: &mut [G::ScalarField]) -> ProofResult<()> {
         self.arthur.fill_challenge_scalars(output)
     }
 
+    #[inline(always)]
     pub fn challenge_scalars<const N: usize>(&mut self) -> ProofResult<[G::ScalarField; N]> {
         self.arthur.challenge_scalars()
     }
 
+    #[inline(always)]
     pub fn public_points(&mut self, input: &[G]) -> ProofResult<Vec<u8>> {
         let mut buf = Vec::new();
         for point in input {
@@ -190,6 +200,7 @@ where
         self.arthur.public(&buf).map(|()| buf).map_err(|x| x.into())
     }
 
+    #[inline(always)]
     pub fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
         let serialized = self.public_points(input);
         self.arthur.transcript.extend(serialized?);

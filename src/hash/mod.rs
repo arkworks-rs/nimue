@@ -1,8 +1,17 @@
-/// Hash functions traits and implmentations.
+//! This module defines
+//! [`DuplexHash`], the basic interface for hash function that can absorb and squeeze data.
+//! Hashes in nume operate over some native elements satisfying the trait [`Unit`] which, roughly speaking, requires
+//! the basic type to support cloning, size, read/write procedures, and secure deletion.
+//!
+//! Additionally, the module exports some utilities:
+//! - [`sponge::DuplexSponge`] allows to implement a [`DuplexHash`] using a secure permutation function, specifying `RATE` and `CAPACITY`.
+//! This is done using the standard duplex sponge cosntruction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
+//! - [`legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
 
-/// SHA3 sponge function.
+
+/// A wrapper around the Keccak-f\[1600\] permutation.
 pub mod keccak;
-/// Support for legacy hash functions (SHA2).
+/// Legacy hash functions support (e.g. [`sha2`](https://crates.io/crates/sha2), [`blake2`](https://crates.io/crates/blake2)).
 pub mod legacy;
 /// Sponge functions.
 pub mod sponge;
@@ -10,9 +19,8 @@ pub mod sponge;
 #[cfg(feature = "anemoi")]
 pub mod anemoi;
 
+// Re-export the supported hash functions.
 pub use keccak::Keccak;
-
-use std::io;
 
 /// Basic units over which a sponge operates.
 ///
@@ -20,13 +28,16 @@ use std::io;
 /// and that we can zeroize them.
 pub trait Unit: Clone + Sized + zeroize::Zeroize {
     /// Write a bunch of units in the wire.
-    fn write(bunch: &[Self], w: &mut impl io::Write) -> Result<(), io::Error>;
+    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error>;
     /// Read a bunch of units from the wire
-    fn read(r: &mut impl io::Read, bunch: &mut [Self]) -> Result<(), io::Error>;
+    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error>;
 }
 
-/// A DuplexHash is an abstract interface for absorbing and squeezing data.
+/// A [`DuplexHash`] is an abstract interface for absorbing and squeezing data.
 /// The type parameter `U` represents basic unit that the sponge works with.
+///
+/// We require [`DuplexHash`] implementations to have a [`std::default::Default`] implementation, that initializes
+/// to zero the hash function state, and a [`zeroize::Zeroize`] implementation for secure deletion.
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.

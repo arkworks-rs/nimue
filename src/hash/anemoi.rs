@@ -1,3 +1,8 @@
+//! Work-in-progress (but working) implementation of the Anemoi hash function.
+//!
+//! The main reason for this code not being deployed is that [anemoi](https://anemoi-hash.github.io/)'s Rust implementation
+//! is not published as a crate and thus `nimue` cannot publish it along with a new release.
+
 use ark_ff::Field;
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
 use zeroize::Zeroize;
