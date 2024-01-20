@@ -1,6 +1,6 @@
 use crate::DefaultHash;
 
-use super::arkworks::prelude::*;
+use super::arkworks::*;
 use super::dalek::*;
 
 #[test]
