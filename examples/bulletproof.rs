@@ -185,7 +185,11 @@ fn main() {
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove(&mut arthur, generators, &statement, witness).expect("Error proving");
-    println!("Here's a bulletproof for {} elements:\n{}", size, hex::encode(proof));
+    println!(
+        "Here's a bulletproof for {} elements:\n{}",
+        size,
+        hex::encode(proof)
+    );
 
     let mut verifier_transcript = io_pattern.to_merlin(proof);
     verifier_transcript.public_points(&[statement]).unwrap();

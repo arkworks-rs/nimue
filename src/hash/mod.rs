@@ -30,7 +30,10 @@ pub trait Unit: Clone + Sized + zeroize::Zeroize {
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.
-pub trait DuplexHash<U: Unit>: Default + Clone + zeroize::Zeroize {
+pub trait DuplexHash<U = u8>: Default + Clone + zeroize::Zeroize
+where
+    U: Unit,
+{
     /// Initializes a new sponge, setting up the state.
     fn new(tag: [u8; 32]) -> Self;
 
