@@ -60,7 +60,9 @@
 //! build the protocol transcript, and seed the private randomness for the prover.
 //!
 //! ```
-//! use nimue::{IOPattern, Arthur, hash::Keccak};
+//! use nimue::{IOPattern, Arthur};
+//! use nimue::hash::Keccak;
+//! use nimue::traits::*;
 //! use rand::Rng;
 //!
 //! // create a new protocol that will absorb 1 byte and squeeze 16 bytes.
@@ -71,7 +73,7 @@
 //! arthur.add(&[0x42]).expect("Absorbing one byte");
 //! // the prover receive a 128-bit challenge.
 //! let mut chal = [0u8; 16];
-//! arthur.challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! arthur.fill_challenge_bytes(&mut chal).expect("Squeezing 128 bits");
 //! assert_eq!(arthur.transcript(), [0x42]);
 //! // generate some private randomness bound to the protocol transcript.
 //! let private = arthur.rng().gen::<[u8; 2]>();
@@ -86,7 +88,9 @@
 //!
 //! The verifier can use a [`Merlin`] instance to recover the protocol transcript and public coins:
 //! ```
-//! use nimue::{IOPattern, Merlin, hash::Keccak};
+//! use nimue::{IOPattern, Merlin};
+//! use nimue::hash::Keccak;
+//! use nimue::traits::*;
 //! use rand::{Rng, rngs::OsRng};
 //!
 //! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
@@ -133,14 +137,17 @@ mod safe;
 /// Unit-tests.
 #[cfg(test)]
 mod tests;
+/// Traits for byte support.
+pub mod traits;
 
 pub use arthur::Arthur;
 pub use errors::{IOPatternError, ProofError, ProofResult};
 pub use hash::{DuplexHash, Unit};
 pub use merlin::Merlin;
 pub use safe::{IOPattern, Safe};
+pub use traits::*;
 
-// Default random number generator used ([`rand::rngs::OsRng`]).
+/// Default random number generator used ([`rand::rngs::OsRng`]).
 pub type DefaultRng = rand::rngs::OsRng;
 
 /// Default hash function used ([`hash::Keccak`]).

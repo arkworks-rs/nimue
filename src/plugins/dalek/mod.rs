@@ -1,7 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
+use crate::traits::*;
 use crate::DefaultRng;
-pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, IOPatternError, Merlin, Safe};
+pub use crate::{Arthur, DuplexHash, IOPattern, IOPatternError, Merlin, Safe, Unit};
 use curve25519_dalek::{ristretto::RistrettoPoint, Scalar};
 
 pub struct DalekIOPattern<H = crate::DefaultHash, U = u8>
@@ -48,6 +49,10 @@ impl<H: DuplexHash<u8>> DalekIOPattern<H, u8> {
     }
 
     pub fn add_scalars(self, count: usize, label: &str) -> Self {
+        self.add_bytes(32 * count, label)
+    }
+
+    pub fn add_points(self, count: usize, label: &str) -> Self {
         self.add_bytes(32 * count, label)
     }
 
@@ -138,8 +143,8 @@ impl<H: DuplexHash<u8>, R: rand::RngCore + rand::CryptoRng> DalekArthur<H, R, u8
         let mut buf = [[0u8; 32]; 2];
 
         for o in output.into_iter() {
-            self.arthur.challenge_bytes(&mut buf[0])?;
-            self.arthur.challenge_bytes(&mut buf[1][..16])?;
+            self.arthur.fill_challenge_bytes(&mut buf[0])?;
+            self.arthur.fill_challenge_bytes(&mut buf[1][..16])?;
             *o = Scalar::from_bytes_mod_order(buf[0]) + Scalar::from_bytes_mod_order(buf[1]);
         }
         Ok(())

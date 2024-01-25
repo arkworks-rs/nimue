@@ -2,8 +2,8 @@ use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::plugins::arkworks::{ArkGroupArthur, ArkGroupIOPattern, ArkGroupMerlin};
-use nimue::{ProofError, ProofResult};
+use nimue::plugins::arkworks::*;
+use nimue::{Arthur, Merlin, ProofError, ProofResult};
 use rand::rngs::OsRng;
 
 fn fold_generators<A: AffineRepr>(
@@ -60,7 +60,7 @@ impl<G: CurveGroup> BulletproofIOPattern<G> for ArkGroupIOPattern<G> {
 }
 
 fn prove<'a, G: CurveGroup>(
-    arthur: &'a mut ArkGroupArthur<G>,
+    arthur: &'a mut Arthur,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
@@ -108,7 +108,7 @@ fn prove<'a, G: CurveGroup>(
 }
 
 fn verify<G: CurveGroup>(
-    merlin: &mut ArkGroupMerlin<G>,
+    merlin: &mut Merlin,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
@@ -126,7 +126,7 @@ fn verify<G: CurveGroup>(
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
 
-        let [x]: [G::ScalarField; 1] = merlin.squeeze_scalars().unwrap();
+        let [x]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
         let x_inv = x.inverse().expect("You just won the lottery!");
 
         g = fold_generators(g_left, g_right, &x_inv, &x);

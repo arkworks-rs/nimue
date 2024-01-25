@@ -6,6 +6,7 @@
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
 use nimue::plugins::arkworks::*;
+use nimue::Arthur;
 use nimue::{DuplexHash, ProofResult};
 use rand::rngs::OsRng;
 
@@ -23,10 +24,9 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn prove<H: DuplexHash<u8>, G: CurveGroup>(
-    // `ArkGroupArthur` is a wrapper around `Arthur` that is aware of serialization/deserialization of group elements
+fn prove<H: DuplexHash, G: CurveGroup>(
     // the hash function `H` works over bytes, unless otherwise denoted with an additional type argument implementing `nimue::Unit`.
-    arthur: &mut ArkGroupArthur<G, H>,
+    arthur: &mut Arthur<H>,
     // the generator
     P: G,
     // the secret key
@@ -42,7 +42,7 @@ fn prove<H: DuplexHash<u8>, G: CurveGroup>(
     arthur.add_points(&[K])?;
 
     // Fetch a challenge from the current transcript state.
-    let [c] = arthur.challenge_scalars()?;
+    let [c]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
 
     let r = k + c * x;
     // Add a sequence of scalar elements to the protocol transcript.
@@ -57,19 +57,24 @@ fn prove<H: DuplexHash<u8>, G: CurveGroup>(
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn verify<G: CurveGroup, H: DuplexHash>(
+fn verify<G, H>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    merlin: &mut ArkGroupMerlin<G, H>,
+    merlin: &mut Merlin<H>,
     // The group generator `P``
     P: G,
     // The public key `X`
     X: G,
-) -> ProofResult<()> {
+) -> ProofResult<()>
+where
+    G: CurveGroup,
+    H: DuplexHash,
+    for<'a> Merlin<'a, H>: GroupReader<G>,
+{
     // Read the protocol from the transcript:
-    let [K] = merlin.next_points().unwrap();
-    let [c] = merlin.squeeze_scalars().unwrap();
-    let [r] = merlin.next_scalars().unwrap();
+    let [K]: [G; 1] = merlin.next_points().unwrap();
+    let [c]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
+    let [r]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
 
     // Check the verification equation, otherwise return a verification error.
     if P * r == K + X * c {

@@ -26,7 +26,6 @@ use std::{borrow::Borrow, error::Error, fmt::Display};
 #[derive(Debug, Clone)]
 pub struct IOPatternError(String);
 
-
 /// An error happened when creating or verifying a proof.
 #[derive(Debug, Clone)]
 pub enum ProofError {

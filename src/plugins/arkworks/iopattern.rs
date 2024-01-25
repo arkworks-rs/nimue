@@ -73,12 +73,12 @@ where
         self.challenge_bytes(count * (F::MODULUS_BIT_SIZE as usize / 8 + 16), label)
     }
 
-    pub fn to_arthur(&self) -> ArkFieldArthur<F, H, u8> {
-        ArkFieldArthur::new(self, crate::DefaultRng::default())
+    pub fn to_arthur(&self) -> Arthur<H> {
+        Arthur::new(self, crate::DefaultRng::default())
     }
 
-    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> ArkFieldMerlin<'a, F, H, u8> {
-        ArkFieldMerlin::new(&self, transcript)
+    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> Merlin<'a, H, u8> {
+        Merlin::new(&self, transcript)
     }
 }
 
@@ -172,12 +172,12 @@ where
             .into()
     }
 
-    pub fn to_arthur(&self) -> ArkGroupArthur<G, H, u8> {
-        ArkGroupArthur::new(self, crate::DefaultRng::default())
+    pub fn to_arthur(&self) -> Arthur<H> {
+        Arthur::new(self, crate::DefaultRng::default())
     }
 
-    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> ArkGroupMerlin<'a, G, H, u8> {
-        ArkGroupMerlin::new(&self, transcript)
+    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> Merlin<'a, H> {
+        Merlin::new(&self, transcript)
     }
 }
 

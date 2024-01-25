@@ -78,7 +78,7 @@ fn test_merlin() {
 
     let mut arthur = Arthur::<Keccak>::from(&io);
     arthur.add(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
-    arthur.challenge(&mut [0u8; 10]).unwrap();
+    arthur.fill_challenges(&mut [0u8; 10]).unwrap();
     let transcript = arthur.transcript();
 
     let mut merlin = Merlin::<Keccak>::new(&io, transcript);

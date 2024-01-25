@@ -1,7 +1,7 @@
 use rand::{CryptoRng, RngCore};
 
 use crate::hash::Unit;
-use crate::{IOPattern, Safe};
+use crate::{ByteTranscript, ByteTranscriptWriter, IOPattern, Safe};
 
 use super::hash::{DuplexHash, Keccak};
 use super::{DefaultHash, DefaultRng, IOPatternError};
@@ -121,7 +121,7 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
         Ok(())
     }
 
-    pub fn challenge(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
+    pub fn fill_challenges(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
         self.safe.squeeze(output)
     }
 
@@ -148,14 +148,21 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> core::fmt::Debug for Art
     }
 }
 
-impl<H: DuplexHash<u8>, R: RngCore + CryptoRng> Arthur<H, R, u8> {
+impl<H: DuplexHash, R: RngCore + CryptoRng> ByteTranscript for Arthur<H, R> {
     #[inline(always)]
-    pub fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
-        self.add(input)
+    fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+        self.public(input)
     }
 
     #[inline(always)]
-    pub fn challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        self.safe.squeeze(output)
+    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
+        self.fill_challenges(output)
+    }
+}
+
+impl<H: DuplexHash, R: RngCore + CryptoRng> ByteTranscriptWriter for Arthur<H, R> {
+    #[inline(always)]
+    fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+        self.add(input)
     }
 }

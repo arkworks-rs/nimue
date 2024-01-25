@@ -1,9 +1,8 @@
-use super::hash::DuplexHash;
-use crate::DefaultHash;
-
 use crate::errors::IOPatternError;
-use crate::hash::Unit;
+use crate::hash::{DuplexHash, Unit};
 use crate::safe::{IOPattern, Safe};
+use crate::traits::{ByteTranscript, ByteTranscriptReader};
+use crate::DefaultHash;
 
 /// Merlin is wrapper around a sponge that provides a secure
 /// Fiat-Shamir implementation for public-coin protocols.
@@ -63,26 +62,20 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
     }
 }
 
-impl<'a, H: DuplexHash<u8>> Merlin<'a, H, u8> {
+impl<'a, H: DuplexHash<u8>> ByteTranscript for Merlin<'a, H, u8> {
     #[inline(always)]
-    pub fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
-        self.fill_next(input)
+    fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+        self.public_input(input)
     }
-
     #[inline(always)]
-    pub fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
+    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         self.fill_challenges(output)
     }
+}
 
+impl<'a, H: DuplexHash<u8>> ByteTranscriptReader for Merlin<'a, H, u8> {
     #[inline(always)]
-    pub fn next_bytes<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
-        let mut input = [0u8; N];
-        self.fill_next_bytes(&mut input).map(|()| input)
-    }
-
-    #[inline(always)]
-    pub fn challenge_bytes<const N: usize>(&mut self) -> Result<[u8; N], IOPatternError> {
-        let mut output = [0u8; N];
-        self.fill_challenge_bytes(&mut output).map(|()| output)
+    fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
+        self.fill_next(input)
     }
 }
