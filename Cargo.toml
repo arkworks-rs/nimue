@@ -28,15 +28,14 @@ ark-ff = {version="0.4.0", optional=true}
 ark-ec = {version="0.4.0", optional=true}
 ark-serialize = {version="0.4.2", optional=true}
 ark-crypto-primitives = {version="0.4.0", optional=true}
-curve25519-dalek = {version="4.0.0", optional=true}
+curve25519-dalek = {version="4.0.0", optional=true, features=["group"]}
 # anemoi = {git = "https://github.com/anemoi-hash/anemoi-rust", optional=true}
 group = {version="0.13.0", optional=true}
 
 [features]
 default = []
-arkworks = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-crypto-primitives"]
-dalek = ["dep:curve25519-dalek"]
-zkcrypto = ["dep:group"]
+ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-crypto-primitives"]
+group = ["dep:group", "dep:curve25519-dalek"]
 # anemoi = ["dep:anemoi"]
 
 [dev-dependencies]
@@ -47,17 +46,18 @@ ark-curve25519 = "0.4.0"
 hex = "0.4.3"
 anyhow = { version = "1.0.75", features = ["backtrace"] }
 
+
 [package.metadata.docs.rs]
 rustdoc-args = [
     "--html-in-header", "doc/katex-header.html",
     "--cfg", "docsrs",
 ]
-features = ["arkworks", "dalek"]
+features = ["ark", "group"]
 
 [[example]]
 name = "schnorr"
-required-features = ["arkworks"]
+required-features = ["ark"]
 
 [[example]]
 name = "bulletproof"
-required-features = ["arkworks"]
+required-features = ["ark"]

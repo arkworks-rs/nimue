@@ -128,6 +128,8 @@ mod arthur;
 mod errors;
 /// Hash functions traits and implmentations.
 pub mod hash;
+/// IO Pattern
+mod iopattern;
 /// Verifier state and transcript deserialization.
 mod merlin;
 /// APIs for common zkp libraries.
@@ -143,8 +145,9 @@ pub mod traits;
 pub use arthur::Arthur;
 pub use errors::{IOPatternError, ProofError, ProofResult};
 pub use hash::{DuplexHash, Unit};
+pub use iopattern::IOPattern;
 pub use merlin::Merlin;
-pub use safe::{IOPattern, Safe};
+pub use safe::Safe;
 pub use traits::*;
 
 /// Default random number generator used ([`rand::rngs::OsRng`]).

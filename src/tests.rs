@@ -1,6 +1,5 @@
 use crate::hash::keccak::Keccak;
-use crate::safe::IOPattern;
-use crate::{Arthur, Merlin, Safe};
+use crate::{Arthur, IOPattern, Merlin, Safe};
 
 /// How should a protocol without IOPattern be handled?
 #[test]

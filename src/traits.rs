@@ -25,3 +25,8 @@ pub trait ByteTranscriptReader {
 pub trait ByteTranscriptWriter {
     fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError>;
 }
+
+pub trait ByteIOPattern {
+    fn add_bytes(self, count: usize, label: &str) -> Self;
+    fn challenge_bytes(self, count: usize, label: &str) -> Self;
+}

@@ -1,6 +1,7 @@
 use crate::errors::IOPatternError;
 use crate::hash::{DuplexHash, Unit};
-use crate::safe::{IOPattern, Safe};
+use crate::iopattern::IOPattern;
+use crate::safe::Safe;
 use crate::traits::{ByteTranscript, ByteTranscriptReader};
 use crate::DefaultHash;
 

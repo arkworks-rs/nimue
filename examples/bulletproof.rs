@@ -2,36 +2,8 @@ use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::plugins::arkworks::*;
-use nimue::{Arthur, Merlin, ProofError, ProofResult};
+use nimue::plugins::ark::*;
 use rand::rngs::OsRng;
-
-fn fold_generators<A: AffineRepr>(
-    a: &[A],
-    b: &[A],
-    x: &A::ScalarField,
-    y: &A::ScalarField,
-) -> Vec<A> {
-    a.iter()
-        .zip(b.iter())
-        .map(|(&a, &b)| (a * x + b * y).into_affine())
-        .collect()
-}
-
-/// Computes the inner prouct of vectors `a` and `b`.
-///
-/// Useless once https://github.com/arkworks-rs/algebra/pull/665 gets merged.
-fn dot_prod<F: Field>(a: &[F], b: &[F]) -> F {
-    a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
-}
-
-/// Folds together `(a, b)` using challenges `x` and `y`.
-fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
-    a.iter()
-        .zip(b.iter())
-        .map(|(&a, &b)| a * x + b * y)
-        .collect()
-}
 
 /// The IO Pattern of a bulleproof.
 ///
@@ -42,10 +14,15 @@ trait BulletproofIOPattern<G: CurveGroup> {
     fn add_bulletproof(self, len: usize) -> Self;
 }
 
-impl<G: CurveGroup> BulletproofIOPattern<G> for ArkGroupIOPattern<G> {
-    /// The IO of the bulletproof statement (the sole commitment)
+impl<G, H> BulletproofIOPattern<G> for IOPattern<H>
+where
+    G: CurveGroup,
+    H: DuplexHash,
+    IOPattern<H>: GroupIOPattern<G>,
+{
+    /// The IO of the bulletproof statement
     fn bulletproof_statement(self) -> Self {
-        self.add_points(1, "Ped-commit")
+        self.add_points(1, "Pedersen commitment")
     }
 
     /// The IO of the bulletproof protocol
@@ -143,6 +120,33 @@ fn verify<G: CurveGroup>(
     }
 }
 
+fn fold_generators<A: AffineRepr>(
+    a: &[A],
+    b: &[A],
+    x: &A::ScalarField,
+    y: &A::ScalarField,
+) -> Vec<A> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(&a, &b)| (a * x + b * y).into_affine())
+        .collect()
+}
+
+/// Computes the inner prouct of vectors `a` and `b`.
+///
+/// Useless once https://github.com/arkworks-rs/algebra/pull/665 gets merged.
+fn dot_prod<F: Field>(a: &[F], b: &[F]) -> F {
+    a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
+}
+
+/// Folds together `(a, b)` using challenges `x` and `y`.
+fn fold<F: Field>(a: &[F], b: &[F], x: &F, y: &F) -> Vec<F> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(&a, &b)| a * x + b * y)
+        .collect()
+}
+
 fn main() {
     use ark_curve25519::EdwardsProjective as G;
     use ark_std::UniformRand;
@@ -154,13 +158,11 @@ fn main() {
     let size = 8;
 
     // initialize the IO Pattern putting the domain separator ("example.com")
-    let io_pattern = ArkGroupIOPattern::<G>::new("example.com")
-        // add the IO of the bulletproof statement (the commitment)
-        .bulletproof_statement()
-        // (optional) process the data so far, filling the block till the end.
-        .ratchet()
-        // add the IO of the bulletproof protocol (the transcript)
-        .add_bulletproof(size);
+    let iopattern = IOPattern::new("example.com");
+    // add the IO of the bulletproof statement
+    let iopattern = BulletproofIOPattern::<G>::bulletproof_statement(iopattern).ratchet();
+    // add the IO of the bulletproof protocol (the transcript)
+    let iopattern = BulletproofIOPattern::<G>::add_bulletproof(iopattern, size);
 
     // the test vectors
     let a = (0..size).map(|x| F::from(x as u32)).collect::<Vec<_>>();
@@ -181,7 +183,7 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut arthur = io_pattern.to_arthur();
+    let mut arthur = iopattern.to_arthur();
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove(&mut arthur, generators, &statement, witness).expect("Error proving");
@@ -191,7 +193,7 @@ fn main() {
         hex::encode(proof)
     );
 
-    let mut verifier_transcript = io_pattern.to_merlin(proof);
+    let mut verifier_transcript = iopattern.to_merlin(proof);
     verifier_transcript.public_points(&[statement]).unwrap();
     verifier_transcript.ratchet().unwrap();
     verify(&mut verifier_transcript, generators, size, &statement).expect("Invalid proof");

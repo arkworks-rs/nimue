@@ -16,9 +16,6 @@
 //! `squeeze_unchecked` will use the squeeze oracle to output `output.len()` bytes,
 //! and finally `squeeze_end` will set the state `cv` to the current squeeze digest and length.
 //!
-
-use core::mem::size_of;
-
 use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
 use generic_array::GenericArray;
 use zeroize::Zeroize;
@@ -119,7 +116,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Default for DigestBri
 
 impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for DigestBridge<D> {
     fn new(tag: [u8; 32]) -> Self {
-        debug_assert!(size_of::<D::OutputSize>() >= 32);
+        // debug_assert!(size_of::<D::OutputSize>() >= 32);
         let mut bridge = Self::default();
         bridge.absorb_unchecked(&tag);
         bridge

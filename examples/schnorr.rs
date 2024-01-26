@@ -5,10 +5,30 @@
 ///
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
-use nimue::plugins::arkworks::*;
-use nimue::Arthur;
-use nimue::{DuplexHash, ProofResult};
+use nimue::plugins::ark::*;
 use rand::rngs::OsRng;
+
+/// Extend the IO pattern with the Schnorr protocol.
+trait SchnorrIOPattern<G: CurveGroup> {
+    /// Adds the entire Schnorr protocol to the IO pattern (statement and proof).
+    fn add_schnorr_io(self) -> Self;
+}
+
+impl<G, H> SchnorrIOPattern<G> for IOPattern<H>
+where
+    G: CurveGroup,
+    H: DuplexHash,
+    IOPattern<H>: GroupIOPattern<G>,
+{
+    fn add_schnorr_io(self) -> Self {
+        self.add_points(1, "P")
+            .add_points(1, "X")
+            .ratchet()
+            .add_points(1, "commitment (K)")
+            .challenge_scalars(1, "challenge (c)")
+            .add_scalars(1, "response (r)")
+    }
+}
 
 /// The key generation algorithm otuputs
 /// a secret key `sk` in $\mathbb{Z}_p$
@@ -24,14 +44,19 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn prove<H: DuplexHash, G: CurveGroup>(
+fn prove<H, G>(
     // the hash function `H` works over bytes, unless otherwise denoted with an additional type argument implementing `nimue::Unit`.
     arthur: &mut Arthur<H>,
     // the generator
     P: G,
     // the secret key
     x: G::ScalarField,
-) -> ProofResult<&[u8]> {
+) -> ProofResult<&[u8]>
+where
+    H: DuplexHash,
+    G: CurveGroup,
+    Arthur<H>: FieldChallenges<G::ScalarField>,
+{
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` funciton.
     let k = G::ScalarField::rand(arthur.rng());
@@ -42,7 +67,7 @@ fn prove<H: DuplexHash, G: CurveGroup>(
     arthur.add_points(&[K])?;
 
     // Fetch a challenge from the current transcript state.
-    let [c]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
+    let [c] = arthur.challenge_scalars()?;
 
     let r = k + c * x;
     // Add a sequence of scalar elements to the protocol transcript.
@@ -72,16 +97,23 @@ where
     for<'a> Merlin<'a, H>: GroupReader<G>,
 {
     // Read the protocol from the transcript:
-    let [K]: [G; 1] = merlin.next_points().unwrap();
-    let [c]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
-    let [r]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
+    let [K] = merlin.next_points().unwrap();
+    let [c] = merlin.challenge_scalars().unwrap();
+    let [r] = merlin.next_scalars().unwrap();
 
     // Check the verification equation, otherwise return a verification error.
+    // The type ProofError is an enum that can report:
+    // - InvalidProof: the proof is not valid
+    // - InvalidIO: the transcript does not match the IO pattern
+    // - SerializationError: there was an error serializing/deserializing an element
     if P * r == K + X * c {
         Ok(())
     } else {
         Err(nimue::ProofError::InvalidProof)
     }
+
+    // from here, another proof can be verified using the same merlin instance
+    // and proofs can be composed.
 }
 
 #[allow(non_snake_case)]
@@ -90,18 +122,13 @@ fn main() {
     // Set the group:
     type G = ark_curve25519::EdwardsProjective;
     // Set the hash function (commented out other valid choices):
-    type H = nimue::hash::Keccak;
-    // type H = nimue::legacy::DigestBridge<blake2::Blake2s256>;
-    // type H = nimue::legacy::DigestBridge<sha2::Sha256>;
+    // type H = nimue::hash::Keccak;
+    type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
+    // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
-    let io = ArkGroupIOPattern::<G, H>::new("nimue::examples::schnorr")
-        .add_points(1, "P")
-        .add_points(1, "X")
-        .ratchet()
-        .add_points(1, "commitment (K)")
-        .challenge_scalars(1, "challenge (c)")
-        .add_scalars(1, "response (r)");
+    let io = IOPattern::<H>::new("nimue::examples::schnorr");
+    let io = SchnorrIOPattern::<G>::add_schnorr_io(io);
 
     // Set up the elements to prove
     let P = G::generator();
