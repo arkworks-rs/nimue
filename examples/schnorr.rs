@@ -1,8 +1,23 @@
 /// Example: simple Schnorr proofs.
 ///
-/// Schnorr proofs allow to prove knowledge of a secret key over a group $\mathbb{G}$ of prime order $p$ where the discrete logarithm problem is hard.
-/// The protocols is as follows:
+/// Schnorr proofs allow to prove knowledge of a secret key over a group $\mathbb{G}$ of prime order $p$ where the discrete logarithm problem is hard. In `nimue`, we play with 3 data structures:
 ///
+/// 1. `nimue::IOPattern``
+/// The IOPattern describes the protocol.
+/// In the case of Schnorr proofs we have also some public information (the generator $P$ and the public key $X$).
+/// The protocol, roughly speaking is:
+///
+/// - P -> V: K, a commitment (point)
+/// - V -> P: c, a challenge (scalar)
+/// - P -> V: r, a response (scalar)
+///
+/// 2. `nimue::Arthur`, describes the prover state. It contains the transcript, but not only:
+/// it also provides a CSPRNG and a reliable way of serializing elements into a proof, so that the prover does not have to worry about them.
+/// It can be instantiated via `IOPattern::to_arthur()`.
+///
+/// 3. `nimue::Merlin`, describes the verifier state.
+/// It internally will read the transcript, and deserialize elements as requested making sure that they match with the IO Pattern.
+/// It can be used to verify a proof.
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
 use nimue::plugins::ark::*;
