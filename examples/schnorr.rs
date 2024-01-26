@@ -21,8 +21,8 @@ where
     IOPattern<H>: GroupIOPattern<G>,
 {
     fn add_schnorr_io(self) -> Self {
-        self.add_points(1, "P")
-            .add_points(1, "X")
+        self.add_points(1, "generator (P)")
+            .add_points(1, "public key (X)")
             .ratchet()
             .add_points(1, "commitment (K)")
             .challenge_scalars(1, "challenge (c)")
@@ -41,11 +41,13 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 
 /// The prove algorithm takes as input
 /// - the prover state `Arthur`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
+/// - The generator `P` in the group.
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn prove<H, G>(
-    // the hash function `H` works over bytes, unless otherwise denoted with an additional type argument implementing `nimue::Unit`.
+    // the hash function `H` works over bytes.
+    // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
     arthur: &mut Arthur<H>,
     // the generator
     P: G,
@@ -55,7 +57,7 @@ fn prove<H, G>(
 where
     H: DuplexHash,
     G: CurveGroup,
-    Arthur<H>: FieldChallenges<G::ScalarField>,
+    Arthur<H>: GroupWriter<G>,
 {
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` funciton.
@@ -109,7 +111,7 @@ where
     if P * r == K + X * c {
         Ok(())
     } else {
-        Err(nimue::ProofError::InvalidProof)
+        Err(ProofError::InvalidProof)
     }
 
     // from here, another proof can be verified using the same merlin instance

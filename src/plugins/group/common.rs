@@ -4,21 +4,16 @@ use group::ff::PrimeField;
 use super::{FieldChallenges, FieldPublic};
 use crate::plugins::bytes_uniform_modp;
 
+/// Convert a byte array to a field element.
+///
+/// This function should be equivalent to arkworks' `PrimeField::from_be_bytes_mod_order`.
+/// XXX. A better way to do this?
+/// Took less time to implement this than to figure out group's API..
 fn from_bytes_mod_order<F: PrimeField>(bytes: &[u8]) -> F {
-    let two = F::ONE + F::ONE;
-    let basis = two.pow(&[64]);
-    let mut iterator = bytes.chunks_exact(8);
-    let mut acc = F::ZERO;
-
-    while let Some(chunk) = iterator.next() {
-        let chunk = u64::from_be_bytes(chunk.try_into().unwrap());
-        acc = acc * basis + F::from(chunk);
-    }
-    let reminder = iterator.remainder();
-    let reminder = u64::from_be_bytes(reminder.try_into().unwrap());
-    acc = acc * basis + F::from(reminder);
-
-    acc
+    let basis = F::from(256);
+    bytes
+        .iter()
+        .fold(F::ZERO, |acc, &b| acc * basis + F::from(b as u64))
 }
 
 impl<F, T> FieldChallenges<F> for T

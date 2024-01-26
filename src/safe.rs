@@ -103,9 +103,10 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
             Some(op) => {
                 self.stack.clear();
                 Err(format!(
-                    "Invalid tag. Got {:?}, expected {:?}",
+                    "Invalid tag. Got {:?}, expected {:?}. The stack remaining is: {:?}",
                     Op::Squeeze(output.len()),
-                    op
+                    op,
+                    self.stack
                 )
                 .into())
             }

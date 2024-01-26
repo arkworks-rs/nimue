@@ -8,7 +8,7 @@ macro_rules! field_traits {
         }
 
         pub trait FieldChallenges<F: $Field> {
-            fn fill_challenge_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
+            fn fill_challenge_scalars(&mut self, output: &mut [F]) -> $crate::ProofResult<()>;
 
             fn challenge_scalars<const N: usize>(&mut self) -> crate::ProofResult<[F; N]> {
                 let mut output = [F::default(); N];
@@ -44,13 +44,13 @@ macro_rules! group_traits {
         }
 
         pub trait GroupWriter<G: $Group>: FieldWriter<$ScalarField> {
-            fn add_points(&mut self, input: &[G]) -> crate::ProofResult<()>;
+            fn add_points(&mut self, input: &[G]) -> $crate::ProofResult<()>;
         }
 
         pub trait GroupReader<G: $Group + Default>: FieldReader<$ScalarField> {
-            fn fill_next_points(&mut self, output: &mut [G]) -> crate::ProofResult<()>;
+            fn fill_next_points(&mut self, output: &mut [G]) -> $crate::ProofResult<()>;
 
-            fn next_points<const N: usize>(&mut self) -> crate::ProofResult<[G; N]> {
+            fn next_points<const N: usize>(&mut self) -> $crate::ProofResult<[G; N]> {
                 let mut output = [G::default(); N];
                 self.fill_next_points(&mut output).map(|()| output)
             }
@@ -58,7 +58,7 @@ macro_rules! group_traits {
 
         pub trait GroupPublic<G: $Group> {
             type Repr;
-            fn public_points(&mut self, input: &[G]) -> crate::ProofResult<Self::Repr>;
+            fn public_points(&mut self, input: &[G]) -> $crate::ProofResult<Self::Repr>;
         }
     };
 }

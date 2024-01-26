@@ -133,6 +133,7 @@ mod iopattern;
 /// Verifier state and transcript deserialization.
 mod merlin;
 /// APIs for common zkp libraries.
+#[cfg(any(feature = "ark", feature = "group"))]
 pub mod plugins;
 /// SAFE API.
 mod safe;

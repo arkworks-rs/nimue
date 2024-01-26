@@ -80,7 +80,7 @@ impl<D: BlockSizeUser + Digest + Clone + Reset> DigestBridge<D> {
             let mut squeeze_hasher = D::new();
             Digest::update(&mut squeeze_hasher, &Self::mask_squeeze_end());
             Digest::update(&mut squeeze_hasher, &self.cv);
-            Digest::update(&mut squeeze_hasher, &byte_count.to_be_bytes());
+            Digest::update(&mut squeeze_hasher, byte_count.to_be_bytes());
             self.cv = Digest::finalize(squeeze_hasher);
 
             // set the sponge state in absorb mode
@@ -171,7 +171,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for Di
         } else if let Mode::Squeeze(i) = self.mode {
             // Add the squeeze mask, current digest, and index
             let mut output_hasher_prefix = self.hasher.clone();
-            Digest::update(&mut output_hasher_prefix, &i.to_be_bytes());
+            Digest::update(&mut output_hasher_prefix, i.to_be_bytes());
             let digest = output_hasher_prefix.finalize();
             // Copy the digest into the output, and store the rest for later
             let chunk_len = usize::min(output.len(), Self::DIGEST_SIZE);
