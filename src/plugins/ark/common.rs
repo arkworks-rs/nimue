@@ -3,12 +3,13 @@ use std::io;
 use ark_ec::CurveGroup;
 use ark_ff::{Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
+use rand::CryptoRng;
 
 use super::{FieldChallenges, FieldPublic, GroupPublic};
 use crate::plugins::bytes_uniform_modp;
-use crate::{ByteTranscript, ProofError, ProofResult};
+use crate::{Arthur, ByteTranscript, DuplexHash, Merlin, ProofError, ProofResult};
 
-impl<'a, F, T> FieldPublic<F> for T
+impl<F, T> FieldPublic<F> for T
 where
     F: PrimeField,
     T: ByteTranscript,
@@ -22,6 +23,33 @@ where
         }
         self.public_bytes(&buf)?;
         Ok(buf)
+    }
+}
+
+impl<'a, C, H, const N: usize> FieldPublic<Fp<C, N>> for Merlin<'a, H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+{
+    type Repr = ();
+
+    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
+        self.public(input)?;
+        Ok(())
+    }
+}
+
+impl<C, H, R, const N: usize> FieldPublic<Fp<C, N>> for Arthur<H, R, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+    R: rand::RngCore + CryptoRng,
+{
+    type Repr = ();
+
+    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
+        self.public(input)?;
+        Ok(())
     }
 }
 

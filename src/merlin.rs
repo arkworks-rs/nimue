@@ -34,7 +34,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
     }
 
     #[inline(always)]
-    pub fn public_input(&mut self, input: &[U]) -> Result<(), IOPatternError> {
+    pub fn public(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         self.safe.absorb(input)
     }
 
@@ -66,7 +66,7 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
 impl<'a, H: DuplexHash<u8>> ByteTranscript for Merlin<'a, H, u8> {
     #[inline(always)]
     fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
-        self.public_input(input)
+        self.public(input)
     }
     #[inline(always)]
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
