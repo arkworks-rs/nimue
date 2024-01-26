@@ -1,6 +1,12 @@
 #[macro_export]
 macro_rules! field_traits {
     ($Field:path) => {
+        pub trait FieldIOPattern<F: $Field> {
+            fn add_scalars(self, count: usize, label: &str) -> Self;
+
+            fn challenge_scalars(self, count: usize, label: &str) -> Self;
+        }
+
         pub trait FieldChallenges<F: $Field> {
             fn fill_challenge_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
 
@@ -33,6 +39,10 @@ macro_rules! field_traits {
 #[macro_export]
 macro_rules! group_traits {
     ($Group:path, $ScalarField:path : $Field:path) => {
+        pub trait GroupIOPattern<G: $Group>: FieldIOPattern<$ScalarField> {
+            fn add_points(self, count: usize, label: &str) -> Self;
+        }
+
         pub trait GroupWriter<G: $Group>: FieldWriter<$ScalarField> {
             fn add_points(&mut self, input: &[G]) -> crate::ProofResult<()>;
         }
@@ -53,5 +63,5 @@ macro_rules! group_traits {
     };
 }
 
-#[cfg(any(feature = "dalek", feature = "arkworks", feature = "zkcrypto"))]
+#[cfg(any(feature = "group", feature = "ark"))]
 pub(super) use {field_traits, group_traits};

@@ -1,6 +1,6 @@
-use group::ff::PrimeField;
 use super::FieldReader;
-use crate::{Merlin, DuplexHash, ByteTranscriptReader};
+use crate::{ByteTranscriptReader, DuplexHash, Merlin, ProofError};
+use group::ff::PrimeField;
 
 impl<'a, F, H, const N: usize> FieldReader<F> for Merlin<'a, H>
 where
@@ -11,9 +11,8 @@ where
         let mut buf = [0u8; N];
         for o in output.iter_mut() {
             self.fill_next_bytes(&mut buf)?;
-            *o = F::from_repr(buf).unwrap();
+            *o = F::from_repr_vartime(buf).ok_or(ProofError::SerializationError)?;
         }
         Ok(())
     }
 }
-

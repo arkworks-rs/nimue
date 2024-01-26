@@ -31,7 +31,7 @@ where
     T: ByteTranscript,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
-        let mut buf = vec![0u8; bytes_uniform_modp(F::MODULUS_BIT_SIZE as usize)];
+        let mut buf = vec![0u8; bytes_uniform_modp(F::MODULUS_BIT_SIZE)];
 
         for o in output.iter_mut() {
             self.fill_challenge_bytes(&mut buf)?;

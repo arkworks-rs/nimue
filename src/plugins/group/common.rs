@@ -1,4 +1,4 @@
-use crate::{ByteTranscript, DuplexHash, ProofResult};
+use crate::{ByteTranscript, ProofResult};
 use group::ff::PrimeField;
 
 use super::{FieldChallenges, FieldPublic};
@@ -27,7 +27,7 @@ where
     T: ByteTranscript,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
-        let mut buf = vec![0; bytes_uniform_modp(F::NUM_BITS as usize)];
+        let mut buf = vec![0; bytes_uniform_modp(F::NUM_BITS)];
 
         for o in output {
             self.fill_challenge_bytes(&mut buf)?;
@@ -52,4 +52,3 @@ where
         Ok(buf)
     }
 }
-
