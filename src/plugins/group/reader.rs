@@ -1,5 +1,5 @@
 use super::FieldReader;
-use crate::{ByteTranscriptReader, DuplexHash, Merlin, ProofError};
+use crate::{ByteReader, DuplexHash, Merlin, ProofError};
 use group::ff::PrimeField;
 
 impl<'a, F, H, const N: usize> FieldReader<F> for Merlin<'a, H>

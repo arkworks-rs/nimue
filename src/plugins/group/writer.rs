@@ -2,7 +2,7 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{Arthur, ByteTranscriptWriter, DuplexHash, ProofResult};
+use crate::{Arthur, ByteWriter, DuplexHash, ProofResult};
 
 impl<F, H, R> FieldWriter<F> for Arthur<H, R>
 where

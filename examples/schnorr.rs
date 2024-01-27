@@ -33,7 +33,7 @@ impl<G, H> SchnorrIOPattern<G> for IOPattern<H>
 where
     G: CurveGroup,
     H: DuplexHash,
-    IOPattern<H>: GroupIOPattern<G>,
+    IOPattern<H>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
     fn add_schnorr_io(self) -> Self {
         self.add_points(1, "generator (P)")
@@ -72,8 +72,11 @@ fn prove<H, G>(
 where
     H: DuplexHash,
     G: CurveGroup,
-    Arthur<H>: GroupWriter<G>,
+    Arthur<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
+    arthur.public_points(&[P, P * x]).unwrap();
+    arthur.ratchet().unwrap();
+
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` funciton.
     let k = G::ScalarField::rand(arthur.rng());
@@ -111,8 +114,11 @@ fn verify<G, H>(
 where
     G: CurveGroup,
     H: DuplexHash,
-    for<'a> Merlin<'a, H>: GroupReader<G>,
+    for<'a> Merlin<'a, H>: GroupReader<G> + FieldChallenges<G::ScalarField>,
 {
+    merlin.public_points(&[P, X]).unwrap();
+    merlin.ratchet().unwrap();
+
     // Read the protocol from the transcript:
     let [K] = merlin.next_points().unwrap();
     let [c] = merlin.challenge_scalars().unwrap();
@@ -140,11 +146,11 @@ fn main() {
     type G = ark_curve25519::EdwardsProjective;
     // Set the hash function (commented out other valid choices):
     // type H = nimue::hash::Keccak;
-    type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
+    // type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
-    let io = IOPattern::<H>::new("nimue::examples::schnorr");
+    let io = IOPattern::new("nimue::examples::schnorr");
     let io = SchnorrIOPattern::<G>::add_schnorr_io(io);
 
     // Set up the elements to prove
@@ -152,9 +158,7 @@ fn main() {
     let (x, X) = keygen();
 
     // Create the prover transcript, add the statement to it, and then invoke the prover.
-    let mut arthur = io.to_arthur();
-    arthur.public_points(&[P, X]).unwrap();
-    arthur.ratchet().unwrap();
+    let mut arthur: Arthur = io.to_arthur();
     let proof = prove(&mut arthur, P, x).expect("Invalid proof");
 
     // Print out the hex-encoded schnorr proof.

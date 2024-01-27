@@ -2,11 +2,13 @@ mod common;
 mod iopattern;
 mod reader;
 mod writer;
+// poseidon support
+pub mod poseidon;
 
 pub use crate::traits::*;
 pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
 
-super::traits::field_traits!(ark_ff::Field);
+super::traits::field_traits!(ark_ff::PrimeField);
 super::traits::group_traits!(ark_ec::CurveGroup, G::Scalar : ark_ff::Field);
 
 // pub trait PairingReader<P: ark_ec::pairing::Pairing>: GroupReader<P::G1> + GroupReader<P::G2>  {

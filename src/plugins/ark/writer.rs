@@ -1,5 +1,5 @@
 use ark_ec::CurveGroup;
-use ark_ff::PrimeField;
+use ark_ff::{Fp, FpConfig, PrimeField};
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
@@ -17,12 +17,30 @@ impl<G, H, R> GroupWriter<G> for Arthur<H, R>
 where
     G: CurveGroup,
     H: DuplexHash,
-    R: rand::RngCore + CryptoRng,
+    R: RngCore + CryptoRng,
+    Arthur<H, R>: GroupPublic<G, Repr = Vec<u8>>,
 {
     #[inline(always)]
     fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
         let serialized = self.public_points(input);
         self.transcript.extend(serialized?);
+        Ok(())
+    }
+}
+
+impl<G, H, R, C: FpConfig<N>, const N: usize> GroupWriter<G> for Arthur<H, R, Fp<C, N>>
+where
+    G: CurveGroup,
+    H: DuplexHash<Fp<C, N>>,
+    R: RngCore + CryptoRng,
+    Arthur<H, R, Fp<C, N>>: GroupPublic<G>,
+{
+    #[inline(always)]
+    fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
+        self.public_points(input).map(|_| ())?;
+        for i in input {
+            i.serialize_compressed(&mut self.transcript)?;
+        }
         Ok(())
     }
 }

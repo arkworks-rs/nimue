@@ -2,7 +2,7 @@ use crate::errors::IOPatternError;
 use crate::hash::{DuplexHash, Unit};
 use crate::iopattern::IOPattern;
 use crate::safe::Safe;
-use crate::traits::{ByteTranscript, ByteTranscriptReader};
+use crate::traits::{ByteReader, UnitTranscript};
 use crate::DefaultHash;
 
 /// Merlin is wrapper around a sponge that provides a secure
@@ -33,17 +33,6 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
         self.safe.absorb(input)
     }
 
-    #[inline(always)]
-    pub fn public(&mut self, input: &[U]) -> Result<(), IOPatternError> {
-        self.safe.absorb(input)
-    }
-
-    /// Get a challenge of `count` elements.
-    #[inline(always)]
-    pub fn fill_challenges(&mut self, input: &mut [U]) -> Result<(), IOPatternError> {
-        self.safe.squeeze(input)
-    }
-
     /// Signals the end of the statement.
     #[inline(always)]
     pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
@@ -57,24 +46,26 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
     }
 }
 
+impl<'a, H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Merlin<'a, H, U> {
+    #[inline]
+    fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
+        self.safe.absorb(input)
+    }
+
+    /// Get a challenge of `count` elements.
+    #[inline]
+    fn fill_challenge_units(&mut self, input: &mut [U]) -> Result<(), IOPatternError> {
+        self.safe.squeeze(input)
+    }
+}
+
 impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Merlin").field(&self.safe).finish()
     }
 }
 
-impl<'a, H: DuplexHash<u8>> ByteTranscript for Merlin<'a, H, u8> {
-    #[inline(always)]
-    fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
-        self.public(input)
-    }
-    #[inline(always)]
-    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        self.fill_challenges(output)
-    }
-}
-
-impl<'a, H: DuplexHash<u8>> ByteTranscriptReader for Merlin<'a, H, u8> {
+impl<'a, H: DuplexHash<u8>> ByteReader for Merlin<'a, H, u8> {
     #[inline(always)]
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.fill_next(input)

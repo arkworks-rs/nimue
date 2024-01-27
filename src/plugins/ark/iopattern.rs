@@ -1,5 +1,5 @@
 use ark_ec::CurveGroup;
-use ark_ff::PrimeField;
+use ark_ff::{Fp, FpConfig, PrimeField};
 
 use super::*;
 use crate::plugins::{bytes_modp, bytes_uniform_modp};
@@ -18,6 +18,35 @@ where
     }
 }
 
+impl<C, H, const N: usize> FieldIOPattern<Fp<C, N>> for IOPattern<H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+{
+    fn add_scalars(self, count: usize, label: &str) -> Self {
+        self.absorb(count, label)
+    }
+
+    fn challenge_scalars(self, count: usize, label: &str) -> Self {
+        self.squeeze(count, label)
+    }
+}
+
+impl<C, H, const N: usize> ByteIOPattern for IOPattern<H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+{
+    fn add_bytes(self, count: usize, label: &str) -> Self {
+        self.absorb(count, label)
+    }
+
+    fn challenge_bytes(self, count: usize, label: &str) -> Self {
+        let n = bytes_uniform_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
+        self.absorb((count + n - 1) / n, label)
+    }
+}
+
 impl<G, H> GroupIOPattern<G> for IOPattern<H>
 where
     G: CurveGroup,
@@ -25,6 +54,18 @@ where
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         self.add_bytes(count * G::default().compressed_size(), label)
+    }
+}
+
+impl<G, H, C, const N: usize> GroupIOPattern<G> for IOPattern<H, Fp<C, N>>
+where
+    G: CurveGroup<BaseField = Fp<C, N>>,
+    H: DuplexHash<Fp<C, N>>,
+    C: FpConfig<N>,
+    IOPattern<H, ark_ff::Fp<C, N>>: FieldIOPattern<G::BaseField>,
+{
+    fn add_points(self, count: usize, label: &str) -> Self {
+        self.absorb(count * 2, label)
     }
 }
 
@@ -42,7 +83,7 @@ fn test_iopattern() {
     // // OPTION 2
     fn add_schnorr_iopattern<G: ark_ec::CurveGroup, H: DuplexHash<u8>>() -> IOPattern<H, u8>
     where
-        IOPattern<H, u8>: GroupIOPattern<G>,
+        IOPattern<H, u8>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
     {
         IOPattern::new("github.com/mmaker/nimue")
             .add_points(1, "g")

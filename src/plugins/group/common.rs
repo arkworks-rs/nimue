@@ -1,4 +1,4 @@
-use crate::{ByteTranscript, ProofResult};
+use crate::{ByteChallenges, BytePublic, ProofResult};
 use group::ff::PrimeField;
 
 use super::{FieldChallenges, FieldPublic};
@@ -19,7 +19,7 @@ fn from_bytes_mod_order<F: PrimeField>(bytes: &[u8]) -> F {
 impl<F, T> FieldChallenges<F> for T
 where
     F: PrimeField,
-    T: ByteTranscript,
+    T: ByteChallenges,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let mut buf = vec![0; bytes_uniform_modp(F::NUM_BITS)];
@@ -36,7 +36,7 @@ where
 impl<F, T> FieldPublic<F> for T
 where
     F: PrimeField,
-    T: ByteTranscript,
+    T: BytePublic,
 {
     type Repr = Vec<u8>;
 

@@ -1,5 +1,5 @@
 use ark_ec::CurveGroup;
-use ark_ff::PrimeField;
+use ark_ff::{Fp, FpConfig, PrimeField};
 
 use super::{FieldReader, GroupReader};
 use crate::traits::*;
@@ -35,5 +35,16 @@ where
             *o = G::deserialize_compressed(buf.as_slice())?;
         }
         Ok(())
+    }
+}
+
+impl<'a, G, H, C, const N: usize> GroupReader<G> for Merlin<'a, H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    G: CurveGroup<BaseField = Fp<C, N>>,
+    H: DuplexHash<G::BaseField>,
+{
+    fn fill_next_points(&mut self, _output: &mut [G]) -> ProofResult<()> {
+        todo!()
     }
 }

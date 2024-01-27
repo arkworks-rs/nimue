@@ -18,7 +18,7 @@ impl<G, H> BulletproofIOPattern<G> for IOPattern<H>
 where
     G: CurveGroup,
     H: DuplexHash,
-    IOPattern<H>: GroupIOPattern<G>,
+    IOPattern<H>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
     /// The IO of the bulletproof statement
     fn bulletproof_statement(self) -> Self {
@@ -41,8 +41,14 @@ fn prove<'a, G: CurveGroup>(
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
-) -> ProofResult<&'a [u8]> {
+) -> ProofResult<&'a [u8]>
+where
+    Arthur: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+{
     assert_eq!(witness.0.len(), witness.1.len());
+
+    arthur.public_points(&[*statement]).unwrap();
+    arthur.ratchet().unwrap();
 
     if witness.0.len() == 1 {
         assert_eq!(generators.0.len(), 1);
@@ -89,7 +95,13 @@ fn verify<G: CurveGroup>(
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
-) -> ProofResult<()> {
+) -> ProofResult<()>
+where
+    for<'a> Merlin<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
+{
+    merlin.public_points(&[*statement]).unwrap();
+    merlin.ratchet().unwrap();
+
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
     let u = generators.2.clone();
@@ -184,8 +196,6 @@ fn main() {
     let witness = (&a[..], &b[..]);
 
     let mut arthur = iopattern.to_arthur();
-    arthur.public_points(&[statement]).unwrap();
-    arthur.ratchet().unwrap();
     let proof = prove(&mut arthur, generators, &statement, witness).expect("Error proving");
     println!(
         "Here's a bulletproof for {} elements:\n{}",
@@ -194,7 +204,5 @@ fn main() {
     );
 
     let mut verifier_transcript = iopattern.to_merlin(proof);
-    verifier_transcript.public_points(&[statement]).unwrap();
-    verifier_transcript.ratchet().unwrap();
     verify(&mut verifier_transcript, generators, size, &statement).expect("Invalid proof");
 }

@@ -45,6 +45,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-bls12-381"
+version = "0.4.0"
+source = "git+https://github.com/arkworks-rs/algebra#bf96a5b2873e69f3c378c7b25d0901a6701efcc4"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+]
+
+[[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -452,6 +463,7 @@ name = "nimue"
 version = "0.0.1-beta5"
 dependencies = [
  "anyhow",
+ "ark-bls12-381",
  "ark-crypto-primitives",
  "ark-curve25519",
  "ark-ec",
@@ -746,8 +758,3 @@ dependencies = [
  "quote",
  "syn 2.0.48",
 ]
-
-[[patch.unused]]
-name = "ark-bls12-381"
-version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/algebra#bf96a5b2873e69f3c378c7b25d0901a6701efcc4"

@@ -31,10 +31,11 @@ ark-crypto-primitives = {version="0.4.0", optional=true}
 curve25519-dalek = {version="4.0.0", optional=true, features=["group"]}
 # anemoi = {git = "https://github.com/anemoi-hash/anemoi-rust", optional=true}
 group = {version="0.13.0", optional=true}
+ark-bls12-381 = {version="0.4.0", optional=true}
 
 [features]
 default = []
-ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-crypto-primitives"]
+ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-crypto-primitives", "dep:ark-bls12-381"]
 group = ["dep:group", "dep:curve25519-dalek"]
 # anemoi = ["dep:anemoi"]
 

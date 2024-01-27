@@ -39,15 +39,15 @@ macro_rules! field_traits {
 #[macro_export]
 macro_rules! group_traits {
     ($Group:path, $ScalarField:path : $Field:path) => {
-        pub trait GroupIOPattern<G: $Group>: FieldIOPattern<$ScalarField> {
+        pub trait GroupIOPattern<G: $Group> {
             fn add_points(self, count: usize, label: &str) -> Self;
         }
 
-        pub trait GroupWriter<G: $Group>: FieldWriter<$ScalarField> {
+        pub trait GroupWriter<G: $Group>: GroupPublic<G> {
             fn add_points(&mut self, input: &[G]) -> $crate::ProofResult<()>;
         }
 
-        pub trait GroupReader<G: $Group + Default>: FieldReader<$ScalarField> {
+        pub trait GroupReader<G: $Group + Default> {
             fn fill_next_points(&mut self, output: &mut [G]) -> $crate::ProofResult<()>;
 
             fn next_points<const N: usize>(&mut self) -> $crate::ProofResult<[G; N]> {

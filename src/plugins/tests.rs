@@ -4,13 +4,13 @@ use group::{Group, GroupEncoding};
 
 use crate::hash::Keccak;
 use crate::{plugins, ByteIOPattern};
-use crate::{ByteTranscript, DuplexHash, IOPattern};
+use crate::{ByteChallenges, DuplexHash, IOPattern};
 
 fn group_iopattern<G, H>() -> IOPattern<H>
 where
     G: group::Group,
     H: DuplexHash,
-    IOPattern<H>: super::group::GroupIOPattern<G>,
+    IOPattern<H>: super::group::GroupIOPattern<G> + super::group::FieldIOPattern<G::Scalar>,
 {
     use plugins::group::{FieldIOPattern, GroupIOPattern};
 
@@ -26,7 +26,7 @@ fn ark_iopattern<G, H>() -> IOPattern<H>
 where
     G: ark_ec::CurveGroup,
     H: DuplexHash,
-    IOPattern<H>: super::ark::GroupIOPattern<G>,
+    IOPattern<H>: super::ark::GroupIOPattern<G> + super::ark::FieldIOPattern<G::Scalar>,
 {
     use plugins::ark::{FieldIOPattern, GroupIOPattern};
 
