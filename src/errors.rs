@@ -76,3 +76,9 @@ impl<B: Borrow<IOPatternError>> From<B> for ProofError {
         ProofError::InvalidIO(value.borrow().clone())
     }
 }
+
+impl From<std::io::Error> for IOPatternError {
+    fn from(value: std::io::Error) -> Self {
+        IOPatternError(value.to_string())
+    }
+}

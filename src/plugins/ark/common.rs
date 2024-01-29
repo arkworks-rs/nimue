@@ -1,7 +1,7 @@
 use std::io;
 
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_ff::{Fp, FpConfig, PrimeField};
+use ark_ff::{Field, Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use rand::{CryptoRng, RngCore};
 
@@ -25,8 +25,10 @@ impl<C: FpConfig<N>, const N: usize> Unit for Fp<C, N> {
 
     fn read(mut r: &mut impl io::Read, bunch: &mut [Self]) -> Result<(), io::Error> {
         for b in bunch.iter_mut() {
-            *b = ark_ff::Fp::<C, N>::deserialize_compressed(&mut r)
-                .map_err(|_| io::Error::new(io::ErrorKind::Other, "oh no!"))?
+            let b_result = Fp::deserialize_compressed(&mut r);
+            *b = b_result.map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "Unable to deserialize into Field.")
+            })?
         }
         Ok(())
     }
@@ -58,7 +60,7 @@ where
 
 impl<T, F> FieldPublic<F> for T
 where
-    F: PrimeField,
+    F: Field,
     T: UnitTranscript<u8>,
 {
     type Repr = Vec<u8>;
@@ -83,7 +85,7 @@ where
 
         for o in output.iter_mut() {
             self.fill_challenge_bytes(&mut buf)?;
-            *o = F::from_be_bytes_mod_order(&buf);
+            *o = F::from_be_bytes_mod_order(&buf).into();
         }
         Ok(())
     }
@@ -171,7 +173,6 @@ where
         Ok(())
     }
 }
-
 
 // Field  <-> Bytes interactions:
 

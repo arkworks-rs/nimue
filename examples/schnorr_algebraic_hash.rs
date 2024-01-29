@@ -45,21 +45,22 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn aprove<G, H, R>(
+fn prove<G, H, U, R>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    arthur: &mut Arthur<H, R, G::BaseField>,
+    arthur: &mut Arthur<H, R, U>,
     // the generator
     P: G,
     // the secret key
     x: G::ScalarField,
 ) -> ProofResult<&[u8]>
 where
-    G::BaseField: Unit,
+    U: Unit,
+    G::BaseField: PrimeField,
     R: CryptoRng + RngCore,
-    H: DuplexHash<G::BaseField>,
+    H: DuplexHash<U>,
     G: CurveGroup,
-    Arthur<H, R, G::BaseField>: GroupWriter<G> + ByteChallenges,
+    Arthur<H, R, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 {
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` funciton.
@@ -74,9 +75,10 @@ where
     let c_bytes = arthur.challenge_bytes::<16>()?;
     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
 
-    let _r = k + c * x;
+    let r = k + c * x;
+    let r_q = swap_field::<G::ScalarField, G::BaseField>(r)?;
     // Add a sequence of scalar elements to the protocol transcript.
-    // arthur.add_scalars(&[r])?;
+    arthur.add_scalars(&[r_q])?;
 
     // Output the current protocol transcript as a sequence of bytes.
     Ok(arthur.transcript())
@@ -87,27 +89,28 @@ where
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn averify<'a, G, H>(
+fn verify<'a, G, H, U>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    merlin: &mut Merlin<'a, H, G::BaseField>,
+    merlin: &mut Merlin<'a, H, U>,
     // The group generator `P``
     P: G,
     // The public key `X`
     X: G,
 ) -> ProofResult<()>
 where
-    G::BaseField: Unit,
+    U: Unit,
+    G::BaseField: PrimeField,
     G: CurveGroup,
-    H: DuplexHash<G::BaseField>,
-    Merlin<'a, H, G::BaseField>: GroupReader<G> + ByteChallenges,
+    H: DuplexHash<U>,
+    Merlin<'a, H, U>: GroupReader<G> + FieldReader<G::BaseField> + ByteChallenges,
 {
     // Read the protocol from the transcript:
     let [K] = merlin.next_points().unwrap();
     let c_bytes = merlin.challenge_bytes::<16>().unwrap();
     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
-    let r = G::ScalarField::from(0);
-    // let [r] = merlin.next_scalars().unwrap();
+    let [r_q] = merlin.next_scalars().unwrap();
+    let r = swap_field::<G::BaseField, G::ScalarField>(r_q)?;
 
     // Check the verification equation, otherwise return a verification error.
     // The type ProofError is an enum that can report:
@@ -136,8 +139,12 @@ fn main() {
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
     type H = nimue::plugins::ark::poseidon::PoseidonHash;
 
+    //
+    // type U = u8;
+    type U = Fq;
+
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
-    let io = IOPattern::<H, Fq>::new("nimue::examples::schnorr");
+    let io = IOPattern::<H, U>::new("nimue::examples::schnorr");
     let io = SchnorrIOPattern::<G>::add_schnorr_io(io);
 
     // Set up the elements to prove
@@ -145,17 +152,17 @@ fn main() {
     let (x, X) = keygen();
 
     // Create the prover transcript, add the statement to it, and then invoke the prover.
-    let mut arthur: Arthur<H, OsRng, Fq> = Arthur::<H, _, Fq>::new(&io, OsRng);
+    let mut arthur = Arthur::<H, _, U>::new(&io, OsRng);
     arthur.public_points(&[P, X]).unwrap();
     arthur.ratchet().unwrap();
-    let proof = aprove(&mut arthur, P, x).expect("Invalid proof");
+    let proof = prove(&mut arthur, P, x).expect("Invalid proof");
 
     // Print out the hex-encoded schnorr proof.
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
     // Verify the proof: create the verifier transcript, add the statement to it, and invoke the verifier.
-    let mut merlin = Merlin::<H, Fq>::new(&io, &proof);
+    let mut merlin = Merlin::<H, U>::new(&io, &proof);
     merlin.public_points(&[P, X]).unwrap();
     merlin.ratchet().unwrap();
-    averify(&mut merlin, P, X).expect("Invalid proof");
+    verify(&mut merlin, P, X).expect("Invalid proof");
 }

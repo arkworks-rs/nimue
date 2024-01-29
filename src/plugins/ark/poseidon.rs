@@ -1,12 +1,13 @@
-use std::ops::RangeTo;
-
+use crate::{hash::sponge::DuplexSponge, Unit};
 use ark_bls12_381::Fq;
 use ark_ff::{PrimeField, Zero};
+use std::ops::RangeTo;
 
-type F = Fq;
+type FF = Fq;
+pub type PoseidonHash = DuplexSponge<PoseidonSponge<FF>>;
 
 #[derive(Clone, Debug)]
-pub struct PoseidonConfig<F: PrimeField> {
+pub struct PoseidonConfig<F: PrimeField, const RATE: usize, const CAPACITY: usize> {
     /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
     /// Number of rounds in a partial-round operation.
@@ -18,15 +19,188 @@ pub struct PoseidonConfig<F: PrimeField> {
     pub ark: &'static [[F; 3]],
     /// Maximally Distance Separating (MDS) Matrix.
     pub mds: &'static [[F; 3]],
-    /// The rate (in terms of number of field elements).
-    /// See [On the Indifferentiability of the Sponge Construction](https://iacr.org/archive/eurocrypt2008/49650180/49650180.pdf)
-    /// for more details on the rate and capacity of a sponge.
-    pub rate: usize,
-    /// The capacity (in terms of number of field elements).
-    pub capacity: usize,
 }
 
-const MDS: &'static [[F; 3]] = &[
+/// Generate default parameters (bls381-fr-only) for alpha = 17, state-size = 8
+const BLS12381POSEIDON_CONF: PoseidonConfig<FF, 2, 1> = {
+    let alpha = 17;
+    let full_rounds = 8;
+    let total_rounds = 37;
+    let partial_rounds = total_rounds - full_rounds;
+    PoseidonConfig {
+        full_rounds,
+        partial_rounds,
+        alpha,
+        ark: ARK,
+        mds: MDS,
+    }
+};
+
+#[derive(Clone)]
+pub struct PoseidonSponge<F: PrimeField, const RATE: usize, const CAPACITY: usize> {
+    /// Sponge Config
+    pub parameters: PoseidonConfig<F, RATE, CAPACITY>,
+
+    // Sponge State
+    /// Current sponge's state (current elements in the permutation block)
+    pub state: Vec<F>,
+}
+
+impl<F: PrimeField, const RATE: usize, const CAPACITY: usize> PoseidonSponge<F, RATE, CAPACITY> {
+    fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
+        // Full rounds apply the S Box (x^alpha) to every element of state
+        if is_full_round {
+            for elem in state {
+                *elem = elem.pow(&[self.parameters.alpha]);
+            }
+        }
+        // Partial rounds apply the S Box (x^alpha) to just the first element of state
+        else {
+            state[0] = state[0].pow(&[self.parameters.alpha]);
+        }
+    }
+
+    fn apply_ark(&self, state: &mut [F], round_number: usize) {
+        for (i, state_elem) in state.iter_mut().enumerate() {
+            state_elem.add_assign(&self.parameters.ark[round_number][i]);
+        }
+    }
+
+    fn apply_mds(&self, state: &mut [F]) {
+        let mut new_state = Vec::new();
+        for i in 0..state.len() {
+            let mut cur = F::zero();
+            for (j, state_elem) in state.iter().enumerate() {
+                let term = state_elem.mul(&self.parameters.mds[i][j]);
+                cur.add_assign(&term);
+            }
+            new_state.push(cur);
+        }
+        state.clone_from_slice(&new_state[..state.len()])
+    }
+}
+
+impl Default for PoseidonSponge<FF, 2, 1> {
+    fn default() -> Self {
+        PoseidonSponge {
+            parameters: BLS12381POSEIDON_CONF.clone(),
+            state: vec![FF::zero(); 2 + 1],
+        }
+    }
+}
+
+macro_rules! impl_index {
+    ($trait: ty, $struct: ident, Output = $output: ident, Params = [$($type:ident : $trait:ident),*], Constants = $($constgen:ident),*) => {
+        impl<$($type: $trait,)* $(const $constgen: usize,)*> $trait for $struct<$($type,)* $($constgen,)*> {
+            type Output = $output;
+
+            fn index(&self, index: usize) -> &Self::Output {
+                &self.state[index]
+            }
+        }
+    };
+}
+
+impl_index!(std::ops::Index<usize>, PoseidonSponge, Output = F, Params = [F: PrimeField], Constants = RATE, CAPACITY);
+
+impl<F: PrimeField> std::ops::Index<usize> for PoseidonSponge<F, RATE, CAPACITY> {
+    type Output = F;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.state[index]
+    }
+}
+
+
+
+impl<F: PrimeField> std::ops::Index<RangeTo<usize>> for PoseidonSponge<F> {
+    type Output = [F];
+
+    fn index(&self, index: RangeTo<usize>) -> &Self::Output {
+        &self.state[index]
+    }
+}
+
+impl<F: PrimeField> std::ops::IndexMut<RangeTo<usize>> for PoseidonSponge<F> {
+    fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
+        &mut self.state[index]
+    }
+}
+
+impl<F: PrimeField> std::ops::Index<std::ops::Range<usize>> for PoseidonSponge<F> {
+    type Output = [F];
+
+    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
+        &self.state[index]
+    }
+}
+
+impl<F: PrimeField> std::ops::IndexMut<std::ops::Range<usize>> for PoseidonSponge<F> {
+    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
+        &mut self.state[index]
+    }
+}
+
+impl<F: PrimeField> std::ops::Index<std::ops::RangeFrom<usize>> for PoseidonSponge<F> {
+    type Output = [F];
+
+    fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
+        &self.state[index]
+    }
+}
+
+impl<F: PrimeField> std::ops::IndexMut<std::ops::RangeFrom<usize>> for PoseidonSponge<F> {
+    fn index_mut(&mut self, index: std::ops::RangeFrom<usize>) -> &mut Self::Output {
+        &mut self.state[index]
+    }
+}
+
+impl<F: PrimeField> zeroize::Zeroize for PoseidonSponge<F> {
+    fn zeroize(&mut self) {
+        self.state.zeroize();
+    }
+}
+
+impl<F: PrimeField> crate::hash::sponge::Sponge for PoseidonSponge<F>
+    where PoseidonSponge<F>: Default, F: Unit {
+    type U = F;
+    const CAPACITY: usize = 1;
+    const RATE: usize = 2;
+
+    fn new(iv: [u8; 32]) -> Self {
+        assert!(Self::CAPACITY >= 1);
+        let mut ark_sponge = Self::default();
+        ark_sponge.state[Self::RATE] = F::from_be_bytes_mod_order(&iv);
+        ark_sponge
+    }
+
+    fn permute(&mut self) {
+        let full_rounds_over_2 = self.parameters.full_rounds / 2;
+        let mut state = self.state.clone();
+        for i in 0..full_rounds_over_2 {
+            self.apply_ark(&mut state, i);
+            self.apply_s_box(&mut state, true);
+            self.apply_mds(&mut state);
+        }
+
+        for i in full_rounds_over_2..(full_rounds_over_2 + self.parameters.partial_rounds) {
+            self.apply_ark(&mut state, i);
+            self.apply_s_box(&mut state, false);
+            self.apply_mds(&mut state);
+        }
+
+        for i in (full_rounds_over_2 + self.parameters.partial_rounds)
+            ..(self.parameters.partial_rounds + self.parameters.full_rounds)
+        {
+            self.apply_ark(&mut state, i);
+            self.apply_s_box(&mut state, true);
+            self.apply_mds(&mut state);
+        }
+        self.state = state;
+    }
+}
+
+const MDS: &'static [[FF; 3]] = &[
     [
         ark_ff::MontFp!(
             "43228725308391137369947362226390319299014033584574058394339561338097152657858"
@@ -61,7 +235,7 @@ const MDS: &'static [[F; 3]] = &[
         ),
     ],
 ];
-const ARK: &'static [[F; 3]] = &[
+const ARK: &'static [[FF; 3]] = &[
     [
         ark_ff::MontFp!(
             "44595993092652566245296379427906271087754779418564084732265552598173323099784"
@@ -470,188 +644,3 @@ const ARK: &'static [[F; 3]] = &[
         ),
     ],
 ];
-
-/// Generate default parameters (bls381-fr-only) for alpha = 17, state-size = 8
-pub(crate) const fn poseidon_parameters_for_test() -> PoseidonConfig<F> {
-    let alpha = 17;
-    let full_rounds = 8;
-    let total_rounds = 37;
-    let partial_rounds = total_rounds - full_rounds;
-    let capacity = 1;
-    let rate = 2;
-    PoseidonConfig {
-        full_rounds,
-        partial_rounds,
-        alpha,
-        ark: ARK,
-        mds: MDS,
-        rate,
-        capacity,
-    }
-}
-
-#[derive(Clone)]
-pub struct PoseidonSponge<F: PrimeField> {
-    /// Sponge Config
-    pub parameters: PoseidonConfig<F>,
-
-    // Sponge State
-    /// Current sponge's state (current elements in the permutation block)
-    pub state: Vec<F>,
-}
-
-impl<F: PrimeField> PoseidonSponge<F> {
-    fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
-        // Full rounds apply the S Box (x^alpha) to every element of state
-        if is_full_round {
-            for elem in state {
-                *elem = elem.pow(&[self.parameters.alpha]);
-            }
-        }
-        // Partial rounds apply the S Box (x^alpha) to just the first element of state
-        else {
-            state[0] = state[0].pow(&[self.parameters.alpha]);
-        }
-    }
-
-    fn apply_ark(&self, state: &mut [F], round_number: usize) {
-        for (i, state_elem) in state.iter_mut().enumerate() {
-            state_elem.add_assign(&self.parameters.ark[round_number][i]);
-        }
-    }
-
-    fn apply_mds(&self, state: &mut [F]) {
-        let mut new_state = Vec::new();
-        for i in 0..state.len() {
-            let mut cur = F::zero();
-            for (j, state_elem) in state.iter().enumerate() {
-                let term = state_elem.mul(&self.parameters.mds[i][j]);
-                cur.add_assign(&term);
-            }
-            new_state.push(cur);
-        }
-        state.clone_from_slice(&new_state[..state.len()])
-    }
-
-    fn permute(&mut self) {
-        let full_rounds_over_2 = self.parameters.full_rounds / 2;
-        let mut state = self.state.clone();
-        for i in 0..full_rounds_over_2 {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
-        }
-
-        for i in full_rounds_over_2..(full_rounds_over_2 + self.parameters.partial_rounds) {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, false);
-            self.apply_mds(&mut state);
-        }
-
-        for i in (full_rounds_over_2 + self.parameters.partial_rounds)
-            ..(self.parameters.partial_rounds + self.parameters.full_rounds)
-        {
-            self.apply_ark(&mut state, i);
-            self.apply_s_box(&mut state, true);
-            self.apply_mds(&mut state);
-        }
-        self.state = state;
-    }
-}
-
-const BLS12381POSEIDON_CONF: PoseidonConfig<F> = poseidon_parameters_for_test();
-
-#[derive(Clone)]
-pub struct Bls12381Poseidon(PoseidonSponge<F>);
-
-impl Default for Bls12381Poseidon {
-    fn default() -> Self {
-        Self(PoseidonSponge {
-            parameters: BLS12381POSEIDON_CONF.clone(),
-            state: vec![F::zero(); BLS12381POSEIDON_CONF.rate + BLS12381POSEIDON_CONF.capacity],
-        })
-    }
-}
-
-impl std::ops::Index<usize> for Bls12381Poseidon {
-    type Output = F;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0.state[index]
-    }
-}
-
-impl std::ops::IndexMut<usize> for Bls12381Poseidon {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.0.state[index]
-    }
-}
-
-impl std::ops::Index<RangeTo<usize>> for Bls12381Poseidon {
-    type Output = [F];
-
-    fn index(&self, index: RangeTo<usize>) -> &Self::Output {
-        &self.0.state[index]
-    }
-}
-
-impl std::ops::IndexMut<RangeTo<usize>> for Bls12381Poseidon {
-    fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
-        &mut self.0.state[index]
-    }
-}
-
-impl std::ops::Index<std::ops::Range<usize>> for Bls12381Poseidon {
-    type Output = [F];
-
-    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
-        &self.0.state[index]
-    }
-}
-
-impl std::ops::IndexMut<std::ops::Range<usize>> for Bls12381Poseidon {
-    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
-        &mut self.0.state[index]
-    }
-}
-
-impl std::ops::Index<std::ops::RangeFrom<usize>> for Bls12381Poseidon {
-    type Output = [F];
-
-    fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
-        &self.0.state[index]
-    }
-}
-
-impl std::ops::IndexMut<std::ops::RangeFrom<usize>> for Bls12381Poseidon {
-    fn index_mut(&mut self, index: std::ops::RangeFrom<usize>) -> &mut Self::Output {
-        &mut self.0.state[index]
-    }
-}
-
-impl zeroize::Zeroize for Bls12381Poseidon {
-    fn zeroize(&mut self) {
-        self.0.state.zeroize();
-    }
-}
-
-impl crate::hash::sponge::Sponge for Bls12381Poseidon {
-    type U = F;
-
-    const CAPACITY: usize = 1;
-
-    const RATE: usize = 2;
-
-    fn new(iv: [u8; 32]) -> Self {
-        assert!(Self::CAPACITY >= 1);
-        let mut ark_sponge = Self::default();
-        ark_sponge.0.state[Self::RATE] = F::from_be_bytes_mod_order(&iv);
-        ark_sponge
-    }
-
-    fn permute(&mut self) {
-        self.0.permute();
-    }
-}
-
-pub type PoseidonHash = crate::hash::sponge::DuplexSponge<Bls12381Poseidon>;

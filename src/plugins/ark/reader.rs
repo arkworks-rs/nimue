@@ -1,5 +1,9 @@
+use ark_ec::short_weierstrass::{Affine as SWAffine, Projective as SWCurve, SWCurveConfig};
+use ark_ec::twisted_edwards::{Affine as EdwardsAffine, Projective as EdwardsCurve, TECurveConfig};
 use ark_ec::CurveGroup;
-use ark_ff::{Fp, FpConfig, PrimeField};
+use ark_ff::Field;
+use ark_ff::{Fp, FpConfig};
+use ark_serialize::CanonicalDeserialize;
 
 use super::{FieldReader, GroupReader};
 use crate::traits::*;
@@ -7,7 +11,7 @@ use crate::{DuplexHash, Merlin, ProofResult};
 
 impl<'a, F, H> FieldReader<F> for Merlin<'a, H>
 where
-    F: PrimeField,
+    F: Field,
     H: DuplexHash,
 {
     fn fill_next_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
@@ -38,13 +42,45 @@ where
     }
 }
 
-impl<'a, G, H, C, const N: usize> GroupReader<G> for Merlin<'a, H, Fp<C, N>>
+impl<'a, H, C, const N: usize> FieldReader<Fp<C, N>> for Merlin<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    G: CurveGroup<BaseField = Fp<C, N>>,
-    H: DuplexHash<G::BaseField>,
+    H: DuplexHash<Fp<C, N>>,
 {
-    fn fill_next_points(&mut self, _output: &mut [G]) -> ProofResult<()> {
-        todo!()
+    fn fill_next_scalars(&mut self, output: &mut [Fp<C, N>]) -> crate::ProofResult<()> {
+        self.fill_next(output)?;
+        Ok(())
+    }
+}
+
+impl<'a, P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Merlin<'a, H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+    P: TECurveConfig<BaseField = Fp<C, N>>,
+{
+    fn fill_next_points(&mut self, output: &mut [EdwardsCurve<P>]) -> ProofResult<()> {
+        for o in output.iter_mut() {
+            let o_affine = EdwardsAffine::deserialize_compressed(&mut self.transcript)?;
+            *o = o_affine.into();
+            self.public_units(&[o.x, o.y])?;
+        }
+        Ok(())
+    }
+}
+
+impl<'a, P, H, C, const N: usize> GroupReader<SWCurve<P>> for Merlin<'a, H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+    P: SWCurveConfig<BaseField = Fp<C, N>>,
+{
+    fn fill_next_points(&mut self, output: &mut [SWCurve<P>]) -> ProofResult<()> {
+        for o in output.iter_mut() {
+            let o_affine = SWAffine::deserialize_compressed(&mut self.transcript)?;
+            *o = o_affine.into();
+            self.public_units(&[o.x, o.y])?;
+        }
+        Ok(())
     }
 }

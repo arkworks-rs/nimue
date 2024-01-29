@@ -43,7 +43,7 @@ where
 
     fn challenge_bytes(self, count: usize, label: &str) -> Self {
         let n = bytes_uniform_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
-        self.absorb((count + n - 1) / n, label)
+        self.squeeze((count + n - 1) / n, label)
     }
 }
 
@@ -62,7 +62,7 @@ where
     G: CurveGroup<BaseField = Fp<C, N>>,
     H: DuplexHash<Fp<C, N>>,
     C: FpConfig<N>,
-    IOPattern<H, ark_ff::Fp<C, N>>: FieldIOPattern<G::BaseField>,
+    IOPattern<H, Fp<C, N>>: FieldIOPattern<Fp<C, N>>,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         self.absorb(count * 2, label)

@@ -29,8 +29,9 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
     /// Read `input.len()` elements from the transcript.
     #[inline(always)]
     pub fn fill_next(&mut self, input: &mut [U]) -> Result<(), IOPatternError> {
-        U::read(&mut self.transcript, input).unwrap();
-        self.safe.absorb(input)
+        U::read(&mut self.transcript, input)?;
+        self.safe.absorb(input)?;
+        Ok(())
     }
 
     /// Signals the end of the statement.

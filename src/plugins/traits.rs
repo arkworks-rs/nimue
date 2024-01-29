@@ -21,11 +21,11 @@ macro_rules! field_traits {
             fn public_scalars(&mut self, input: &[F]) -> crate::ProofResult<Self::Repr>;
         }
 
-        pub trait FieldWriter<F: $Field>: FieldChallenges<F> + FieldPublic<F> {
+        pub trait FieldWriter<F: $Field>: FieldPublic<F> {
             fn add_scalars(&mut self, input: &[F]) -> crate::ProofResult<()>;
         }
 
-        pub trait FieldReader<F: $Field>: FieldChallenges<F> + FieldPublic<F> {
+        pub trait FieldReader<F: $Field>: FieldPublic<F> {
             fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
 
             fn next_scalars<const N: usize>(&mut self) -> crate::ProofResult<[F; N]> {
@@ -38,7 +38,7 @@ macro_rules! field_traits {
 
 #[macro_export]
 macro_rules! group_traits {
-    ($Group:path, $ScalarField:path : $Field:path) => {
+    ($Group:path, $BaseField:path : $Field:path) => {
         pub trait GroupIOPattern<G: $Group> {
             fn add_points(self, count: usize, label: &str) -> Self;
         }
