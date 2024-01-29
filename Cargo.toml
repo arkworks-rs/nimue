@@ -26,8 +26,7 @@ log = "0.4.20"
 # optional dependencies
 ark-ff = {version="0.4.0", optional=true}
 ark-ec = {version="0.4.0", optional=true}
-ark-serialize = {version="0.4.2", optional=true}
-ark-crypto-primitives = {version="0.4.0", optional=true}
+ark-serialize = {version="0.4.2", optional=true, features=["std"]}
 curve25519-dalek = {version="4.0.0", optional=true, features=["group"]}
 # anemoi = {git = "https://github.com/anemoi-hash/anemoi-rust", optional=true}
 group = {version="0.13.0", optional=true}
@@ -35,7 +34,7 @@ ark-bls12-381 = {version="0.4.0", optional=true}
 
 [features]
 default = []
-ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-crypto-primitives", "dep:ark-bls12-381"]
+ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-bls12-381"]
 group = ["dep:group", "dep:curve25519-dalek"]
 # anemoi = ["dep:anemoi"]
 

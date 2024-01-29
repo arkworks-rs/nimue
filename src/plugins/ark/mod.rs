@@ -5,6 +5,9 @@ mod writer;
 // poseidon support
 pub mod poseidon;
 
+#[cfg(feature = "anemoi")]
+pub mod anemoi;
+
 pub use crate::traits::*;
 pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
 

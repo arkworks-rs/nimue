@@ -1,10 +1,9 @@
 use crate::{hash::sponge::DuplexSponge, Unit};
 use ark_bls12_381::Fq;
 use ark_ff::{PrimeField, Zero};
-use std::ops::RangeTo;
 
 type FF = Fq;
-pub type PoseidonHash = DuplexSponge<PoseidonSponge<FF>>;
+pub type PoseidonHash = DuplexSponge<PoseidonSponge<FF, 2, 1>>;
 
 #[derive(Clone, Debug)]
 pub struct PoseidonConfig<F: PrimeField, const RATE: usize, const CAPACITY: usize> {
@@ -89,83 +88,25 @@ impl Default for PoseidonSponge<FF, 2, 1> {
     }
 }
 
-macro_rules! impl_index {
-    ($trait: ty, $struct: ident, Output = $output: ident, Params = [$($type:ident : $trait:ident),*], Constants = $($constgen:ident),*) => {
-        impl<$($type: $trait,)* $(const $constgen: usize,)*> $trait for $struct<$($type,)* $($constgen,)*> {
-            type Output = $output;
+crate::hash::index::impl_indexing!(PoseidonSponge, state, Output = F, Params = [F: PrimeField], Constants = [RATE, CAPACITY]);
 
-            fn index(&self, index: usize) -> &Self::Output {
-                &self.state[index]
-            }
-        }
-    };
-}
-
-impl_index!(std::ops::Index<usize>, PoseidonSponge, Output = F, Params = [F: PrimeField], Constants = RATE, CAPACITY);
-
-impl<F: PrimeField> std::ops::Index<usize> for PoseidonSponge<F, RATE, CAPACITY> {
-    type Output = F;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.state[index]
-    }
-}
-
-
-
-impl<F: PrimeField> std::ops::Index<RangeTo<usize>> for PoseidonSponge<F> {
-    type Output = [F];
-
-    fn index(&self, index: RangeTo<usize>) -> &Self::Output {
-        &self.state[index]
-    }
-}
-
-impl<F: PrimeField> std::ops::IndexMut<RangeTo<usize>> for PoseidonSponge<F> {
-    fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
-        &mut self.state[index]
-    }
-}
-
-impl<F: PrimeField> std::ops::Index<std::ops::Range<usize>> for PoseidonSponge<F> {
-    type Output = [F];
-
-    fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
-        &self.state[index]
-    }
-}
-
-impl<F: PrimeField> std::ops::IndexMut<std::ops::Range<usize>> for PoseidonSponge<F> {
-    fn index_mut(&mut self, index: std::ops::Range<usize>) -> &mut Self::Output {
-        &mut self.state[index]
-    }
-}
-
-impl<F: PrimeField> std::ops::Index<std::ops::RangeFrom<usize>> for PoseidonSponge<F> {
-    type Output = [F];
-
-    fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
-        &self.state[index]
-    }
-}
-
-impl<F: PrimeField> std::ops::IndexMut<std::ops::RangeFrom<usize>> for PoseidonSponge<F> {
-    fn index_mut(&mut self, index: std::ops::RangeFrom<usize>) -> &mut Self::Output {
-        &mut self.state[index]
-    }
-}
-
-impl<F: PrimeField> zeroize::Zeroize for PoseidonSponge<F> {
+impl<F: PrimeField, const RATE: usize, const CAPACITY: usize> zeroize::Zeroize
+    for PoseidonSponge<F, RATE, CAPACITY>
+{
     fn zeroize(&mut self) {
         self.state.zeroize();
     }
 }
 
-impl<F: PrimeField> crate::hash::sponge::Sponge for PoseidonSponge<F>
-    where PoseidonSponge<F>: Default, F: Unit {
+impl<F: PrimeField, const RATE: usize, const CAPACITY: usize> crate::hash::sponge::Sponge
+    for PoseidonSponge<F, RATE, CAPACITY>
+where
+    PoseidonSponge<F, RATE, CAPACITY>: Default,
+    F: Unit,
+{
     type U = F;
-    const CAPACITY: usize = 1;
-    const RATE: usize = 2;
+    const CAPACITY: usize = CAPACITY;
+    const RATE: usize = RATE;
 
     fn new(iv: [u8; 32]) -> Self {
         assert!(Self::CAPACITY >= 1);

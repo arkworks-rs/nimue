@@ -2,10 +2,8 @@
 //! Despite internally we use the same permutation,
 //! we build a duplex sponge in overwrite mode
 //! on the top of it using the `DuplexSponge` trait.
-use core::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
-use zeroize::{Zeroize, ZeroizeOnDrop};
-
 use super::sponge::{DuplexSponge, Sponge};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// A duplex sponge based on the permutation [`keccak::f1600`]
 /// using [`DuplexSponge`].
@@ -44,58 +42,10 @@ impl Default for AlignedKeccakState {
     }
 }
 
-impl Index<usize> for AlignedKeccakState {
-    type Output = u8;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl IndexMut<usize> for AlignedKeccakState {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
-
-impl Index<Range<usize>> for AlignedKeccakState {
-    type Output = [u8];
-
-    fn index(&self, index: Range<usize>) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl IndexMut<Range<usize>> for AlignedKeccakState {
-    fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
-
-impl Index<RangeFrom<usize>> for AlignedKeccakState {
-    type Output = [u8];
-
-    fn index(&self, index: RangeFrom<usize>) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl IndexMut<RangeFrom<usize>> for AlignedKeccakState {
-    fn index_mut(&mut self, index: RangeFrom<usize>) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
-
-impl Index<RangeTo<usize>> for AlignedKeccakState {
-    type Output = [u8];
-
-    fn index(&self, index: RangeTo<usize>) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl IndexMut<RangeTo<usize>> for AlignedKeccakState {
-    fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
+super::index::impl_indexing!(
+    AlignedKeccakState,
+    0,
+    Output = u8,
+    Params = [],
+    Constants = []
+);
