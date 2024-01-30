@@ -30,7 +30,6 @@ impl<G, H, R> GroupWriter<G> for Arthur<H, u8, R>
 where
     G: CurveGroup,
     H: DuplexHash,
-    G::BaseField: PrimeField,
     R: RngCore + CryptoRng,
     Arthur<H, u8, R>: GroupPublic<G, Repr = Vec<u8>>,
 {
