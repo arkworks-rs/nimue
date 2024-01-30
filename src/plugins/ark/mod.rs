@@ -1,3 +1,7 @@
+//! This module contains utilities for working with Arkworks types
+//! and aid in the Fiat-Shamir heuristic for protocols dealing with
+//! field elements and group elements.
+
 /// Common utilities for adding public elements to the protocol transcript.
 mod common;
 /// IO Pattern utilities.
@@ -8,6 +12,10 @@ pub mod poseidon;
 mod reader;
 /// Prover's utilities for encoding into a transcript.
 mod writer;
+
+#[cfg(test)]
+/// Tests for arkworks.
+mod tests;
 
 #[cfg(feature = "anemoi")]
 pub mod anemoi;

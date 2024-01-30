@@ -4,36 +4,35 @@
 //! Nimue helps performing Fiat-Shamir on any public-coin protocol.
 //! It enables secure provision of randomness for the prover and secure generation
 //! of random coins for the verifier.
-//! It is inspired by the [SAFE] API with minor variations.
-//!
-//! This allows for the implementation of non-interactive protocols in a readable manner,
-//! in a unified framework for sponge functions.
+//! It is inspired by the [SAFE] API, with minor variations.
 //!
 //! # Features
 //!
-//! Nimue supports multi-round protocols, domain separation, and protocol composition.
-//! Inspired from [Merlin], it tries to address some of its core design limitations:
+//! Nimue facilitates the writing of multi-round public coin protocols.
+//! It provides the following features:
+//! - **Automatic transcript generation**: nimue comes with batteries included for serializing/deserializing algebraic elements such as field/group elements in [Arkworks](https://github.com/arkworks-rs/algebra) and [Zkcrypto](https://github.com/zkcrypto/group). Users can build the top of it via extension trait.
 //! - **Support custom hash function**, including algebraic hashes.
 //! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
 //! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
 //! - **Retro-compatibility** with MD hashes.
-//! We have a legacy interface for Sha2, Blake2, and any hash function that satisfies the [`digest::Digest`] trait.
+//! We have a legacy interface for [`sha2``], [`blake2`], and any hash function that satisfies the [`digest::Digest`] trait.
 //! - **Preprocessing**.
 //! In recursive SNARKs, minimizing the number of hash invocations
 //! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
 //! - **Private randomness generation**.
 //! It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
-//! # IO Patterns
 //!
-//! The basic idea behind Nimue is that prover and verifier both commit to the entire sequence of absorb
-//! and squeeze done throughout the protocol.
-//! Once the IO Pattern is fixed, the rest of the protocol can just proceed with concatenation, without ever worrying
-//! about encoding length and special flags in a protocol transcript.
+//! # Intuition
+//!
+//! The basic idea behind Nimue is that prover and verifier "commit" to the protocol before running the actual protocol.
+//! This preprocessing step, where the input/output of the prover, generates an "IV" that is used to initialize the hash function for the Fiat-Shamir heuristic.
+//! From here, prover just proceeds with concatenation, without ever worrying
+//! about encoding length and special flags to embed in the hash function.
 //! This allows for
 //! better preprocessing,
 //! friendliness with algebraic hashes,
 //! static composition of protocol (and prevention of composition during the execution of a protocol),
-//! easy inspection of the Fiat-Shamir transform.
+//! easy an easier inspection of the Fiat-Shamir transform.
 //!
 //! ```
 //! use nimue::IOPattern;
@@ -104,12 +103,15 @@
 //! let chal = merlin.challenge_bytes::<16>().expect("Squeezing 128 bits");
 //! ```
 //!
-//! # Contributing
+//! # Acknowledgements
 //!
-//! This work is still in early development!
-//! If you would like to contribute, adopt it in your project, or simply tell us about your use-case,
-//! reach out to us!
+//! This work is heavily inspired from:
+//! - Libsignal's [shosha256], by Trevor Perrin. It provides an absorb/squeeze interface over legacy hash functions.
+//! - the [SAFE] API, by Dmitry Khovratovich, JP Aumasson, Porçu Quine, Bart Mennink. To my knowledge they are the first to introduce this idea of using an IO Pattern to build a transcript.
+//! - [Merlin], by Henry de Valence. To my knowledge it introduced this idea of a `Transcript` object carrying over the state of the hash function throughout the protocol.
 //!
+//!
+//! [shosha256]: https://github.com/signalapp/libsignal/blob/main/rust/poksho/src/shosha256.rs
 //! [SAFE]: https://eprint.iacr.org/2023/522
 //! [Merlin]: https://github.com/dalek-cryptography/merlin
 //! [`digest::Digest`]: https://docs.rs/digest/latest/digest/trait.Digest.html

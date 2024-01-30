@@ -1,3 +1,4 @@
+use core::fmt;
 use core::marker::PhantomData;
 use std::collections::vec_deque::VecDeque;
 
@@ -133,8 +134,11 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
 impl<U: Unit, H: DuplexHash<U>> Drop for Safe<H, U> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
-        // assert!(self.stack.is_empty());
-        if self.stack.is_empty() {
+        // it's a bit violent to panic here,
+        // because any other issue in the protocol transcript causing `Safe` to get out of scope
+        // (like another panic) will pollute the traceback.
+        // debug_assert!(self.stack.is_empty());
+        if !self.stack.is_empty() {
             log::error!("Unfinished operations:\n {:?}", self.stack)
         }
         // XXX. is the compiler going to optimize this out?
@@ -142,8 +146,8 @@ impl<U: Unit, H: DuplexHash<U>> Drop for Safe<H, U> {
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>> ::core::fmt::Debug for Safe<H, U> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+impl<U: Unit, H: DuplexHash<U>> fmt::Debug for Safe<H, U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
         write!(f, "SAFE sponge with IO: {:?}", self.stack)
@@ -153,17 +157,5 @@ impl<U: Unit, H: DuplexHash<U>> ::core::fmt::Debug for Safe<H, U> {
 impl<U: Unit, H: DuplexHash<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B> for Safe<H, U> {
     fn from(value: B) -> Self {
         Self::new(value.borrow())
-    }
-}
-
-impl<H: DuplexHash<u8>> Safe<H, u8> {
-    #[inline(always)]
-    pub fn absorb_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
-        self.absorb(input)
-    }
-
-    #[inline(always)]
-    pub fn squeeze_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        self.squeeze(output)
     }
 }

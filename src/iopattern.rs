@@ -65,7 +65,7 @@ impl Op {
 /// Denotes a protocol absorbing 32 native elements, squeezing 64 native elements,
 /// and finally absorbing 64 native elements.
 #[derive(Clone)]
-pub struct IOPattern<H, U = u8>
+pub struct IOPattern<H = crate::DefaultHash, U = u8>
 where
     U: Unit,
     H: DuplexHash<U>,

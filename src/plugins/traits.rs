@@ -1,11 +1,13 @@
 macro_rules! field_traits {
     ($Field:path) => {
+        /// Absorb and squeeze field elements to the IO pattern.
         pub trait FieldIOPattern<F: $Field> {
             fn add_scalars(self, count: usize, label: &str) -> Self;
 
             fn challenge_scalars(self, count: usize, label: &str) -> Self;
         }
 
+        /// Interpret verifier messages as uniformly distributed field elements.
         pub trait FieldChallenges<F: $Field> {
             fn fill_challenge_scalars(&mut self, output: &mut [F]) -> $crate::ProofResult<()>;
 
@@ -15,15 +17,18 @@ macro_rules! field_traits {
             }
         }
 
+        /// Add field elements as shared public information.
         pub trait FieldPublic<F: $Field> {
             type Repr;
             fn public_scalars(&mut self, input: &[F]) -> crate::ProofResult<Self::Repr>;
         }
 
+        /// Add field elements to the protocol transcript.
         pub trait FieldWriter<F: $Field>: FieldPublic<F> {
             fn add_scalars(&mut self, input: &[F]) -> crate::ProofResult<()>;
         }
 
+        /// Retrieve field elements from the protocol trainscript.
         pub trait FieldReader<F: $Field>: FieldPublic<F> {
             fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
 
