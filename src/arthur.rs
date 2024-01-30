@@ -105,7 +105,7 @@ where
     R: RngCore + CryptoRng,
 {
     #[inline(always)]
-    pub fn add(&mut self, input: &[U]) -> Result<(), IOPatternError> {
+    pub fn add_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
         let old_len = self.transcript.len();
@@ -142,7 +142,7 @@ where
 {
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         let len = self.transcript.len();
-        self.add(input)?;
+        self.add_units(input)?;
         self.transcript.truncate(len);
         Ok(())
     }
@@ -172,6 +172,6 @@ where
 {
     #[inline(always)]
     fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
-        self.add(input)
+        self.add_units(input)
     }
 }

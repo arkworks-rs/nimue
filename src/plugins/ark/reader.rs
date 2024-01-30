@@ -35,7 +35,7 @@ where
         let mut buf = vec![0u8; point_size];
 
         for o in output.iter_mut() {
-            self.fill_next(&mut buf)?;
+            self.fill_next_units(&mut buf)?;
             *o = G::deserialize_compressed(buf.as_slice())?;
         }
         Ok(())
@@ -48,7 +48,7 @@ where
     H: DuplexHash<Fp<C, N>>,
 {
     fn fill_next_scalars(&mut self, output: &mut [Fp<C, N>]) -> crate::ProofResult<()> {
-        self.fill_next(output)?;
+        self.fill_next_units(output)?;
         Ok(())
     }
 }

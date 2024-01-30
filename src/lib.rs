@@ -69,7 +69,7 @@
 //! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "send").squeeze(16, "receive");
 //! let mut arthur = io.to_arthur();
 //! // the prover sends the byte 0x42.
-//! arthur.add(&[0x42]).expect("Absorbing one byte");
+//! arthur.add_bytes(&[0x42]).expect("Absorbing one byte");
 //! // the prover receive a 128-bit challenge.
 //! let mut chal = [0u8; 16];
 //! arthur.fill_challenge_bytes(&mut chal).expect("Squeezing 128 bits");

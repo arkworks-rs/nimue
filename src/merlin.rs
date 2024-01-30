@@ -27,21 +27,21 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
     }
 
     /// Read `input.len()` elements from the transcript.
-    #[inline(always)]
-    pub fn fill_next(&mut self, input: &mut [U]) -> Result<(), IOPatternError> {
+    #[inline]
+    pub fn fill_next_units(&mut self, input: &mut [U]) -> Result<(), IOPatternError> {
         U::read(&mut self.transcript, input)?;
         self.safe.absorb(input)?;
         Ok(())
     }
 
     /// Signals the end of the statement.
-    #[inline(always)]
+    #[inline]
     pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
         self.safe.ratchet()
     }
 
     /// Signals the end of the statement and returns the (compressed) sponge state.
-    #[inline(always)]
+    #[inline]
     pub fn preprocess(self) -> Result<&'static [U], IOPatternError> {
         self.safe.preprocess()
     }
@@ -67,8 +67,8 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
 }
 
 impl<'a, H: DuplexHash<u8>> ByteReader for Merlin<'a, H, u8> {
-    #[inline(always)]
+    #[inline]
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
-        self.fill_next(input)
+        self.fill_next_units(input)
     }
 }
