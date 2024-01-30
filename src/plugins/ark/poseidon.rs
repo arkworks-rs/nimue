@@ -2,10 +2,10 @@ use ark_ff::PrimeField;
 
 use crate::hash::sponge::Sponge;
 use crate::hash::Unit;
+use crate::hash::index::impl_indexing;
 
 #[derive(Clone)]
 pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
-
     /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
     /// Number of rounds in a partial-round operation.
@@ -18,10 +18,13 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     /// Maximally Distance Separating (MDS) Matrix.
     pub mds: &'static [[F; N]],
 
-    // Sponge State
-    /// Current sponge's state (current elements in the permutation block)
+    /// Sponge state
     pub state: [F; N],
 }
+
+// Indexing over PoseidonSponge is just forwarded to indexing on the state.
+impl_indexing!(PoseidonSponge, state, Output = F, Params = [F: PrimeField], Constants = [R, N]);
+
 
 impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
     fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
@@ -57,7 +60,6 @@ impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
     }
 }
 
-crate::hash::index::impl_indexing!(PoseidonSponge, state, Output = F, Params = [F: PrimeField], Constants = [R, N]);
 
 impl<F: PrimeField, const R: usize, const N: usize> zeroize::Zeroize for PoseidonSponge<F, R, N> {
     fn zeroize(&mut self) {

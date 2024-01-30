@@ -49,9 +49,9 @@ pub struct DuplexSponge<C: Sponge> {
 }
 
 impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
-    fn new(tag: [u8; 32]) -> Self {
+    fn new(iv: [u8; 32]) -> Self {
         Self {
-            state: C::new(tag),
+            state: C::new(iv),
             absorb_pos: 0,
             squeeze_pos: 0,
         }

@@ -1,8 +1,59 @@
 //! This module contains utilities for working with Arkworks types
 //! and aid in the Fiat-Shamir heuristic for protocols dealing with
 //! field elements and group elements.
-
-/// Common utilities for adding public elements to the protocol transcript.
+//!
+//! # Examples
+//!
+//! Here's a protocol that does Fiat-Shamir without caring about the hash function used
+//! or the serialization format.
+//!
+//! ```rust
+//! use ark_ec::CurveGroup;
+//! use ark_std::UniformRand;
+//! use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! use nimue::plugins::ark::*;
+//!
+//! fn prove<G>(
+//!     arthur: &mut Arthur,
+//!     x: G::ScalarField,
+//! ) -> ProofResult<&[u8]>
+//! where
+//!     G: CurveGroup,
+//!     Arthur: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+//! {
+//!     let k = G::ScalarField::rand(arthur.rng());
+//!     arthur.add_points(&[G::generator() * k])?;
+//!     let [c] = arthur.challenge_scalars()?;
+//!     arthur.add_scalars(&[k + c * x])?;
+//!     Ok(arthur.transcript())
+//! }
+//! ```
+//! The type constraint on [`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
+//!
+//! ```rust
+//! # use ark_ec::CurveGroup;
+//! # use ark_std::UniformRand;
+//! # use ark_ff::PrimeField;
+//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::plugins::ark::*;
+//!
+//! fn prove<G>(
+//!     arthur: &mut Arthur,
+//!     x: G::ScalarField,
+//! ) -> ProofResult<&[u8]>
+//! where
+//!     G: CurveGroup,
+//!     Arthur: GroupWriter<G> + ByteChallenges,
+//! {
+//!     let k = G::ScalarField::rand(arthur.rng());
+//!     arthur.add_points(&[G::generator() * k])?;
+//!     let c_bytes = arthur.challenge_bytes::<16>()?;
+//!     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
+//!     arthur.add_scalars(&[k + c * x])?;
+//!     Ok(arthur.transcript())
+//! }
+//! ```
+/// Add public elements (field or group elements) to the protocol transcript.
 mod common;
 /// IO Pattern utilities.
 mod iopattern;

@@ -163,10 +163,9 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for Di
         // If we still have some digest not yet squeezed
         // from previous invocations, write it to the output.
         } else if !self.leftovers.is_empty() {
-            println!("Here we are, with leftovers {:?}", self.leftovers);
             let len = usize::min(output.len(), self.leftovers.len());
             output[..len].copy_from_slice(&self.leftovers[..len]);
-            self.leftovers.drain(len..);
+            self.leftovers.drain(..len);
             self.squeeze_unchecked(&mut output[len..])
         // Squeeze another digest
         } else if let Mode::Squeeze(i) = self.mode {

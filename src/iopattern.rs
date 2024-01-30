@@ -14,6 +14,31 @@ use super::hash::{DuplexHash, Unit};
 /// and as such is the only forbidden characted in labels.
 const SEP_BYTE: &str = "\0";
 
+/// The IO Pattern of an interactive protocol.
+///
+/// An IO pattern is a string that specifies the protocol in a simple,
+/// non-ambiguous, human-readable format. A typical example is the following:
+///
+/// ```text
+///     domain-separator A32generator A32public-key R A32commitment S32challenge A32response
+/// ```
+/// The domain-separator is a user-specified string uniquely identifying the end-user application  (to avoid cross-protocol attacks).
+/// The letter `A` indicates the absorption of a public input (an `ABSORB`), while the letter `S` indicates the squeezing (a `SQUEEZE`) of a challenge.
+/// The letter `R` indicates a ratcheting operation: ratcheting means invoking the hash function even on an incomplete block.
+/// It provides forward secrecy and allows it to start from a clean rate.
+/// After the operation type, is the number of elements in base 10 that are being absorbed/squeezed.
+/// Then, follows the label associated with the element being absorbed/squeezed. This often comes from the underlying description of the protocol. The label cannot start with a digit or contain the NULL byte.
+
+#[derive(Clone)]
+pub struct IOPattern<H = crate::DefaultHash, U = u8>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+{
+    io: String,
+    _hash: PhantomData<(H, U)>,
+}
+
 /// Sponge operations.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Op {
@@ -46,34 +71,6 @@ impl Op {
     }
 }
 
-/// The IO Pattern of an interactive protocol.
-///
-/// An IO Pattern is a string denoting a
-/// sequence of operations to be performed on a [`crate::DuplexHash`].
-/// The IO Pattern is prepended by a domain separator, a NULL-terminated string
-/// that is used to prevent collisions between different protocols.
-/// Each operation (absorb, squeeze, ratchet) is identified by a
-/// single character, followed by the number of units (bytes, or field elements)
-/// to be absorbed/squeezed, and a NULL-terminated label identifying the element.
-/// The whole is separated by a NULL byte.
-///
-/// For example, the IO Pattern
-/// ```text
-/// iacr.org\0A32\0S64\0A32\0A32
-/// ```
-///
-/// Denotes a protocol absorbing 32 native elements, squeezing 64 native elements,
-/// and finally absorbing 64 native elements.
-#[derive(Clone)]
-pub struct IOPattern<H = crate::DefaultHash, U = u8>
-where
-    U: Unit,
-    H: DuplexHash<U>,
-{
-    io: String,
-    _hash: PhantomData<(H, U)>,
-}
-
 impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     fn from_string(io: String) -> Self {
         Self {
@@ -88,6 +85,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         Self::from_string(domsep.to_string())
     }
 
+    /// Absorb `count` native elements.
     pub fn absorb(self, count: usize, label: &str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
@@ -96,6 +94,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         Self::from_string(self.io + SEP_BYTE + &format!("A{}", count) + label)
     }
 
+    /// Squeeze `count` native elements.
     pub fn squeeze(self, count: usize, label: &str) -> Self {
         assert!(count > 0, "Count must be positive");
         assert!(!label.contains(SEP_BYTE));
@@ -104,14 +103,17 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         Self::from_string(self.io + SEP_BYTE + &format!("S{}", count) + label)
     }
 
+    /// Ratchet the state.
     pub fn ratchet(self) -> Self {
         Self::from_string(self.io + SEP_BYTE + "R")
     }
 
+    /// Return the IO Pattern as bytes.
     pub fn as_bytes(&self) -> &[u8] {
         self.io.as_bytes()
     }
 
+    /// Parse the givern IO Pattern into a sequence of [`Op`]'s.
     pub(crate) fn finalize(&self) -> VecDeque<Op> {
         // Guaranteed to succeed as instances are all valid iopatterns
         Self::parse_io(self.io.as_bytes())
@@ -173,10 +175,12 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
+    /// Create an [`crate::Arthur`] instance from the IO Pattern.
     pub fn to_arthur(&self) -> crate::Arthur<H, U, crate::DefaultRng> {
         crate::Arthur::new(self, crate::DefaultRng::default())
     }
 
+    /// Create a [`crate::Merlin`] instance from the IO Pattern and the protocol transcript (bytes).
     pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> crate::Merlin<'a, H, U> {
         crate::Merlin::<H, U>::new(self, transcript)
     }

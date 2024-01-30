@@ -22,11 +22,17 @@
 //! - **Private randomness generation**.
 //! It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
 //!
-//! # Intuition
+//! # Overview
+//!
+//! The library does three things:
+//!
+//! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([Arthur]),
+//! - Assist in the deserialization and verification of a public-coin protocol ([Merlin]).
 //!
 //! The basic idea behind Nimue is that prover and verifier "commit" to the protocol before running the actual protocol.
-//! This preprocessing step, where the input/output of the prover, generates an "IV" that is used to initialize the hash function for the Fiat-Shamir heuristic.
-//! From here, prover just proceeds with concatenation, without ever worrying
+//! They a string encoding the sequence of messages sent from the prover and the verifier (the [IOPattern]), which is used as an  "IV" to initialize the hash function for the Fiat-Shamir heuristic.
+//!
+//! There are prover just proceeds with concatenation, without ever worrying
 //! about encoding length and special flags to embed in the hash function.
 //! This allows for
 //! better preprocessing,
@@ -48,7 +54,7 @@
 //! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are denoted as `format!(A{}, length)` and
 //! squeezes as `format!(S{}, length)`. A label is added at the end of the string, meant to describe the *type* and
 //! *the variable* as used in the protocol. Operations are separated by a NULL byte and therefore labels cannot contain
-//! NULL bytes themselves, nor start with an ASCII digit.x
+//! NULL bytes themselves, nor start with an ASCII digit.
 //!
 //!
 //! # Protocol transcripts

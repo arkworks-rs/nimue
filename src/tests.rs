@@ -3,7 +3,9 @@ use crate::hash::legacy::DigestBridge;
 use crate::{Arthur, ByteChallenges, ByteWriter, DuplexHash, IOPattern, Safe};
 
 type Sha2 = DigestBridge<sha2::Sha256>;
-type Blake2 = DigestBridge<blake2::Blake2b512>;
+type Blake2b512 = DigestBridge<blake2::Blake2b512>;
+type Blake2s256 = DigestBridge<blake2::Blake2s256>;
+
 
 /// How should a protocol without IOPattern be handled?
 #[test]
@@ -165,7 +167,8 @@ fn test_streaming_sha2() {
 
 #[test]
 fn test_streaming_blake2() {
-    test_streaming_absorb_and_squeeze::<Blake2>();
+    test_streaming_absorb_and_squeeze::<Blake2b512>();
+    test_streaming_absorb_and_squeeze::<Blake2s256>();
 }
 
 #[test]
