@@ -418,7 +418,7 @@ dependencies = [
 
 [[package]]
 name = "nimue"
-version = "0.0.1-beta5"
+version = "0.0.1-beta6"
 dependencies = [
  "anyhow",
  "ark-bls12-381",

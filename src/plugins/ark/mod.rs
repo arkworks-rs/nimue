@@ -14,7 +14,7 @@ pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, P
 super::traits::field_traits!(ark_ff::Field);
 super::traits::group_traits!(ark_ec::CurveGroup, G::BaseField : ark_ff::PrimeField);
 
-/// Move a value from one field to another.
+/// Move a value from freld F1 to field F2 to another.
 ///
 /// Return an error if the value is larger than the destination field.
 pub fn swap_field<F1: ark_ff::PrimeField, F2: ark_ff::PrimeField>(a_f1: F1) -> ProofResult<F2> {
