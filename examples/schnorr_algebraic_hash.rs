@@ -1,11 +1,10 @@
 /// This code is pretty much the same as the one in `schnorr.rs`,
-/// except that
+/// except for minor changes in order to work with algebraic hashes
+/// over the scalar field of BLS12-381.
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
 use nimue::plugins::ark::*;
-
-use rand::{rngs::OsRng, CryptoRng, RngCore};
 
 /// Extend the IO pattern with the Schnorr protocol.
 trait SchnorrIOPattern<G: CurveGroup> {
@@ -34,7 +33,7 @@ where
 /// a secret key `sk` in $\mathbb{Z}_p$
 /// and its respective public key `pk` in $\mathbb{G}$.
 fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
-    let sk = G::ScalarField::rand(&mut OsRng);
+    let sk = G::ScalarField::rand(&mut nimue::DefaultRng::default());
     let pk = G::generator() * sk;
     (sk, pk)
 }
@@ -45,10 +44,10 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
 #[allow(non_snake_case)]
-fn prove<G, H, U, R>(
+fn prove<G, H, U>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    arthur: &mut Arthur<H, R, U>,
+    arthur: &mut Arthur<H, U>,
     // the generator
     P: G,
     // the secret key
@@ -57,10 +56,9 @@ fn prove<G, H, U, R>(
 where
     U: Unit,
     G::BaseField: PrimeField,
-    R: CryptoRng + RngCore,
     H: DuplexHash<U>,
     G: CurveGroup,
-    Arthur<H, R, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
+    Arthur<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 {
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` funciton.
@@ -152,7 +150,7 @@ fn main() {
     let (x, X) = keygen();
 
     // Create the prover transcript, add the statement to it, and then invoke the prover.
-    let mut arthur = Arthur::<H, _, U>::new(&io, OsRng);
+    let mut arthur = io.to_arthur();
     arthur.public_points(&[P, X]).unwrap();
     arthur.ratchet().unwrap();
     let proof = prove(&mut arthur, P, x).expect("Invalid proof");

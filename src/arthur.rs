@@ -8,7 +8,7 @@ use super::{DefaultHash, DefaultRng, IOPatternError};
 
 /// A cryptographically-secure random number generator that is bound to the protocol transcript.
 ///
-/// For most public-coin protocols it is *vital* not to have two commitments for the same challenge.
+/// For most public-coin protocols it is *vital* not to have two different verifier messages for the same prover message.
 /// For this reason, we construct a Rng that will absorb whatever the verifier absorbs, and that in addition
 /// it is seeded by a cryptographic random number generator (by default, [`rand::rngs::OsRng`]).
 ///
@@ -50,7 +50,7 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
     }
 }
 
-impl<H, R, U> Arthur<H, R, U>
+impl<H, U, R> Arthur<H, U, R>
 where
     H: DuplexHash<U>,
     R: RngCore + CryptoRng,
@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<U, H, D> From<D> for Arthur<H, DefaultRng, U>
+impl<U, H, D> From<D> for Arthur<H, U, DefaultRng>
 where
     U: Unit,
     H: DuplexHash<U>,
@@ -84,11 +84,11 @@ where
 
 /// The state of an interactive proof system.
 /// Holds the state of the verifier, and provides the random coins for the prover.
-pub struct Arthur<H = DefaultHash, R = DefaultRng, U = u8>
+pub struct Arthur<H = DefaultHash, U = u8, R = DefaultRng>
 where
+    U: Unit,
     H: DuplexHash<U>,
     R: RngCore + CryptoRng,
-    U: Unit,
 {
     /// The randomness state of the prover.
     pub(crate) rng: ProverRng<R>,
@@ -98,7 +98,12 @@ where
     pub(crate) transcript: Vec<u8>,
 }
 
-impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
+impl<H, U, R> Arthur<H, U, R>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+    R: RngCore + CryptoRng,
+{
     #[inline(always)]
     pub fn add(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         // let serialized = bincode::serialize(input).unwrap();
@@ -129,7 +134,12 @@ impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> Arthur<H, R, U> {
     }
 }
 
-impl<H: DuplexHash<U>, R: RngCore + CryptoRng, U: Unit> UnitTranscript<U> for Arthur<H, R, U> {
+impl<H, U, R> UnitTranscript<U> for Arthur<H, U, R>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+    R: RngCore + CryptoRng,
+{
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         let len = self.transcript.len();
         self.add(input)?;
@@ -144,13 +154,22 @@ impl<H: DuplexHash<U>, R: RngCore + CryptoRng, U: Unit> UnitTranscript<U> for Ar
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<R: RngCore + CryptoRng, U: Unit, H: DuplexHash<U>> core::fmt::Debug for Arthur<H, R, U> {
+impl<H, U, R> core::fmt::Debug for Arthur<H, U, R>
+where
+    U: Unit,
+    H: DuplexHash<U>,
+    R: RngCore + CryptoRng,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.safe.fmt(f)
     }
 }
 
-impl<H: DuplexHash, R: RngCore + CryptoRng> ByteWriter for Arthur<H, R> {
+impl<H, R> ByteWriter for Arthur<H, u8, R>
+where
+    H: DuplexHash<u8>,
+    R: RngCore + CryptoRng,
+{
     #[inline(always)]
     fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
         self.add(input)

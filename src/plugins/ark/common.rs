@@ -93,7 +93,7 @@ where
 
 // Field <-> Field interactions:
 
-impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<H, R, Fp<C, N>>
+impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<H, Fp<C, N>, R>
 where
     H: DuplexHash<Fp<C, N>>,
     R: RngCore + CryptoRng,
@@ -139,7 +139,7 @@ where
     }
 }
 
-impl<H, R, C, const N: usize, G> GroupPublic<G> for Arthur<H, R, Fp<C, N>>
+impl<H, R, C, const N: usize, G> GroupPublic<G> for Arthur<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     R: RngCore + CryptoRng,
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> BytePublic for Arthur<H, R, Fp<C, N>>
+impl<'a, H, R, C, const N: usize> BytePublic for Arthur<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -203,7 +203,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> ByteChallenges for Arthur<H, R, Fp<C, N>>
+impl<'a, H, R, C, const N: usize> ByteChallenges for Arthur<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,

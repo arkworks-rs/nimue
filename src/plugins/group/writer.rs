@@ -4,7 +4,7 @@ use rand::{CryptoRng, RngCore};
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
 use crate::{Arthur, ByteWriter, DuplexHash, ProofResult};
 
-impl<F, H, R> FieldWriter<F> for Arthur<H, R>
+impl<F, H, R> FieldWriter<F> for Arthur<H, u8, R>
 where
     F: PrimeField,
     H: DuplexHash,
@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<G, H, R, const N: usize> GroupPublic<G> for Arthur<H, R>
+impl<G, H, R, const N: usize> GroupPublic<G> for Arthur<H, u8, R>
 where
     G: Group + GroupEncoding<Repr = [u8; N]>,
     H: DuplexHash,
@@ -34,7 +34,7 @@ where
     }
 }
 
-impl<G, H, R, const N: usize> GroupWriter<G> for Arthur<H, R>
+impl<G, H, R, const N: usize> GroupWriter<G> for Arthur<H, u8, R>
 where
     G: Group + GroupEncoding<Repr = [u8; N]>,
     H: DuplexHash,
