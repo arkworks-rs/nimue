@@ -49,8 +49,7 @@
 //! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are denoted as `format!(A{}, length)` and
 //! squeezes as `format!(S{}, length)`. A label is added at the end of the string, meant to describe the *type* and
 //! *the variable* as used in the protocol. Operations are separated by a NULL byte and therefore labels cannot contain
-//! NULL bytes themselves, nor start with an ASCII digit.
-//! Additional type shortcuts can be found in the [`plugins`] module as extension traits.
+//! NULL bytes themselves, nor start with an ASCII digit.x
 //!
 //!
 //! # Protocol transcripts
