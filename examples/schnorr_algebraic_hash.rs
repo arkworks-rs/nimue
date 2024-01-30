@@ -104,17 +104,13 @@ where
     Merlin<'a, H, U>: GroupReader<G> + FieldReader<G::BaseField> + ByteChallenges,
 {
     // Read the protocol from the transcript:
-    let [K] = merlin.next_points().unwrap();
-    let c_bytes = merlin.challenge_bytes::<16>().unwrap();
+    let [K] = merlin.next_points()?;
+    let c_bytes = merlin.challenge_bytes::<16>()?;
     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
-    let [r_q] = merlin.next_scalars().unwrap();
+    // Map the response to the field of the hash function to be absorbed easilty.
+    let [r_q] = merlin.next_scalars()?;
     let r = swap_field::<G::BaseField, G::ScalarField>(r_q)?;
 
-    // Check the verification equation, otherwise return a verification error.
-    // The type ProofError is an enum that can report:
-    // - InvalidProof: the proof is not valid
-    // - InvalidIO: the transcript does not match the IO pattern
-    // - SerializationError: there was an error serializing/deserializing an element
     if P * r == K + X * c {
         Ok(())
     } else {
@@ -127,19 +123,18 @@ where
 
 #[allow(non_snake_case)]
 fn main() {
-    // Instantiate the group and the random oracle:
-    // Set the group:
+    // Choose the group:
     type G = ark_bls12_381::G1Projective;
-    type Fq = ark_bls12_381::Fq;
+
     // Set the hash function (commented out other valid choices):
     // type H = nimue::hash::Keccak;
-    // type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
+    type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
-    type H = nimue::plugins::ark::poseidon::PoseidonHash;
+    // type H = nimue::plugins::ark::poseidon::PoseidonHash;
 
-    //
-    // type U = u8;
-    type U = Fq;
+    // Unit type where the hash function works over.
+    type U = u8;
+    // type U = ark_bls12_381::Fq;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
     let io = IOPattern::<H, U>::new("nimue::examples::schnorr");

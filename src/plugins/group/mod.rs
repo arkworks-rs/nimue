@@ -5,4 +5,4 @@ mod reader;
 mod writer;
 
 super::traits::field_traits!(group::ff::Field);
-super::traits::group_traits!(group::Group, G::Scalar : group::ff::Field);
+super::traits::group_traits!(group::Group, Scalar: group::ff::Field);

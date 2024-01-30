@@ -58,8 +58,7 @@ dependencies = [
 [[package]]
 name = "ark-curve25519"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ab653b3eff27100f7dcb06b94785f2fbe0d1230408df55d543ee0ef48cd8760"
+source = "git+https://github.com/arkworks-rs/algebra#228787b5ab87139dc2a79359d2f6b25237f46dac"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -418,7 +417,7 @@ dependencies = [
 
 [[package]]
 name = "nimue"
-version = "0.0.1-beta6"
+version = "0.0.1-beta10"
 dependencies = [
  "anyhow",
  "ark-bls12-381",

@@ -1,9 +1,13 @@
+/// Common utilities for adding public elements to the protocol transcript.
 mod common;
+/// IO Pattern utilities.
 mod iopattern;
-mod reader;
-mod writer;
-// poseidon support
+/// (WIP) Support for the Poseidon Hash function.
 pub mod poseidon;
+/// Veririfer's utilities for decoding a transcript.
+mod reader;
+/// Prover's utilities for encoding into a transcript.
+mod writer;
 
 #[cfg(feature = "anemoi")]
 pub mod anemoi;
@@ -12,11 +16,12 @@ pub use crate::traits::*;
 pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
 
 super::traits::field_traits!(ark_ff::Field);
-super::traits::group_traits!(ark_ec::CurveGroup, G::BaseField : ark_ff::PrimeField);
+super::traits::group_traits!(ark_ec::CurveGroup, Scalar: ark_ff::PrimeField);
 
-/// Move a value from freld F1 to field F2 to another.
+/// Move a value from prime field F1 to prime field F2.
 ///
-/// Return an error if the value is larger than the destination field.
+/// Return an error if the element considered mod |F1| is different, when seen as an integer, mod |F2|.
+/// This in particular happens when element > |F2|.
 pub fn swap_field<F1: ark_ff::PrimeField, F2: ark_ff::PrimeField>(a_f1: F1) -> ProofResult<F2> {
     use ark_ff::BigInteger;
     let a_f2 = F2::from_le_bytes_mod_order(&a_f1.into_bigint().to_bytes_le());

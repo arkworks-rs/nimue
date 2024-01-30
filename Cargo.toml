@@ -1,6 +1,6 @@
 [package]
 name = "nimue"
-version = "0.0.1-beta6"
+version = "0.0.1-beta10"
 authors = ["Michele Orrù <michele@tumbolandia.net>"]
 description = "A library for Fiat-Shamir transcripts."
 edition = "2021"
@@ -12,8 +12,9 @@ ark-std = {git = "https://github.com/arkworks-rs/utils"}
 ark-ec = {git = "https://github.com/arkworks-rs/algebra"}
 ark-ff = {git = "https://github.com/arkworks-rs/algebra"}
 ark-serialize = {git = "https://github.com/arkworks-rs/algebra"}
-ark-serialize-derive = {git = "https://github.com/arkworks-rs/algebra"}
 ark-bls12-381 = {git = "https://github.com/arkworks-rs/algebra"}
+ark-curve25519 = {git = "https://github.com/arkworks-rs/algebra"}
+
 
 [dependencies]
 zeroize = {version="1.6.0", features=["zeroize_derive"]}
@@ -27,25 +28,27 @@ log = "0.4.20"
 ark-ff = {version="0.4.0", optional=true}
 ark-ec = {version="0.4.0", optional=true}
 ark-serialize = {version="0.4.2", optional=true, features=["std"]}
-curve25519-dalek = {version="4.0.0", optional=true, features=["group"]}
 # anemoi = {git = "https://github.com/anemoi-hash/anemoi-rust", optional=true}
 group = {version="0.13.0", optional=true}
-ark-bls12-381 = {version="0.4.0", optional=true}
 
 [features]
 default = []
-ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize", "dep:ark-bls12-381"]
-group = ["dep:group", "dep:curve25519-dalek"]
+ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"] # "dep:ark-bls12-381"
+group = ["dep:group"]
 # anemoi = ["dep:anemoi"]
 
 [dev-dependencies]
 ark-std = "0.4.0"
 sha2 = "0.10.7"
 blake2 = "0.10.6"
-ark-curve25519 = "0.4.0"
 hex = "0.4.3"
-anyhow = { version = "1.0.75", features = ["backtrace"] }
+# test curve25519 compatibility
+curve25519-dalek = {version="4.0.0", features=["group"]}
+ark-curve25519 = "0.4.0"
+# test algebraic hashers
+ark-bls12-381 = {version="0.4.0"}
 
+anyhow = { version = "1.0.75", features = ["backtrace"] }
 
 [package.metadata.docs.rs]
 rustdoc-args = [

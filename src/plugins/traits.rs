@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! field_traits {
     ($Field:path) => {
         pub trait FieldIOPattern<F: $Field> {
@@ -38,26 +37,37 @@ macro_rules! field_traits {
 
 #[macro_export]
 macro_rules! group_traits {
-    ($Group:path, $BaseField:path : $Field:path) => {
+    ($Group:path, Scalar: $Field:path) => {
+        /// Send group elements in the IO pattern.
         pub trait GroupIOPattern<G: $Group> {
             fn add_points(self, count: usize, label: &str) -> Self;
         }
 
+        /// Add points to the protocol transcript.
         pub trait GroupWriter<G: $Group>: GroupPublic<G> {
             fn add_points(&mut self, input: &[G]) -> $crate::ProofResult<()>;
         }
 
+        /// Receive (and deserialize) group elements from the IO pattern.
         pub trait GroupReader<G: $Group + Default> {
+            /// Deserialize group elements from the protocol transcript into `output`.
             fn fill_next_points(&mut self, output: &mut [G]) -> $crate::ProofResult<()>;
 
+            /// Deserialize group elements from the protocol transcript and return them.
             fn next_points<const N: usize>(&mut self) -> $crate::ProofResult<[G; N]> {
                 let mut output = [G::default(); N];
                 self.fill_next_points(&mut output).map(|()| output)
             }
         }
 
+        /// Add group elements to the protocol transcript.
         pub trait GroupPublic<G: $Group> {
+            /// In order to be added to the sponge, elements may be serialize into another format.
+            /// This associated type represents the format used, so that other implementation can potentially
+            /// re-use the serialized element.
             type Repr;
+
+            /// Incorporate group elments into the proof without adding them to the final protocol transcript.
             fn public_points(&mut self, input: &[G]) -> $crate::ProofResult<Self::Repr>;
         }
     };
