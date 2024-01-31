@@ -17,9 +17,10 @@ where
     }
 }
 
-impl<G, H, R, const N: usize> GroupPublic<G> for Arthur<H, u8, R>
+impl<G, H, R> GroupPublic<G> for Arthur<H, u8, R>
 where
-    G: Group + GroupEncoding<Repr = [u8; N]>,
+    G: Group + GroupEncoding,
+    G::Repr: AsRef<[u8]>,
     H: DuplexHash,
     R: RngCore + CryptoRng,
 {
@@ -27,16 +28,17 @@ where
     fn public_points(&mut self, input: &[G]) -> crate::ProofResult<Self::Repr> {
         let mut buf = Vec::new();
         for p in input.iter() {
-            buf.extend_from_slice(&<G as GroupEncoding>::to_bytes(p));
+            buf.extend_from_slice(&<G as GroupEncoding>::to_bytes(p).as_ref());
         }
         self.add_bytes(&buf)?;
         Ok(buf)
     }
 }
 
-impl<G, H, R, const N: usize> GroupWriter<G> for Arthur<H, u8, R>
+impl<G, H, R> GroupWriter<G> for Arthur<H, u8, R>
 where
-    G: Group + GroupEncoding<Repr = [u8; N]>,
+    G: Group + GroupEncoding,
+    G::Repr: AsRef<[u8]>,
     H: DuplexHash,
     R: RngCore + CryptoRng,
 {

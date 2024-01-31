@@ -21,12 +21,14 @@ where
     }
 }
 
-impl<G, H, const N: usize> GroupIOPattern<G> for IOPattern<H>
+impl<G, H> GroupIOPattern<G> for IOPattern<H>
 where
-    G: Group + GroupEncoding<Repr = [u8; N]>,
+    G: Group + GroupEncoding,
+    G::Repr: AsRef<[u8]>,
     H: DuplexHash,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
-        self.add_bytes(count * N, label)
+        let n = G::Repr::default().as_ref().len();
+        self.add_bytes(count * n, label)
     }
 }

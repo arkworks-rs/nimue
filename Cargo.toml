@@ -1,6 +1,6 @@
 [package]
 name = "nimue"
-version = "0.0.1-beta11"
+version = "0.0.1-beta11gi"
 authors = ["Michele Orrù <michele@tumbolandia.net>"]
 description = "A library for Fiat-Shamir transcripts."
 edition = "2021"
@@ -14,6 +14,8 @@ ark-ff = {git = "https://github.com/arkworks-rs/algebra"}
 ark-serialize = {git = "https://github.com/arkworks-rs/algebra"}
 ark-bls12-381 = {git = "https://github.com/arkworks-rs/algebra"}
 ark-curve25519 = {git = "https://github.com/arkworks-rs/algebra"}
+ark-pallas = {git = "https://github.com/arkworks-rs/algebra"}
+ark-vesta = {git = "https://github.com/arkworks-rs/algebra"}
 
 
 [dependencies]
@@ -46,9 +48,13 @@ hex = "0.4.3"
 curve25519-dalek = {version="4.0.0", features=["group"]}
 ark-curve25519 = "0.4.0"
 # test algebraic hashers
-ark-bls12-381 = {version="0.4.0"}
-
+ark-bls12-381 = "0.4.0"
+bls12_381 = "0.8.0"
 anyhow = { version = "1.0.75", features = ["backtrace"] }
+ark-pallas = { version = "0.4.0", features = ["std"] }
+pallas = "0.22.0"
+pasta_curves = "0.5.1"
+ark-vesta = { version = "0.4.0", features = ["std"] }
 
 [package.metadata.docs.rs]
 rustdoc-args = [

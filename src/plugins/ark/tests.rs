@@ -1,8 +1,8 @@
-use crate::{hash::sponge::DuplexSponge, UnitTranscript, IOPattern};
+use crate::{hash::sponge::DuplexSponge, IOPattern, UnitTranscript};
 use ark_bls12_381::Fr;
 use ark_ff::{MontFp, Zero};
 
-use super::poseidon::{PoseidonSponge};
+use super::poseidon::PoseidonSponge;
 
 type H = DuplexSponge<PoseidonSponge<Fr, 2, 3>>;
 type F = Fr;
@@ -10,8 +10,8 @@ type F = Fr;
 #[test]
 fn test_poseidon_basic() {
     let io = IOPattern::<H, F>::new("test")
-            .absorb(1, "in")
-            .squeeze(10, "out");
+        .absorb(1, "in")
+        .squeeze(10, "out");
     let mut arthur = io.to_arthur();
     arthur.add_units(&[F::from(0x42)]).unwrap();
 
@@ -21,7 +21,6 @@ fn test_poseidon_basic() {
     for challenge in challenges {
         assert_ne!(challenge, F::from(0));
     }
-
 }
 
 /// Generate default parameters (bls381-fr-only) for alpha = 17, state-size = 8

@@ -6,7 +6,6 @@ type Sha2 = DigestBridge<sha2::Sha256>;
 type Blake2b512 = DigestBridge<blake2::Blake2b512>;
 type Blake2s256 = DigestBridge<blake2::Blake2s256>;
 
-
 /// How should a protocol without IOPattern be handled?
 #[test]
 fn test_iopattern() {

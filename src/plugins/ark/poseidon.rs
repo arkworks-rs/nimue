@@ -1,8 +1,8 @@
 use ark_ff::PrimeField;
 
+use crate::hash::index::impl_indexing;
 use crate::hash::sponge::Sponge;
 use crate::hash::Unit;
-use crate::hash::index::impl_indexing;
 
 #[derive(Clone)]
 pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
@@ -24,7 +24,6 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
 
 // Indexing over PoseidonSponge is just forwarded to indexing on the state.
 impl_indexing!(PoseidonSponge, state, Output = F, Params = [F: PrimeField], Constants = [R, N]);
-
 
 impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
     fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
@@ -59,7 +58,6 @@ impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
         state.clone_from_slice(&new_state[..state.len()])
     }
 }
-
 
 impl<F: PrimeField, const R: usize, const N: usize> zeroize::Zeroize for PoseidonSponge<F, R, N> {
     fn zeroize(&mut self) {
@@ -98,8 +96,8 @@ where
             self.apply_mds(&mut state);
         }
 
-        for i in (full_rounds_over_2 + self.partial_rounds)
-            ..(self.partial_rounds + self.full_rounds)
+        for i in
+            (full_rounds_over_2 + self.partial_rounds)..(self.partial_rounds + self.full_rounds)
         {
             self.apply_ark(&mut state, i);
             self.apply_s_box(&mut state, true);

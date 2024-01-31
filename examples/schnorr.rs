@@ -25,7 +25,12 @@ use rand::rngs::OsRng;
 
 /// Extend the IO pattern with the Schnorr protocol.
 trait SchnorrIOPattern<G: CurveGroup> {
-    /// Adds the entire Schnorr protocol to the IO pattern (statement and proof).
+    /// Shortcut: create a new schnorr proof with statement + proof.
+    fn new_schnorr_proof(domsep: &str) -> Self;
+
+    /// Add the statement of the Schnorr proof
+    fn add_schnorr_statement(self) -> Self;
+    /// Add the Schnorr protocol to the IO pattern.
     fn add_schnorr_io(self) -> Self;
 }
 
@@ -35,11 +40,20 @@ where
     H: DuplexHash,
     IOPattern<H>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
-    fn add_schnorr_io(self) -> Self {
+    fn new_schnorr_proof(domsep: &str) -> Self {
+        IOPattern::new(domsep)
+            .add_schnorr_statement()
+            .add_schnorr_io()
+    }
+
+    fn add_schnorr_statement(self) -> Self {
         self.add_points(1, "generator (P)")
             .add_points(1, "public key (X)")
             .ratchet()
-            .add_points(1, "commitment (K)")
+    }
+
+    fn add_schnorr_io(self) -> Self {
+        self.add_points(1, "commitment (K)")
             .challenge_scalars(1, "challenge (c)")
             .add_scalars(1, "response (r)")
     }
@@ -147,8 +161,7 @@ fn main() {
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
-    let io = IOPattern::<H>::new("nimue::examples::schnorr");
-    let io = SchnorrIOPattern::<G>::add_schnorr_io(io);
+    let io: IOPattern<H> = SchnorrIOPattern::<G>::new_schnorr_proof("nimue::example");
 
     // Set up the elements to prove
     let P = G::generator();
