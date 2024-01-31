@@ -38,8 +38,6 @@ where
         .challenge_scalars(1, "chal")
 }
 
-// Check that the transcripts generated using the Group trait can be compatible with transcripts generated using group.
-#[ignore = "Change sign of generator to make this work"]
 #[test]
 fn test_compatible_curve25519() {
     type ArkG = ark_curve25519::EdwardsProjective;
@@ -54,7 +52,7 @@ fn test_compatible_bls12_381() {
     compatible_groups::<ArkG, GroupG>();
 }
 
-#[ignore = "Looks like there's a length mismatch in the encoded values."]
+#[ignore = "arkworks adds trailing 0-byte"]
 #[test]
 fn test_compatible_pasta() {
     type ArkG = ark_vesta::Projective;
