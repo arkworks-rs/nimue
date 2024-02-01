@@ -39,7 +39,7 @@ impl Sponge
 
     fn new(tag: [u8; 32]) -> Self {
         let mut state = Self::default();
-        state[0] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&tag);
+        state[RATE] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&tag);
         state
     }
 

@@ -15,7 +15,7 @@
 //! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
 //! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
 //! - **Retro-compatibility** with MD hashes.
-//! We have a legacy interface for [`sha2``], [`blake2`], and any hash function that satisfies the [`digest::Digest`] trait.
+//! We have a legacy interface for [`sha2`], [`blake2`], and any hash function that satisfies the [`digest::Digest`] trait.
 //! - **Preprocessing**.
 //! In recursive SNARKs, minimizing the number of hash invocations
 //! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
@@ -26,11 +26,11 @@
 //!
 //! The library does three things:
 //!
-//! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([Arthur]),
-//! - Assist in the deserialization and verification of a public-coin protocol ([Merlin]).
+//! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([`Arthur`]),
+//! - Assist in the deserialization and verification of a public-coin protocol ([`Merlin`]).
 //!
 //! The basic idea behind Nimue is that prover and verifier "commit" to the protocol before running the actual protocol.
-//! They a string encoding the sequence of messages sent from the prover and the verifier (the [IOPattern]), which is used as an  "IV" to initialize the hash function for the Fiat-Shamir heuristic.
+//! They a string encoding the sequence of messages sent from the prover and the verifier (the [`IOPattern`]), which is used as an  "IV" to initialize the hash function for the Fiat-Shamir heuristic.
 //!
 //! There are prover just proceeds with concatenation, without ever worrying
 //! about encoding length and special flags to embed in the hash function.

@@ -2,7 +2,9 @@ use crate::errors::IOPatternError;
 use crate::Unit;
 
 pub trait UnitTranscript<U: Unit> {
+
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError>;
+
     fn fill_challenge_units(&mut self, output: &mut [U]) -> Result<(), IOPatternError>;
 }
 

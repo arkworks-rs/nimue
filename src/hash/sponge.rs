@@ -53,7 +53,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
         Self {
             state: C::new(iv),
             absorb_pos: 0,
-            squeeze_pos: 0,
+            squeeze_pos: C::RATE,
         }
     }
 

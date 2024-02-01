@@ -49,8 +49,8 @@ impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
         let mut new_state = Vec::new();
         for i in 0..state.len() {
             let mut cur = F::zero();
-            for (j, state_elem) in state.iter().enumerate() {
-                let term = state_elem.mul(&self.mds[i][j]);
+            for (j, &state_elem) in state.iter().enumerate() {
+                let term = state_elem * self.mds[i][j];
                 cur.add_assign(&term);
             }
             new_state.push(cur);
@@ -76,9 +76,9 @@ where
 
     fn new(iv: [u8; 32]) -> Self {
         assert!(N >= 1);
-        let mut ark_sponge = Self::default();
-        ark_sponge.state[R] = F::from_be_bytes_mod_order(&iv);
-        ark_sponge
+        let mut sponge = Self::default();
+        sponge.state[R] = F::from_be_bytes_mod_order(&iv);
+        sponge
     }
 
     fn permute(&mut self) {
