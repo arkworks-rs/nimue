@@ -19,11 +19,10 @@
 //! ) -> ProofResult<&[u8]>
 //! where
 //!     G: CurveGroup,
-//!     Arthur: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 //! {
 //!     let k = G::ScalarField::rand(arthur.rng());
 //!     arthur.add_points(&[G::generator() * k])?;
-//!     let [c] = arthur.challenge_scalars()?;
+//!     let [c]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
 //!     arthur.add_scalars(&[k + c * x])?;
 //!     Ok(arthur.transcript())
 //! }

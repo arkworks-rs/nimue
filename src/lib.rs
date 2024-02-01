@@ -6,25 +6,10 @@
 //! of random coins for the verifier.
 //! It is inspired by the [SAFE] API, with minor variations.
 //!
-//! # Features
-//!
-//! Nimue facilitates the writing of multi-round public coin protocols.
-//! It provides the following features:
-//! - **Automatic transcript generation**: nimue comes with batteries included for serializing/deserializing algebraic elements such as field/group elements in [Arkworks](https://github.com/arkworks-rs/algebra) and [Zkcrypto](https://github.com/zkcrypto/group). Users can build the top of it via extension trait.
-//! - **Support custom hash function**, including algebraic hashes.
-//! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
-//! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
-//! - **Retro-compatibility** with MD hashes.
-//! We have a legacy interface for `sha2`, `blake2`, and any hash function that satisfies the [`digest::Digest`] trait.
-//! - **Preprocessing**.
-//! In recursive SNARKs, minimizing the number of hash invocations
-//! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
-//! - **Private randomness generation**.
-//! It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
 //!
 //! # Overview
 //!
-//! The library does three things:
+//! The library does two things:
 //!
 //! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([`Arthur`]),
 //! - Assist in the deserialization and verification of a public-coin protocol ([`Merlin`]).
@@ -51,10 +36,18 @@
 //!         .squeeze(10, "second");
 //! assert_eq!(io.as_bytes(), "👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️\0A10first\0S10second".as_bytes())
 //! ```
-//! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are denoted as `format!(A{}, length)` and
-//! squeezes as `format!(S{}, length)`. A label is added at the end of the string, meant to describe the *type* and
+//! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are marked by `A` and
+//! squeezes by `S`, followed by the respective length
+//! (note: length is expressed in terms of [`hash::Unit`], native elements over which the hash function works).
+//! A label is added at the end of each absorb/squeeze, to describe the *type* and
 //! *the variable* as used in the protocol. Operations are separated by a NULL byte and therefore labels cannot contain
-//! NULL bytes themselves, nor start with an ASCII digit.
+//! NULL bytes themselves, nor they can start with an ASCII digit.
+//!
+//! # Batteries included
+//! The library comes with support for algebraic objects over arkworks and zkcrypto:
+//! - with feature flag `--feature=ark`, the module [`plugins::ark`] provides extension traits for arkworks fields and groups;
+//! - with feature flag `--feature=group`, the module [`plugins::group`] provides extension traits for zkcrypto's field and group traits.
+//! See the [`plugins`] module for more information.
 //!
 //!
 //! # Protocol transcripts
@@ -65,28 +58,27 @@
 //!
 //! ```
 //! use nimue::{IOPattern, Arthur};
-//! use nimue::hash::Keccak;
-//! use nimue::traits::*;
+//! use nimue::*;
 //! use rand::Rng;
 //!
-//! // create a new protocol that will absorb 1 byte and squeeze 16 bytes.
-//! // by default we use keccak, but things like `DigestBridge<sha2::Sha256>` will work too.
-//! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "send").squeeze(16, "receive");
+//! // Create a new protocol that will absorb 1 byte and squeeze 16 bytes.
+//! let io = IOPattern::<DefaultHash>::new("example-protocol 🤌").absorb(1, "↪️").squeeze(16, "↩️");
 //! let mut arthur = io.to_arthur();
-//! // the prover sends the byte 0x42.
-//! arthur.add_bytes(&[0x42]).expect("Absorbing one byte");
-//! // the prover receive a 128-bit challenge.
+//! // The prover sends the byte 0x42.
+//! arthur.add_bytes(&[0x42]).unwrap();
+//! // The prover receive a 128-bit challenge.
 //! let mut chal = [0u8; 16];
-//! arthur.fill_challenge_bytes(&mut chal).expect("Squeezing 128 bits");
+//! arthur.fill_challenge_bytes(&mut chal).unwrap();
+//! // The transcript is recording solely the bytes sent by the prover so far.
 //! assert_eq!(arthur.transcript(), [0x42]);
-//! // generate some private randomness bound to the protocol transcript.
+//! // Generate some private randomness bound to the protocol transcript.
 //! let private = arthur.rng().gen::<[u8; 2]>();
 //!
 //! assert_eq!(arthur.transcript(), [0x42]);
 //! ```
 //!
 //! (Note: Nimue provides aliases [`DefaultHash`] and [`DefaultRng`] mapping to secure hash functions and random number generators).
-//! An [`Arthur`] instance can generate public coin (via a [`Safe`] instance) and private coins.
+//! An [`Arthur`] instance can generate public coins (via a [`Safe`] instance) and private coins.
 //! Private coins are generated with a sponge that absorbs whatever the public sponge absorbs, and is seeded by a cryptographic random number generator throughout the protocol by the prover.
 //! This way, it is really hard to produce two different challenges for the same prover message.
 //!
@@ -97,7 +89,7 @@
 //! use nimue::traits::*;
 //! use rand::{Rng, rngs::OsRng};
 //!
-//! let io = IOPattern::<Keccak>::new("example-protocol").absorb(1, "inhale").squeeze(16, "exhale");
+//! let io = IOPattern::<Keccak>::new("example-protocol 🧀").absorb(1, "in 🍽️").squeeze(16, "out 🤮");
 //! let transcript = [0x42];
 //! let mut merlin = io.to_merlin(&transcript);
 //!

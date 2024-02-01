@@ -26,7 +26,8 @@ trait BulletproofIOPattern<G: CurveGroup> {
 
 impl<G> BulletproofIOPattern<G> for IOPattern
 where
-    G: CurveGroup, IOPattern: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
+    G: CurveGroup,
+    IOPattern: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
     /// The IO of the bulletproof statement
     fn bulletproof_statement(self) -> Self {
