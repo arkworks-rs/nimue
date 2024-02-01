@@ -1,3 +1,13 @@
+//! This is the example of a zk proof that is relatively complex,
+//! with non-constant rounds, where the implementor wanted to get the job
+//! done without caring too much about which hash function to be used.
+//!
+//! Bulletproofs allow to prove that a vector commitment has the following form
+//!
+//! $$
+//! C = \langle a, G \rangle + \langle b, H \rangle + \langle a, b \rangle U
+//! $$
+
 use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
@@ -14,11 +24,9 @@ trait BulletproofIOPattern<G: CurveGroup> {
     fn add_bulletproof(self, len: usize) -> Self;
 }
 
-impl<G, H> BulletproofIOPattern<G> for IOPattern<H>
+impl<G> BulletproofIOPattern<G> for IOPattern
 where
-    G: CurveGroup,
-    H: DuplexHash,
-    IOPattern<H>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
+    G: CurveGroup, IOPattern: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
     /// The IO of the bulletproof statement
     fn bulletproof_statement(self) -> Self {
@@ -103,12 +111,9 @@ where
 
     while n != 1 {
         let [left, right]: [G; 2] = merlin.next_points().unwrap();
-
         n /= 2;
-
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
-
         let [x]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
         let x_inv = x.inverse().expect("You just won the lottery!");
 

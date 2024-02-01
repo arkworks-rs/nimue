@@ -37,9 +37,9 @@ impl Sponge
 
     const RATE: usize = _AnemoiBls12_381_2_1::RATE;
 
-    fn new(tag: [u8; 32]) -> Self {
+    fn new(iv: [u8; 32]) -> Self {
         let mut state = Self::default();
-        state[RATE] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&tag);
+        state[RATE] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&iv);
         state
     }
 

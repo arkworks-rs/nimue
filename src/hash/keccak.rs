@@ -1,5 +1,5 @@
 //! **Warning**: this function is not SHA3.
-//! Despite internally we use the same permutation,
+//! Despite internally we use the same permutation function,
 //! we build a duplex sponge in overwrite mode
 //! on the top of it using the `DuplexSponge` trait.
 use super::sponge::{DuplexSponge, Sponge};

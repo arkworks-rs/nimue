@@ -15,7 +15,7 @@
 //! To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some field,
 //! be it $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
 //! - **Retro-compatibility** with MD hashes.
-//! We have a legacy interface for [`sha2`], [`blake2`], and any hash function that satisfies the [`digest::Digest`] trait.
+//! We have a legacy interface for `sha2`, `blake2`, and any hash function that satisfies the [`digest::Digest`] trait.
 //! - **Preprocessing**.
 //! In recursive SNARKs, minimizing the number of hash invocations
 //! while maintaining security is crucial. We offer tools for preprocessing the Transcript (i.e., the state of the Fiat-Shamir transform) to achieve this goal.
@@ -44,12 +44,12 @@
 //! use nimue::IOPattern;
 //! use nimue::hash::Keccak;
 //!
-//! let io = IOPattern::<Keccak>::new("a domain separator")
+//! let io = IOPattern::<Keccak>::new("👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️")
 //!         // this indicates the prover is sending 10 elements (bytes)
 //!         .absorb(10, "first")
 //!         // this indicates the verifier is sending 10 elements (bytes)
 //!         .squeeze(10, "second");
-//! assert_eq!(io.as_bytes(), b"a domain separator\0A10first\0S10second")
+//! assert_eq!(io.as_bytes(), "👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️\0A10first\0S10second".as_bytes())
 //! ```
 //! An [`IOPattern`] is a UTF8-encoded string wrapper. Absorptions are denoted as `format!(A{}, length)` and
 //! squeezes as `format!(S{}, length)`. A label is added at the end of the string, meant to describe the *type* and

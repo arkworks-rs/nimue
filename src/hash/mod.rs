@@ -44,7 +44,7 @@ where
     U: Unit,
 {
     /// Initializes a new sponge, setting up the state.
-    fn new(tag: [u8; 32]) -> Self;
+    fn new(iv: [u8; 32]) -> Self;
 
     /// Absorbs new elements in the sponge.
     fn absorb_unchecked(&mut self, input: &[U]) -> &mut Self;
