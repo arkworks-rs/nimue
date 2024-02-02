@@ -1,3 +1,5 @@
+//! This code has been blatantly stolen from `ark-crypto-primitive::sponge``
+//! from William Lin, with contributions from Pratyush Mishra, Weikeng Chen, Yuwen Zhang, Kristian Sosnin, Merlyn, Wilson Nguyen, Hossein Moghaddas, and others.
 use ark_ff::PrimeField;
 
 use crate::hash::sponge::Sponge;
@@ -20,6 +22,9 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     /// Sponge state
     pub state: [F; N],
 }
+
+pub type PoseidonHash<F, const R: usize, const N: usize> = crate::hash::sponge::DuplexSponge<PoseidonSponge<F, R, N>>;
+
 
 impl<F: PrimeField, const R: usize, const N: usize> AsRef<[F]> for PoseidonSponge<F, R, N> {
     fn as_ref(&self) -> &[F] {
@@ -114,3 +119,30 @@ where
         self.state = state;
     }
 }
+
+/// Initialization of constants.
+macro_rules! poseidon_sponge {
+    ($name: ident, $path: tt) => {
+        pub type $name = crate::hash::sponge::DuplexSponge<poseidon::PoseidonSponge< $path::Field, {$path::R}, {$path::N} >>;
+
+        impl Default for poseidon::PoseidonSponge< $path::Field, {$path::R}, {$path::N} > {
+            fn default() -> Self {
+                let alpha = $path::ALPHA;
+                let full_rounds = $path::FULL_ROUNDS;
+                let total_rounds = $path::TOTAL_ROUNDS;
+                let partial_rounds = total_rounds - full_rounds;
+                Self {
+                    full_rounds,
+                    partial_rounds,
+                    alpha,
+                    ark: $path::ARK,
+                    mds: $path::MDS,
+                    state: [ark_ff::Zero::zero(); $path::N],
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "ark-bls12-381")]
+pub mod bls12_381;

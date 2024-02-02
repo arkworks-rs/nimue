@@ -39,7 +39,7 @@ pub trait Sponge: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]
 /// A cryptographic sponge.
 #[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
 pub struct DuplexSponge<C: Sponge> {
-    state: C,
+    sponge: C,
     absorb_pos: usize,
     squeeze_pos: usize,
 }
@@ -47,7 +47,7 @@ pub struct DuplexSponge<C: Sponge> {
 impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
     fn new(iv: [u8; 32]) -> Self {
         Self {
-            state: C::new(iv),
+            sponge: C::new(iv),
             absorb_pos: 0,
             squeeze_pos: C::R,
         }
@@ -58,7 +58,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
             self.squeeze_pos = C::R;
             self
         } else if self.absorb_pos == C::R {
-            self.state.permute();
+            self.sponge.permute();
             self.absorb_pos = 0;
             self.absorb_unchecked(input)
         } else {
@@ -66,7 +66,7 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
             let chunk_len = usize::min(input.len(), C::R - self.absorb_pos);
             let (input, rest) = input.split_at(chunk_len);
 
-            self.state.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
+            self.sponge.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
                 .clone_from_slice(input);
             self.absorb_pos += chunk_len;
             self.absorb_unchecked(rest)
@@ -81,14 +81,15 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
         if self.squeeze_pos == C::R {
             self.squeeze_pos = 0;
             self.absorb_pos = 0;
-            self.state.permute();
+            self.sponge.permute();
         }
 
         assert!(self.squeeze_pos < C::R && !output.is_empty());
         let chunk_len = usize::min(output.len(), C::R - self.squeeze_pos);
         let (output, rest) = output.split_at_mut(chunk_len);
-        output
-            .clone_from_slice(&self.state.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len]);
+        output.clone_from_slice(
+            &self.sponge.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len],
+        );
         self.squeeze_pos += chunk_len;
         self.squeeze_unchecked(rest)
     }
@@ -98,10 +99,10 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
     // }
 
     fn ratchet_unchecked(&mut self) -> &mut Self {
-        self.state.permute();
+        self.sponge.permute();
         // set to zero the state up to rate
         // XXX. is the compiler really going to do this?
-        self.state.as_mut()[0..C::R]
+        self.sponge.as_mut()[0..C::R]
             .iter_mut()
             .for_each(|x| x.zeroize());
         self.squeeze_pos = C::R;
