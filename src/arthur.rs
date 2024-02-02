@@ -109,9 +109,19 @@ where
     H: DuplexHash<U>,
     R: RngCore + CryptoRng,
 {
-    /// Add a slice `[Arthur::U]` to the protocol transcript.
+    /// Add a slice `[U]` to the protocol transcript.
     /// The messages are also internally encoded in the protocol transcript,
     /// and used to re-seed the prover's random number generator.
+    ///
+    /// ```
+    /// use nimue::{IOPattern, DefaultHash, ByteWriter};
+    ///
+    /// let io = IOPattern::<DefaultHash>::new("📝").absorb(20, "how not to make pasta 🤌");
+    /// let mut arthur = io.to_arthur();
+    /// assert!(arthur.add_bytes(&[0u8; 20]).is_ok());
+    /// let result = arthur.add_bytes(b"1tbsp every 10 liters");
+    /// assert!(result.is_err())
+    /// ```
     #[inline(always)]
     pub fn add_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         // let serialized = bincode::serialize(input).unwrap();
@@ -134,6 +144,19 @@ where
     }
 
     /// Return a reference to the random number generator associated to the protocol transcript.
+    ///
+    /// ```
+    /// # use nimue::*;
+    /// # use rand::RngCore;
+    ///
+    /// // The IO Pattern does not need to specify the private coins.
+    /// let io = IOPattern::<DefaultHash>::new("📝");
+    /// let mut arthur = io.to_arthur();
+    /// assert_ne!(arthur.rng().next_u32(), 0, "You won the lottery!");
+    /// let mut challenges = [0u8; 32];
+    /// arthur.rng().fill_bytes(&mut challenges);
+    /// assert_ne!(challenges, [0u8; 32]);
+    /// ```
     #[inline(always)]
     pub fn rng(&mut self) -> &mut (impl CryptoRng + RngCore) {
         &mut self.rng
@@ -144,6 +167,15 @@ where
     /// This is because the information is considered pre-shared within the [`IOPattern`].
     /// Additionally, since the verifier challenges are deterministically generated from the prover's messages,
     /// the transcript does not hold any of the verifier's messages.
+    ///
+    /// ```
+    /// # use nimue::*;
+    ///
+    /// let io = IOPattern::<DefaultHash>::new("📝").absorb(8, "how to make pasta 🤌");
+    /// let mut arthur = io.to_arthur();
+    /// arthur.add_bytes(b"1tbsp:3l").unwrap();
+    /// assert_eq!(arthur.transcript(), b"1tbsp:3l");
+    /// ```
     pub fn transcript(&self) -> &[u8] {
         self.transcript.as_slice()
     }
@@ -158,6 +190,15 @@ where
     /// Add public messages to the protocol transcript.
     /// Messages input to this function are not added to the protocol transcript.
     /// They are however absorbed into the verifier's sponge for Fiat-Shamir, and used to re-seed the prover state.
+    ///
+    /// ```
+    /// # use nimue::*;
+    ///
+    /// let io = IOPattern::<DefaultHash>::new("📝").absorb(20, "how not to make pasta 🙉");
+    /// let mut arthur = io.to_arthur();
+    /// assert!(arthur.public_bytes(&[0u8; 20]).is_ok());
+    /// assert_eq!(arthur.transcript(), b"");
+    /// ```
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         let len = self.transcript.len();
         self.add_units(input)?;
@@ -165,7 +206,7 @@ where
         Ok(())
     }
 
-    /// Fill a slice `[Arthur::U]` with challenges from the verifier.
+    /// Fill a slice with uniformly-distributed challenges from the verifier.
     fn fill_challenge_units(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
         self.safe.squeeze(output)
     }

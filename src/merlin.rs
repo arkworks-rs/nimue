@@ -23,6 +23,19 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
     /// Creates a new [`Merlin`] instance with the given sponge and IO Pattern.
     ///
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
+    ///
+    /// ```
+    /// # use nimue::*;
+    ///
+    /// let io = IOPattern::<DefaultHash>::new("📝").absorb(1, "inhale 🫁").squeeze(32, "exhale 🎏");
+    /// // A silly transcript for the example.
+    /// let transcript = &[0x42];
+    /// let mut merlin = io.to_merlin(transcript);
+    /// assert_eq!(merlin.next_bytes().unwrap(), [0x42]);
+    /// let challenge = merlin.challenge_bytes::<32>();
+    /// assert!(challenge.is_ok());
+    /// assert_ne!(challenge.unwrap(), [0; 32]);
+    /// ```
     pub fn new(io_pattern: &IOPattern<H, U>, transcript: &'a [u8]) -> Self {
         let safe = Safe::new(io_pattern);
         Self { safe, transcript }

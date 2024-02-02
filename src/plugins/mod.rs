@@ -9,6 +9,7 @@ pub mod ark;
 
 #[cfg(feature = "group")]
 /// (In-progress) [group](https://github.com/zkcrypto/group) bindings.
+/// This plugin is experimental and has not yet been throughly tested.
 pub mod group;
 
 /// Bits needed in order to obtain a (pseudo-random) uniform distribution in F.
