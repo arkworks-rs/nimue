@@ -42,7 +42,6 @@ impl Default for AlignedKeccakState {
     }
 }
 
-
 impl AsRef<[u8]> for AlignedKeccakState {
     fn as_ref(&self) -> &[u8] {
         &self.0

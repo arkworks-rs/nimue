@@ -15,16 +15,10 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 /// - The duplex sponge is in *overwrite mode*.
 /// This mode is not known to affect the security levels and removes assumptions on [`Sponge::U`]
 /// as well as constraints in the final zero-knowledge proof implementing the hash function.
-/// - The [`std::default::Default`] implementation should initialize the states to zero.
+/// - The [`std::default::Default`] implementation *MUST* initialize the state to zero.
 /// - The [`Sponge::new`] method should initialize the sponge writing the entropy provided in the `iv` in the last
 ///     [`Sponge::N`]-[`Sponge::R`] elements of the state.
-pub trait Sponge:
-    Zeroize
-    + Default
-    + Clone
-    + AsRef<[Self::U]>
-    + AsMut<[Self::U]>
-{
+pub trait Sponge: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]> {
     /// The basic unit over which the sponge operates.
     type U: Unit;
 
@@ -72,7 +66,8 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
             let chunk_len = usize::min(input.len(), C::R - self.absorb_pos);
             let (input, rest) = input.split_at(chunk_len);
 
-            self.state.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len].clone_from_slice(input);
+            self.state.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
+                .clone_from_slice(input);
             self.absorb_pos += chunk_len;
             self.absorb_unchecked(rest)
         }
@@ -92,7 +87,8 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
         assert!(self.squeeze_pos < C::R && !output.is_empty());
         let chunk_len = usize::min(output.len(), C::R - self.squeeze_pos);
         let (output, rest) = output.split_at_mut(chunk_len);
-        output.clone_from_slice(&self.state.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len]);
+        output
+            .clone_from_slice(&self.state.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len]);
         self.squeeze_pos += chunk_len;
         self.squeeze_unchecked(rest)
     }
@@ -105,7 +101,9 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
         self.state.permute();
         // set to zero the state up to rate
         // XXX. is the compiler really going to do this?
-        self.state.as_mut()[0..C::R].iter_mut().for_each(|x| x.zeroize());
+        self.state.as_mut()[0..C::R]
+            .iter_mut()
+            .for_each(|x| x.zeroize());
         self.squeeze_pos = C::R;
         self
     }
