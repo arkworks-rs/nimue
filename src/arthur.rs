@@ -71,14 +71,14 @@ where
     }
 }
 
-impl<U, H, D> From<D> for Arthur<H, U, DefaultRng>
+impl<U, H, B> From<B> for Arthur<H, U, DefaultRng>
 where
     U: Unit,
     H: DuplexHash<U>,
-    D: core::ops::Deref<Target = IOPattern<H, U>>,
+    B: core::borrow::Borrow<IOPattern<H, U>>,
 {
-    fn from(pattern: D) -> Self {
-        Arthur::new(pattern.deref(), DefaultRng::default())
+    fn from(pattern: B) -> Self {
+        Arthur::new(pattern.borrow(), DefaultRng::default())
     }
 }
 
@@ -127,12 +127,12 @@ where
         // let serialized = bincode::serialize(input).unwrap();
         // self.arthur.sponge.absorb_unchecked(&serialized);
         let old_len = self.transcript.len();
+        self.safe.absorb(input)?;
         // write never fails on Vec<u8>
         U::write(input, &mut self.transcript).unwrap();
         self.rng
             .sponge
             .absorb_unchecked(&self.transcript[old_len..]);
-        self.safe.absorb(input)?;
 
         Ok(())
     }

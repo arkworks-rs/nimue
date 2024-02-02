@@ -183,7 +183,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
 
     /// Create an [`crate::Arthur`] instance from the IO Pattern.
     pub fn to_arthur(&self) -> crate::Arthur<H, U, crate::DefaultRng> {
-        crate::Arthur::new(self, crate::DefaultRng::default())
+        self.into()
     }
 
     /// Create a [`crate::Merlin`] instance from the IO Pattern and the protocol transcript (bytes).

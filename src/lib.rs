@@ -26,10 +26,9 @@
 //! easy an easier inspection of the Fiat-Shamir transform.
 //!
 //! ```
-//! use nimue::IOPattern;
-//! use nimue::hash::Keccak;
+//! use nimue::{IOPattern, DefaultHash};
 //!
-//! let io = IOPattern::<Keccak>::new("👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️")
+//! let io = IOPattern::<DefaultHash>::new("👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️")
 //!         // this indicates the prover is sending 10 elements (bytes)
 //!         .absorb(10, "first")
 //!         // this indicates the verifier is sending 10 elements (bytes)
@@ -57,7 +56,6 @@
 //! build the protocol transcript, and seed the private randomness for the prover.
 //!
 //! ```
-//! use nimue::{IOPattern, Arthur};
 //! use nimue::*;
 //! use rand::Rng;
 //!

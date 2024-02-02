@@ -1,4 +1,4 @@
-//! This code has been blatantly stolen from `ark-crypto-primitive::sponge``
+//! This code has been blatantly stolen from `ark-crypto-primitive::sponge`
 //! from William Lin, with contributions from Pratyush Mishra, Weikeng Chen, Yuwen Zhang, Kristian Sosnin, Merlyn, Wilson Nguyen, Hossein Moghaddas, and others.
 use ark_ff::PrimeField;
 

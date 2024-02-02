@@ -1,17 +1,51 @@
+use rand::RngCore;
+
 use crate::hash::keccak::Keccak;
 use crate::hash::legacy::DigestBridge;
-use crate::{Arthur, ByteChallenges, ByteWriter, DuplexHash, IOPattern, Safe};
+use crate::{Arthur, ByteChallenges, BytePublic, ByteWriter, DuplexHash, IOPattern, Safe};
 
 type Sha2 = DigestBridge<sha2::Sha256>;
 type Blake2b512 = DigestBridge<blake2::Blake2b512>;
 type Blake2s256 = DigestBridge<blake2::Blake2s256>;
 
-/// How should a protocol without IOPattern be handled?
+/// How should a protocol without actual IO be handled?
 #[test]
 fn test_iopattern() {
     // test that the byte separator is always added
     let iop = IOPattern::<Keccak>::new("example.com");
     assert!(iop.as_bytes().starts_with(b"example.com"));
+}
+
+
+/// Test Arthur's rng is not doing completely stupid things.
+#[test]
+fn test_arthur_rng_basic() {
+    let iop = IOPattern::<Keccak>::new("example.com");
+    let mut arthur = iop.to_arthur();
+    let rng = arthur.rng();
+
+    let mut random_bytes = [0u8; 32];
+    rng.fill_bytes(&mut random_bytes);
+    let random_u32 = rng.next_u32();
+    let random_u64 = rng.next_u64();
+    assert_ne!(random_bytes, [0u8; 32]);
+    assert_ne!(random_u32, 0);
+    assert_ne!(random_u64, 0);
+    assert!(random_bytes.iter().any(|&x| x != random_bytes[0]));
+}
+
+
+#[test]
+fn test_arthur_add() {
+    let iop = IOPattern::<Keccak>::new("example.com").absorb(1, "🥕");
+    let mut arthur = iop.to_arthur();
+    assert!(arthur.add_units(&[0u8]).is_ok());
+    assert!(arthur.add_units(&[1u8]).is_err());
+    assert_eq!(arthur.transcript(), b"\0", "Protocol Transcript survives errors");
+
+    let mut arthur = iop.to_arthur();
+    assert!(arthur.public_bytes(&[0u8]).is_ok());
+    assert_eq!(arthur.transcript(), b"");
 }
 
 /// A protocol flow that does not match the IOPattern should fail.
