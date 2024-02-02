@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: rustdoc
-          args: -- -Z unstable-options --enable-index-page
+          args: --all-features
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
