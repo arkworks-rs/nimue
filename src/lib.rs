@@ -137,6 +137,7 @@ mod safe;
 /// Unit-tests.
 #[cfg(test)]
 mod tests;
+
 /// Traits for byte support.
 pub mod traits;
 

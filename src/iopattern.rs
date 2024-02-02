@@ -28,6 +28,11 @@ const SEP_BYTE: &str = "\0";
 /// It provides forward secrecy and allows it to start from a clean rate.
 /// After the operation type, is the number of elements in base 10 that are being absorbed/squeezed.
 /// Then, follows the label associated with the element being absorbed/squeezed. This often comes from the underlying description of the protocol. The label cannot start with a digit or contain the NULL byte.
+///
+/// ## Guarantees
+///
+/// The struct [`IOPattern`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
+/// This means that [`Arthur`][`crate::Arthur`] or [`Merlin`][`crate::Merlin`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
 
 #[derive(Clone)]
 pub struct IOPattern<H = crate::DefaultHash, U = u8>

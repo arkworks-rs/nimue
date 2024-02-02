@@ -2,7 +2,7 @@ use rand::RngCore;
 
 use crate::hash::keccak::Keccak;
 use crate::hash::legacy::DigestBridge;
-use crate::{Arthur, ByteChallenges, BytePublic, ByteWriter, DuplexHash, IOPattern, Safe};
+use crate::{Arthur, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe};
 
 type Sha2 = DigestBridge<sha2::Sha256>;
 type Blake2b512 = DigestBridge<blake2::Blake2b512>;
@@ -34,13 +34,13 @@ fn test_arthur_rng_basic() {
     assert!(random_bytes.iter().any(|&x| x != random_bytes[0]));
 }
 
-
+/// Test adding of public bytes and non-public elements to the transcript.
 #[test]
-fn test_arthur_add() {
+fn test_arthur_bytewriter() {
     let iop = IOPattern::<Keccak>::new("example.com").absorb(1, "🥕");
     let mut arthur = iop.to_arthur();
-    assert!(arthur.add_units(&[0u8]).is_ok());
-    assert!(arthur.add_units(&[1u8]).is_err());
+    assert!(arthur.add_bytes(&[0u8]).is_ok());
+    assert!(arthur.add_bytes(&[1u8]).is_err());
     assert_eq!(arthur.transcript(), b"\0", "Protocol Transcript survives errors");
 
     let mut arthur = iop.to_arthur();
@@ -50,11 +50,10 @@ fn test_arthur_add() {
 
 /// A protocol flow that does not match the IOPattern should fail.
 #[test]
-#[should_panic]
 fn test_invalid_io_sequence() {
     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
     let mut merlin = Safe::<Keccak>::new(&iop);
-    merlin.squeeze(&mut [0u8; 16]).unwrap();
+    assert!(merlin.squeeze(&mut [0u8; 16]).is_err());
 }
 
 // Hiding for now. Should it panic ?
@@ -144,14 +143,13 @@ fn test_incomplete_io() {
 
 /// The user should respect the IO pattern even with empty length.
 #[test]
-#[should_panic]
-fn test_empty_absorb() {
+fn test_arthur_empty_absorb() {
     let io = IOPattern::<Keccak>::new("domain separator")
-        .absorb(0, "nothing")
+        .absorb(1, "in")
         .squeeze(1, "something");
 
-    let mut arthur = io.to_arthur();
-    arthur.fill_challenge_bytes(&mut [0u8; 1]).unwrap();
+    assert!(io.to_arthur().fill_challenge_bytes(&mut [0u8; 1]).is_err());
+    assert!(io.to_merlin(b"").next_bytes::<1>().is_err());
 }
 
 /// Absorbs and squeeze over byte-Units should be streamable.
