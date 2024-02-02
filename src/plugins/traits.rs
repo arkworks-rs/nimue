@@ -3,11 +3,13 @@ macro_rules! field_traits {
         /// Absorb and squeeze field elements to the IO pattern.
         pub trait FieldIOPattern<F: $Field> {
             fn add_scalars(self, count: usize, label: &str) -> Self;
-
             fn challenge_scalars(self, count: usize, label: &str) -> Self;
         }
 
         /// Interpret verifier messages as uniformly distributed field elements.
+        ///
+        /// The implementation of this trait **MUST** ensure that the field elements
+        /// are uniformly distributed and valid.
         pub trait FieldChallenges<F: $Field> {
             fn fill_challenge_scalars(&mut self, output: &mut [F]) -> $crate::ProofResult<()>;
 
@@ -29,6 +31,9 @@ macro_rules! field_traits {
         }
 
         /// Retrieve field elements from the protocol trainscript.
+        ///
+        /// The implementation of this trait **MUST** ensure that the field elements
+        /// are correct encodings.
         pub trait FieldReader<F: $Field>: FieldPublic<F> {
             fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
 
@@ -54,6 +59,9 @@ macro_rules! group_traits {
         }
 
         /// Receive (and deserialize) group elements from the IO pattern.
+        ///
+        /// The implementation of this trait **MUST** ensure that the points decoded are
+        /// valid group elements.
         pub trait GroupReader<G: $Group + Default> {
             /// Deserialize group elements from the protocol transcript into `output`.
             fn fill_next_points(&mut self, output: &mut [G]) -> $crate::ProofResult<()>;

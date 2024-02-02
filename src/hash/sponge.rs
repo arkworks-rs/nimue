@@ -46,6 +46,7 @@ pub struct DuplexSponge<C: Sponge> {
 
 impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
     fn new(iv: [u8; 32]) -> Self {
+        assert!(C::N > C::R, "Capacity of the sponge should be > 0.");
         Self {
             sponge: C::new(iv),
             absorb_pos: 0,

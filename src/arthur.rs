@@ -85,6 +85,10 @@ where
 /// [`Arthur`] is the prover state in an interactive proof system.
 /// It internally holds the secret coins of the prover for zero-knowledge, and
 /// has the hash function state for the verifier state.
+///
+/// Unless otherwise specified,
+/// [`Arthur`] is set to work over bytes with [`DefaultHash`] and
+/// rely on the default random number generator [`DefaultRng`].
 pub struct Arthur<H = DefaultHash, U = u8, R = DefaultRng>
 where
     U: Unit,
