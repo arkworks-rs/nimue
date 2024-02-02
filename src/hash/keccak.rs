@@ -22,12 +22,12 @@ pub struct AlignedKeccakState([u8; 200]);
 
 impl Sponge for AlignedKeccakState {
     type U = u8;
-    const CAPACITY: usize = 64;
-    const RATE: usize = 136;
+    const N: usize = 136 + 64;
+    const R: usize = 136;
 
     fn new(tag: [u8; 32]) -> Self {
         let mut state = Self::default();
-        state[Self::RATE..Self::RATE + 32].copy_from_slice(&tag);
+        state.0[Self::R..Self::R + 32].copy_from_slice(&tag);
         state
     }
 
@@ -38,14 +38,19 @@ impl Sponge for AlignedKeccakState {
 
 impl Default for AlignedKeccakState {
     fn default() -> Self {
-        Self([0u8; Self::CAPACITY + Self::RATE])
+        Self([0u8; Self::N])
     }
 }
 
-super::index::impl_indexing!(
-    AlignedKeccakState,
-    0,
-    Output = u8,
-    Params = [],
-    Constants = []
-);
+
+impl AsRef<[u8]> for AlignedKeccakState {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for AlignedKeccakState {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}

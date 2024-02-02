@@ -1,6 +1,5 @@
 use ark_ff::PrimeField;
 
-use crate::hash::index::impl_indexing;
 use crate::hash::sponge::Sponge;
 use crate::hash::Unit;
 
@@ -22,8 +21,17 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     pub state: [F; N],
 }
 
-// Indexing over PoseidonSponge is just forwarded to indexing on the state.
-impl_indexing!(PoseidonSponge, state, Output = F, Params = [F: PrimeField], Constants = [R, N]);
+impl<F: PrimeField, const R: usize, const N: usize> AsRef<[F]> for PoseidonSponge<F, R, N> {
+    fn as_ref(&self) -> &[F] {
+        &self.state
+    }
+}
+
+impl<F: PrimeField, const R: usize, const N: usize> AsMut<[F]> for PoseidonSponge<F, R, N> {
+    fn as_mut(&mut self) -> &mut [F] {
+        &mut self.state
+    }
+}
 
 impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
     fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
@@ -71,8 +79,8 @@ where
     F: PrimeField + Unit,
 {
     type U = F;
-    const CAPACITY: usize = N - R;
-    const RATE: usize = R;
+    const N: usize = N;
+    const R: usize = R;
 
     fn new(iv: [u8; 32]) -> Self {
         assert!(N >= 1);

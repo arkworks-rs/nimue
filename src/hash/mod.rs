@@ -4,12 +4,10 @@
 //! the basic type to support cloning, size, read/write procedures, and secure deletion.
 //!
 //! Additionally, the module exports some utilities:
-//! - [`hash::sponge::DuplexSponge`] allows to implement a [`crate::DuplexHash`] using a secure permutation function, specifying `RATE` and `CAPACITY`.
+//! - [`hash::sponge::DuplexSponge`] allows to implement a [`crate::DuplexHash`] using a secure permutation function, specifying the rate `R` and the width `N`.
 //! This is done using the standard duplex sponge cosntruction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
 //! - [`hash::legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
 
-/// Automate implementation of Index and IndexMut.
-pub(crate) mod index;
 /// A wrapper around the Keccak-f\[1600\] permutation.
 pub mod keccak;
 /// Legacy hash functions support (e.g. [`sha2`](https://crates.io/crates/sha2), [`blake2`](https://crates.io/crates/blake2)).
