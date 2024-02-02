@@ -5,8 +5,10 @@ use crate::safe::Safe;
 use crate::traits::{ByteReader, UnitTranscript};
 use crate::DefaultHash;
 
-/// Merlin is wrapper around a sponge that provides a secure
-/// Fiat-Shamir implementation for public-coin protocols.
+/// [`Merlin`] contains the verifier state.
+/// Internally, it is a wrapper around a SAFE sponge.
+/// Given as input an [`IOPattern`] and a protocol transcript, it allows to
+/// de-serialize elements from the transcript and make them available to the zero-knowledge verifier.
 #[derive(Clone)]
 pub struct Merlin<'a, H = DefaultHash, U = u8>
 where
@@ -48,6 +50,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Merlin<'a, H, U> {
 }
 
 impl<'a, H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Merlin<'a, H, U> {
+    /// Add native elements to the sponge without writing them to the protocol transcript.
     #[inline]
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         self.safe.absorb(input)
@@ -67,6 +70,7 @@ impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Merlin<'a, H, U> {
 }
 
 impl<'a, H: DuplexHash<u8>> ByteReader for Merlin<'a, H, u8> {
+    /// Read the next `input.len()` bytes from the transcript and return them.
     #[inline]
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
         self.fill_next_units(input)

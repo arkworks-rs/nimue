@@ -82,8 +82,9 @@ where
     }
 }
 
-/// The state of an interactive proof system.
-/// Holds the state of the verifier, and provides the random coins for the prover.
+/// [`Arthur`] is the prover state in an interactive proof system.
+/// It internally holds the secret coins of the prover for zero-knowledge, and
+/// has the hash function state for the verifier state.
 pub struct Arthur<H = DefaultHash, U = u8, R = DefaultRng>
 where
     U: Unit,
@@ -104,6 +105,9 @@ where
     H: DuplexHash<U>,
     R: RngCore + CryptoRng,
 {
+    /// Add a slice `[Arthur::U]` to the protocol transcript.
+    /// The messages are also internally encoded in the protocol transcript,
+    /// and used to re-seed the prover's random number generator.
     #[inline(always)]
     pub fn add_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         // let serialized = bincode::serialize(input).unwrap();
@@ -119,16 +123,23 @@ where
         Ok(())
     }
 
+    /// Ratchet the verifier's state.
     #[inline(always)]
     pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
         self.safe.ratchet()
     }
 
+    /// Return a reference to the random number generator associated to the protocol transcript.
     #[inline(always)]
     pub fn rng(&mut self) -> &mut (impl CryptoRng + RngCore) {
         &mut self.rng
     }
 
+    /// Return the current protocol transcript.
+    /// The protocol transcript does not hold eny information about the length or the type of the messages being read.
+    /// This is because the information is considered pre-shared within the [`IOPattern`].
+    /// Additionally, since the verifier challenges are deterministically generated from the prover's messages,
+    /// the transcript does not hold any of the verifier's messages.
     pub fn transcript(&self) -> &[u8] {
         self.transcript.as_slice()
     }
@@ -140,6 +151,9 @@ where
     H: DuplexHash<U>,
     R: RngCore + CryptoRng,
 {
+    /// Add public messages to the protocol transcript.
+    /// Messages input to this function are not added to the protocol transcript.
+    /// They are however absorbed into the verifier's sponge for Fiat-Shamir, and used to re-seed the prover state.
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
         let len = self.transcript.len();
         self.add_units(input)?;
@@ -147,6 +161,7 @@ where
         Ok(())
     }
 
+    /// Fill a slice `[Arthur::U]` with challenges from the verifier.
     fn fill_challenge_units(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
         self.safe.squeeze(output)
     }
