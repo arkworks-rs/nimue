@@ -2,7 +2,9 @@ use rand::RngCore;
 
 use crate::hash::keccak::Keccak;
 use crate::hash::legacy::DigestBridge;
-use crate::{Arthur, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe};
+use crate::{
+    Arthur, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe,
+};
 
 type Sha2 = DigestBridge<sha2::Sha256>;
 type Blake2b512 = DigestBridge<blake2::Blake2b512>;
@@ -15,7 +17,6 @@ fn test_iopattern() {
     let iop = IOPattern::<Keccak>::new("example.com");
     assert!(iop.as_bytes().starts_with(b"example.com"));
 }
-
 
 /// Test Arthur's rng is not doing completely stupid things.
 #[test]
@@ -41,7 +42,11 @@ fn test_arthur_bytewriter() {
     let mut arthur = iop.to_arthur();
     assert!(arthur.add_bytes(&[0u8]).is_ok());
     assert!(arthur.add_bytes(&[1u8]).is_err());
-    assert_eq!(arthur.transcript(), b"\0", "Protocol Transcript survives errors");
+    assert_eq!(
+        arthur.transcript(),
+        b"\0",
+        "Protocol Transcript survives errors"
+    );
 
     let mut arthur = iop.to_arthur();
     assert!(arthur.public_bytes(&[0u8]).is_ok());

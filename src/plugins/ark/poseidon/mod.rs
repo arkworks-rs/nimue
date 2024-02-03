@@ -23,8 +23,8 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     pub state: [F; N],
 }
 
-pub type PoseidonHash<F, const R: usize, const N: usize> = crate::hash::sponge::DuplexSponge<PoseidonSponge<F, R, N>>;
-
+pub type PoseidonHash<F, const R: usize, const N: usize> =
+    crate::hash::sponge::DuplexSponge<PoseidonSponge<F, R, N>>;
 
 impl<F: PrimeField, const R: usize, const N: usize> AsRef<[F]> for PoseidonSponge<F, R, N> {
     fn as_ref(&self) -> &[F] {
@@ -123,9 +123,11 @@ where
 /// Initialization of constants.
 macro_rules! poseidon_sponge {
     ($name: ident, $path: tt) => {
-        pub type $name = crate::hash::sponge::DuplexSponge<poseidon::PoseidonSponge< $path::Field, {$path::R}, {$path::N} >>;
+        pub type $name = crate::hash::sponge::DuplexSponge<
+            poseidon::PoseidonSponge<$path::Field, { $path::R }, { $path::N }>,
+        >;
 
-        impl Default for poseidon::PoseidonSponge< $path::Field, {$path::R}, {$path::N} > {
+        impl Default for poseidon::PoseidonSponge<$path::Field, { $path::R }, { $path::N }> {
             fn default() -> Self {
                 let alpha = $path::ALPHA;
                 let full_rounds = $path::FULL_ROUNDS;
@@ -141,7 +143,7 @@ macro_rules! poseidon_sponge {
                 }
             }
         }
-    }
+    };
 }
 
 #[cfg(feature = "ark-bls12-381")]

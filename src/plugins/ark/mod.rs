@@ -13,12 +13,10 @@
 //! use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
 //! use nimue::plugins::ark::*;
 //!
-//! fn prove<G>(
+//! fn prove<G: CurveGroup>(
 //!     arthur: &mut Arthur,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
-//! where
-//!     G: CurveGroup,
 //! {
 //!     let k = G::ScalarField::rand(arthur.rng());
 //!     arthur.add_points(&[G::generator() * k])?;
@@ -36,12 +34,11 @@
 //! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
 //! # use nimue::plugins::ark::*;
 //!
-//! fn prove<G>(
+//! fn prove<G: CurveGroup>(
 //!     arthur: &mut Arthur,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
-//!     G: CurveGroup,
 //!     Arthur: GroupWriter<G> + ByteChallenges,
 //! {
 //!     let k = G::ScalarField::rand(arthur.rng());
@@ -52,6 +49,72 @@
 //!     Ok(arthur.transcript())
 //! }
 //! ```
+//!
+//! [`Arthur`] is actually more general than this, and can be used with any hash function, over any field.
+//! Let's for instance use [`sha2`] on the above transcript instead of Keccak.
+//!
+//! ```rust
+//! # use ark_ec::CurveGroup;
+//! # use ark_std::UniformRand;
+//! # use ark_ff::PrimeField;
+//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::plugins::ark::*;
+//!
+//! fn prove<G: CurveGroup, H: DuplexHash>(
+//!     arthur: &mut Arthur,
+//!     x: G::ScalarField,
+//! ) -> ProofResult<&[u8]>
+//! where
+//!     Arthur<H>: GroupWriter<G> + ByteChallenges,
+//! # {
+//! #     let k = G::ScalarField::rand(arthur.rng());
+//! #     arthur.add_points(&[G::generator() * k])?;
+//! #     let c_bytes = arthur.challenge_bytes::<16>()?;
+//! #     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
+//! #     arthur.add_scalars(&[k + c * x])?;
+//! #     Ok(arthur.transcript())
+//! # }
+//! ```
+//! No change to the function body is needed.
+//! Now the proving function can be called with `nimue::DigestBridge<sha2::Sha256>`.
+//! As easy as that.
+//! More _modern_ hash functions may want to operate over some some field different than $\mathbb{F}_8$,
+//! for instance over the base field of the sponge.
+//! Also in this case it's suficient to slightly change the proving function to specify the field over which the
+//! hash function operates, to something like:
+//!
+//! ```rust
+//! # use ark_ec::CurveGroup;
+//! # use ark_std::UniformRand;
+//! # use ark_ff::{PrimeField, BigInteger};
+//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::plugins::ark::*;
+//!
+//! fn prove<G, H, U>(
+//!     arthur: &mut Arthur,
+//!     x: G::ScalarField,
+//! ) -> ProofResult<&[u8]>
+//! where
+//!     G: CurveGroup,
+//!     G::BaseField: PrimeField,
+//!     U: Unit,
+//!     H: DuplexHash<U>,
+//!     Arthur<H, U>: GroupWriter<G> + ByteChallenges,
+//! {
+//!     let k = G::ScalarField::rand(arthur.rng());
+//!     arthur.add_points(&[G::generator() * k])?;
+//!     let c_bytes = arthur.challenge_bytes::<16>()?;
+//!     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
+//!     // XXX. very YOLO code, don't do this at home.
+//!     // The resulting proof is malleable and could also not be correct if
+//!     // G::BaseField::MODULUS < G::ScalarField::MODULUS
+//!     let r = G::BaseField::from_le_bytes_mod_order(&(k + c * x).into_bigint().to_bytes_le());
+//!     arthur.add_scalars(&[k + c * x])?;
+//!     Ok(arthur.transcript())
+//! }
+//! ```
+//! Now the above code should work with algebraic hashes such as [`PoseidonHash`][`crate::plugins::ark::poseidon::PoseidonHash`] just as fine as [`Keccak`][`crate::hash::Keccak`].
+//!
 /// Add public elements (field or group elements) to the protocol transcript.
 mod common;
 /// IO Pattern utilities.
