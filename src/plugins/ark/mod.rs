@@ -1,4 +1,4 @@
-//! This module contains utilities for working with Arkworks types
+//! This module contains utilities for working with [arkworks](https://arkworks.rs) types
 //! and aid in the Fiat-Shamir heuristic for protocols dealing with
 //! field elements and group elements.
 //!
