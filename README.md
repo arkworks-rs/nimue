@@ -14,13 +14,13 @@ Built on the top of the SAFE framework and provides an API for generating the ve
 
 # Features
 
-**Automatic transcript generation.** nimue comes with batteries included for serializing/deserializing algebraic elements such as field/group elements in [arkworks](https://github.com/arkworks-rs/algebra) and [zkcrypto](https://github.com/zkcrypto/group). Users can build the top of it via extension trait.
+**Automatic transcript generation.** nimue comes with batteries included for serializing/deserializing algebraic elements such as field/group elements in [arkworks](https://github.com/arkworks-rs/algebra) and [zkcrypto](https://github.com/zkcrypto/group). Users can build the top of it via extension traits.
 
 **Support custom hash function.**
-To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some set that supports byte-encoding. I can be a `u8` representing $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
+To build a secure Fiat-Shamir transform, the minimal requirement is a permutation function over some set that supports byte-encoding. It can be a `u8` representing $\mathbb{F}_{2^8}$ or any large-characteristic prime field $\mathbb{F}_p$.
 
 **Retro-compatibility.**
-We have a legacy interface for any hash function that satisfies the [`digest::Digest`](https://docs.rs/digest/latest/digest/trait.Digest.html) trait, including [`sha2`](https://crates.io/crates/sha2), [`blake2`](https://crates.io/crates/blake2).
+We have a legacy interface for any hash function that satisfies the [`digest::Digest`](https://docs.rs/digest/latest/digest/trait.Digest.html) trait, such as [`sha2`](https://crates.io/crates/sha2) and [`blake2`](https://crates.io/crates/blake2).
 
 - **Preprocessing**.
 In recursive SNARKs, minimizing the number of hash invocations
