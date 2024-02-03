@@ -25,7 +25,7 @@
 //!     Ok(arthur.transcript())
 //! }
 //! ```
-//! The type constraint on [`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
+//! The type constraint on [`Arthur`][`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field [`G::ScalarField`][`ark_ec::CurveGroup`]. Similarly, we could have been squeezing out bytes.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
@@ -50,8 +50,8 @@
 //! }
 //! ```
 //!
-//! [`Arthur`] is actually more general than this, and can be used with any hash function, over any field.
-//! Let's for instance use [`sha2`] on the above transcript instead of Keccak.
+//! [`Arthur`][`crate::Arthur`] is actually more general than this, and can be used with any hash function, over any field.
+//! Let's for instance use [`sha2`](https://crates.io/crates/sha2) on the above transcript instead of Keccak.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
@@ -76,7 +76,7 @@
 //! # }
 //! ```
 //! No change to the function body is needed.
-//! Now the proving function can be called with `nimue::DigestBridge<sha2::Sha256>`.
+//! Now the proving function can be called with [`nimue::DigestBridge<sha2::Sha256>`][`crate::DigestBridge`].
 //! As easy as that.
 //! More _modern_ hash functions may want to operate over some some field different than $\mathbb{F}_8$,
 //! for instance over the base field of the sponge.
