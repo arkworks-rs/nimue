@@ -61,7 +61,7 @@ where
     Arthur<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 {
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
-    // and that can be accessed via the `rng()` funciton.
+    // and that can be accessed via the `rng()` function.
     let k = G::ScalarField::rand(arthur.rng());
     let K = P * k;
 
@@ -107,7 +107,7 @@ where
     let [K] = merlin.next_points()?;
     let c_bytes = merlin.challenge_bytes::<16>()?;
     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
-    // Map the response to the field of the hash function to be absorbed easilty.
+    // Map the response to the field of the hash function to be absorbed easily.
     let [r_q] = merlin.next_scalars()?;
     let r = swap_field::<G::BaseField, G::ScalarField>(r_q)?;
 

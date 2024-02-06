@@ -9,7 +9,6 @@ use crate::DefaultHash;
 /// Internally, it is a wrapper around a SAFE sponge.
 /// Given as input an [`IOPattern`] and a protocol transcript, it allows to
 /// de-serialize elements from the transcript and make them available to the zero-knowledge verifier.
-#[derive(Clone)]
 pub struct Merlin<'a, H = DefaultHash, U = u8>
 where
     H: DuplexHash<U>,

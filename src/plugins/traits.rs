@@ -80,7 +80,7 @@ macro_rules! group_traits {
             /// re-use the serialized element.
             type Repr;
 
-            /// Incorporate group elments into the proof without adding them to the final protocol transcript.
+            /// Incorporate group elements into the proof without adding them to the final protocol transcript.
             fn public_points(&mut self, input: &[G]) -> $crate::ProofResult<Self::Repr>;
         }
     };

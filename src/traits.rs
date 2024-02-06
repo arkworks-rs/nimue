@@ -16,7 +16,7 @@ pub trait UnitTranscript<U: Unit> {
 /// Absorbing bytes from the sponge, without reading or writing them into the protocol transcript.
 ///
 /// This trait is trivial for byte-oriented sponges, but non-trivial for algebraic hashes.
-/// This trait implementation is **not** expected to be straming-friendly.
+/// This trait implementation is **not** expected to be streaming-friendly.
 ///
 /// For instance, in the case of algebraic sponges operating over a field $\mathbb{F}_p$, we do not expect
 /// the implementation to cache field elements filling $\ceil{\log_2(p)}$ bytes.

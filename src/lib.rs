@@ -123,7 +123,7 @@ This crate doesn't support big-endian targets.
 mod arthur;
 /// Built-in proof results.
 mod errors;
-/// Hash functions traits and implmentations.
+/// Hash functions traits and implementations.
 pub mod hash;
 /// IO Pattern
 mod iopattern;

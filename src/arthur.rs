@@ -71,14 +71,13 @@ where
     }
 }
 
-impl<U, H, B> From<B> for Arthur<H, U, DefaultRng>
+impl<U, H> From<&IOPattern<H, U>> for Arthur<H, U, DefaultRng>
 where
     U: Unit,
     H: DuplexHash<U>,
-    B: core::borrow::Borrow<IOPattern<H, U>>,
 {
-    fn from(pattern: B) -> Self {
-        Arthur::new(pattern.borrow(), DefaultRng::default())
+    fn from(io_pattern: &IOPattern<H, U>) -> Self {
+        Arthur::new(io_pattern, DefaultRng::default())
     }
 }
 

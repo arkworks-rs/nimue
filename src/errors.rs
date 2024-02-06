@@ -1,6 +1,6 @@
 /// The [`nimue`] package has two types of errors:
 /// [`IOPatternError`], which is the error exposed in the low-level interface for bytes and native elements,
-/// which arises whenever the IO Pattern specified and the IO pattern exectuted mismatch.
+/// which arises whenever the IO Pattern specified and the IO pattern executed mismatch.
 /// [`ProofError`], which is the error exposed to high-level interfaces dealing with structured types and
 /// for end-user applications.
 /// Three types of errors can happen when dealing with [`ProofError`]:

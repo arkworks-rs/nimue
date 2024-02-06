@@ -89,7 +89,7 @@ where
     Arthur<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
     // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
-    // and that can be accessed via the `rng()` funciton.
+    // and that can be accessed via the `rng()` function.
     let k = G::ScalarField::rand(arthur.rng());
     let K = P * k;
 
@@ -128,9 +128,12 @@ where
     for<'a> Merlin<'a, H>:
         GroupReader<G> + FieldReader<G::ScalarField> + FieldChallenges<G::ScalarField>,
 {
-    // Read the protocol from the transcript:
-    // XXX. possible inconsistent implementations:
-    // if the point is not validated here (but the public key is) then the proof may fail with InvalidProof, instead of SerializationError
+    // Read the protocol from the transcript.
+    // [[Side note:
+    // The method `next_points` internally performs point validation.
+    // Another implementation that does not use nimue might choose not to validate the point here, but only validate the public-key.
+    // This leads to different errors to be returned: here the proof fails with SerializationError, whereas the other implementation would fail with InvalidProof.
+    // ]]
     let [K] = merlin.next_points().unwrap();
     let [c] = merlin.challenge_scalars().unwrap();
     let [r] = merlin.next_scalars().unwrap();
@@ -146,8 +149,8 @@ where
         Err(ProofError::InvalidProof)
     }
 
-    // from here, another proof can be verified using the same merlin instance
-    // and proofs can be composed.
+    // From here, another proof can be verified using the same merlin instance
+    // and proofs can be composed. The transcript holds the whole proof,
 }
 
 #[allow(non_snake_case)]

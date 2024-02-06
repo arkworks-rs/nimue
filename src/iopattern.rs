@@ -11,7 +11,7 @@ use super::errors::IOPatternError;
 use super::hash::{DuplexHash, Unit};
 
 /// This is the separator between operations in the IO Pattern
-/// and as such is the only forbidden characted in labels.
+/// and as such is the only forbidden character in labels.
 const SEP_BYTE: &str = "\0";
 
 /// The IO Pattern of an interactive protocol.
