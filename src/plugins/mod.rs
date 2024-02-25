@@ -1,4 +1,4 @@
-//!  Bindings for some popular libearies using zero-knowledge.
+//!  Bindings for some popular libraries using zero-knowledge.
 
 /// Extension traits macros, for both arkworks and group.
 mod traits;

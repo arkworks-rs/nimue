@@ -121,7 +121,7 @@ mod common;
 mod iopattern;
 /// (WIP) Support for the Poseidon Hash function.
 pub mod poseidon;
-/// Veririfer's utilities for decoding a transcript.
+/// Verifier's utilities for decoding a transcript.
 mod reader;
 /// Prover's utilities for encoding into a transcript.
 mod writer;

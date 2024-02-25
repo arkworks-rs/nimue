@@ -30,7 +30,7 @@ macro_rules! field_traits {
             fn add_scalars(&mut self, input: &[F]) -> crate::ProofResult<()>;
         }
 
-        /// Retrieve field elements from the protocol trainscript.
+        /// Retrieve field elements from the protocol transcript.
         ///
         /// The implementation of this trait **MUST** ensure that the field elements
         /// are correct encodings.

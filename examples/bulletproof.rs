@@ -15,7 +15,7 @@ use ark_std::log2;
 use nimue::plugins::ark::*;
 use rand::rngs::OsRng;
 
-/// The IO Pattern of a bulleproof.
+/// The IO Pattern of a bulletproof.
 ///
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
 /// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
@@ -48,7 +48,7 @@ where
 fn prove<'a, G: CurveGroup>(
     arthur: &'a mut Arthur,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
-    statement: &G, // the actual inner-roduct of the witness is not really needed
+    statement: &G, // the actual inner-product of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> ProofResult<&'a [u8]>
 where
@@ -144,7 +144,7 @@ fn fold_generators<A: AffineRepr>(
         .collect()
 }
 
-/// Computes the inner prouct of vectors `a` and `b`.
+/// Computes the inner product of vectors `a` and `b`.
 ///
 /// Useless once https://github.com/arkworks-rs/algebra/pull/665 gets merged.
 fn dot_prod<F: Field>(a: &[F], b: &[F]) -> F {

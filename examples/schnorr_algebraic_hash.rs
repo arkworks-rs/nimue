@@ -88,7 +88,7 @@ where
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn verify<'a, G, H, U>(
-    // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
+    // `ArkGroupMerlin` contains the verifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
     merlin: &mut Merlin<'a, H, U>,
     // The group generator `P``

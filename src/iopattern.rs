@@ -124,7 +124,7 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         self.io.as_bytes()
     }
 
-    /// Parse the givern IO Pattern into a sequence of [`Op`]'s.
+    /// Parse the given IO Pattern into a sequence of [`Op`]'s.
     pub(crate) fn finalize(&self) -> VecDeque<Op> {
         // Guaranteed to succeed as instances are all valid iopatterns
         Self::parse_io(self.io.as_bytes())
