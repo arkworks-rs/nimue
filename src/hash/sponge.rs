@@ -54,24 +54,24 @@ impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
         }
     }
 
-    fn absorb_unchecked(&mut self, input: &[U]) -> &mut Self {
-        if input.is_empty() {
-            self.squeeze_pos = C::R;
-            self
-        } else if self.absorb_pos == C::R {
-            self.sponge.permute();
-            self.absorb_pos = 0;
-            self.absorb_unchecked(input)
-        } else {
-            assert!(!input.is_empty() && self.absorb_pos < C::R);
-            let chunk_len = usize::min(input.len(), C::R - self.absorb_pos);
-            let (input, rest) = input.split_at(chunk_len);
+    fn absorb_unchecked(&mut self, mut input: &[U]) -> &mut Self {
+        while !input.is_empty() {
+            if self.absorb_pos == C::R {
+                self.sponge.permute();
+                self.absorb_pos = 0;
+            } else {
+                assert!(!input.is_empty() && self.absorb_pos < C::R);
+                let chunk_len = usize::min(input.len(), C::R - self.absorb_pos);
+                let (chunk, rest) = input.split_at(chunk_len);
 
-            self.sponge.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
-                .clone_from_slice(input);
-            self.absorb_pos += chunk_len;
-            self.absorb_unchecked(rest)
+                self.sponge.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
+                    .clone_from_slice(chunk);
+                self.absorb_pos += chunk_len;
+                input = rest;
+            }
         }
+        self.squeeze_pos = C::R;
+        self
     }
 
     fn squeeze_unchecked(&mut self, output: &mut [U]) -> &mut Self {
