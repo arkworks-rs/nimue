@@ -1,6 +1,7 @@
 use crate::{DefaultHash, DuplexHash, IOPattern, Unit, UnitTranscript};
+#[cfg(feature = "ark-bls12-381")]
 use ark_bls12_381::Fr;
-
+#[cfg(feature = "ark-bls12-381")]
 use super::poseidon::PoseidonHash;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
@@ -18,11 +19,13 @@ fn check_iv_is_used<H: DuplexHash<F>, F: Unit + Copy + Default + Eq + core::fmt:
 #[test]
 fn test_iv_is_used() {
     check_iv_is_used::<DefaultHash, u8>();
+    #[cfg(feature = "ark-bls12-381")]
     check_iv_is_used::<PoseidonHash<Fr, 2, 3>, Fr>();
 }
 
 /// Check that poseidon can indeed be instantiated and doesn't do terribly stupid things like give 0 challenges.
 #[test]
+#[cfg(feature = "ark-bls12-381")]
 fn test_poseidon_basic() {
     type F = Fr;
     type H = PoseidonHash<F, 2, 3>;

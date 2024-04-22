@@ -121,6 +121,7 @@ where
 }
 
 /// Initialization of constants.
+#[allow(unused)]
 macro_rules! poseidon_sponge {
     ($name: ident, $path: tt) => {
         pub type $name = crate::hash::sponge::DuplexSponge<
