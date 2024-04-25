@@ -86,30 +86,30 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
 
     /// Create a new IOPattern with the domain separator.
     pub fn new(domsep: &str) -> Self {
-        assert!(!domsep.contains(SEP_BYTE));
+        assert!(!domsep.contains(SEP_BYTE), "Domain separator cannot contain the separator BYTE.");
         Self::from_string(domsep.to_string())
     }
 
     /// Absorb `count` native elements.
     pub fn absorb(self, count: usize, label: &str) -> Self {
-        assert!(count > 0, "Count must be positive");
-        assert!(!label.contains(SEP_BYTE));
+        assert!(count > 0, "Count must be positive.");
+        assert!(!label.contains(SEP_BYTE), "Label cannot contain the separator BYTE.");
         assert!(match label.chars().next() {
             Some(char) => !char.is_ascii_digit(),
             None => true,
-        });
+        }, "Label cannot start with a digit.");
 
         Self::from_string(self.io + SEP_BYTE + &format!("A{}", count) + label)
     }
 
     /// Squeeze `count` native elements.
     pub fn squeeze(self, count: usize, label: &str) -> Self {
-        assert!(count > 0, "Count must be positive");
-        assert!(!label.contains(SEP_BYTE));
+        assert!(count > 0, "Count must be positive.");
+        assert!(!label.contains(SEP_BYTE), "Label cannot contain the separator BYTE.");
         assert!(match label.chars().next() {
             Some(char) => !char.is_ascii_digit(),
             None => true,
-        });
+        }, "Label cannot start with a digit.");
 
         Self::from_string(self.io + SEP_BYTE + &format!("S{}", count) + label)
     }

@@ -25,7 +25,7 @@
 //!     Ok(arthur.transcript())
 //! }
 //! ```
-//! The type constraint on [`Arthur`][`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field [`G::ScalarField`][`ark_ec::CurveGroup`]. Similarly, we could have been squeezing out bytes.
+//! The type constraint on [`Arthur`][`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
@@ -61,11 +61,9 @@
 //! # use nimue::plugins::ark::*;
 //!
 //! fn prove<G: CurveGroup, H: DuplexHash>(
-//!     arthur: &mut Arthur,
+//!     arthur: &mut Arthur<H>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
-//! where
-//!     Arthur<H>: GroupWriter<G> + ByteChallenges,
 //! # {
 //! #     let k = G::ScalarField::rand(arthur.rng());
 //! #     arthur.add_points(&[G::generator() * k])?;
@@ -91,15 +89,19 @@
 //! # use nimue::plugins::ark::*;
 //!
 //! fn prove<G, H, U>(
-//!     arthur: &mut Arthur,
+//!     arthur: &mut Arthur<H, U>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
 //!     G: CurveGroup,
 //!     G::BaseField: PrimeField,
+//!     // Declares the type the hash function works on
 //!     U: Unit,
+//!     // Constrains the hash function to work over U, ...
 //!     H: DuplexHash<U>,
-//!     Arthur<H, U>: GroupWriter<G> + ByteChallenges,
+//!     // ... and the prover to be able to absorb and squeeze elements from the group and the base field.
+//!     // (normally would be the ScalarField but this is to make it work nicely with algebraic hashes)
+//!     Arthur<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 //! {
 //!     let k = G::ScalarField::rand(arthur.rng());
 //!     arthur.add_points(&[G::generator() * k])?;
@@ -109,7 +111,7 @@
 //!     // The resulting proof is malleable and could also not be correct if
 //!     // G::BaseField::MODULUS < G::ScalarField::MODULUS
 //!     let r = G::BaseField::from_le_bytes_mod_order(&(k + c * x).into_bigint().to_bytes_le());
-//!     arthur.add_scalars(&[k + c * x])?;
+//!     arthur.add_scalars(&[r])?;
 //!     Ok(arthur.transcript())
 //! }
 //! ```
