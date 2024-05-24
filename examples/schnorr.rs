@@ -11,11 +11,11 @@
 /// - V -> P: c, a challenge (scalar)
 /// - P -> V: r, a response (scalar)
 ///
-/// 2. `nimue::Arthur`, describes the prover state. It contains the transcript, but not only:
+/// 2. `nimue::Merlin`, describes the prover state. It contains the transcript, but not only:
 /// it also provides a CSPRNG and a reliable way of serializing elements into a proof, so that the prover does not have to worry about them.
-/// It can be instantiated via `IOPattern::to_arthur()`.
+/// It can be instantiated via `IOPattern::to_merlin()`.
 ///
-/// 3. `nimue::Merlin`, describes the verifier state.
+/// 3. `nimue::Arthur`, describes the verifier state.
 /// It internally will read the transcript, and deserialize elements as requested making sure that they match with the IO Pattern.
 /// It can be used to verify a proof.
 use ark_ec::{CurveGroup, PrimeGroup};
@@ -69,7 +69,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 }
 
 /// The prove algorithm takes as input
-/// - the prover state `Arthur`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
+/// - the prover state `Merlin`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
 /// - The generator `P` in the group.
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
@@ -77,7 +77,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<H, G>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    arthur: &mut Arthur<H>,
+    merlin: &mut Merlin<H>,
     // the generator
     P: G,
     // the secret key
@@ -86,37 +86,37 @@ fn prove<H, G>(
 where
     H: DuplexHash,
     G: CurveGroup,
-    Arthur<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+    Merlin<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
-    // `Arthur` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
+    // `Merlin` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` function.
-    let k = G::ScalarField::rand(arthur.rng());
+    let k = G::ScalarField::rand(merlin.rng());
     let K = P * k;
 
     // Add a sequence of points to the protocol transcript.
     // An error is returned in case of failed serialization, or inconsistencies with the IO pattern provided (see below).
-    arthur.add_points(&[K])?;
+    merlin.add_points(&[K])?;
 
     // Fetch a challenge from the current transcript state.
-    let [c] = arthur.challenge_scalars()?;
+    let [c] = merlin.challenge_scalars()?;
 
     let r = k + c * x;
     // Add a sequence of scalar elements to the protocol transcript.
-    arthur.add_scalars(&[r])?;
+    merlin.add_scalars(&[r])?;
 
     // Output the current protocol transcript as a sequence of bytes.
-    Ok(arthur.transcript())
+    Ok(merlin.transcript())
 }
 
 /// The verify algorithm takes as input
-/// - the verifier state `Merlin`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
+/// - the verifier state `Arthur`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn verify<G, H>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    merlin: &mut Merlin<H>,
+    arthur: &mut Arthur<H>,
     // The group generator `P``
     P: G,
     // The public key `X`
@@ -125,7 +125,7 @@ fn verify<G, H>(
 where
     G: CurveGroup,
     H: DuplexHash,
-    for<'a> Merlin<'a, H>:
+    for<'a> Arthur<'a, H>:
         GroupReader<G> + FieldReader<G::ScalarField> + FieldChallenges<G::ScalarField>,
 {
     // Read the protocol from the transcript.
@@ -134,9 +134,9 @@ where
     // Another implementation that does not use nimue might choose not to validate the point here, but only validate the public-key.
     // This leads to different errors to be returned: here the proof fails with SerializationError, whereas the other implementation would fail with InvalidProof.
     // ]]
-    let [K] = merlin.next_points().unwrap();
-    let [c] = merlin.challenge_scalars().unwrap();
-    let [r] = merlin.next_scalars().unwrap();
+    let [K] = arthur.next_points().unwrap();
+    let [c] = arthur.challenge_scalars().unwrap();
+    let [r] = arthur.next_scalars().unwrap();
 
     // Check the verification equation, otherwise return a verification error.
     // The type ProofError is an enum that can report:
@@ -149,7 +149,7 @@ where
         Err(ProofError::InvalidProof)
     }
 
-    // From here, another proof can be verified using the same merlin instance
+    // From here, another proof can be verified using the same arthur instance
     // and proofs can be composed. The transcript holds the whole proof,
 }
 
@@ -171,17 +171,17 @@ fn main() {
     let (x, X) = keygen();
 
     // Create the prover transcript, add the statement to it, and then invoke the prover.
-    let mut arthur = io.to_arthur();
-    arthur.public_points(&[P, P * x]).unwrap();
-    arthur.ratchet().unwrap();
-    let proof = prove(&mut arthur, P, x).expect("Invalid proof");
+    let mut merlin = io.to_merlin();
+    merlin.public_points(&[P, P * x]).unwrap();
+    merlin.ratchet().unwrap();
+    let proof = prove(&mut merlin, P, x).expect("Invalid proof");
 
     // Print out the hex-encoded schnorr proof.
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
     // Verify the proof: create the verifier transcript, add the statement to it, and invoke the verifier.
-    let mut merlin = io.to_merlin(proof);
-    merlin.public_points(&[P, X]).unwrap();
-    merlin.ratchet().unwrap();
-    verify(&mut merlin, P, X).expect("Invalid proof");
+    let mut arthur = io.to_arthur(proof);
+    arthur.public_points(&[P, X]).unwrap();
+    arthur.ratchet().unwrap();
+    verify(&mut arthur, P, X).expect("Invalid proof");
 }

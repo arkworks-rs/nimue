@@ -2,9 +2,9 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{Arthur, ByteWriter, DuplexHash, ProofResult};
+use crate::{Merlin, ByteWriter, DuplexHash, ProofResult};
 
-impl<F, H, R> FieldWriter<F> for Arthur<H, u8, R>
+impl<F, H, R> FieldWriter<F> for Merlin<H, u8, R>
 where
     F: PrimeField,
     H: DuplexHash,
@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<G, H, R> GroupPublic<G> for Arthur<H, u8, R>
+impl<G, H, R> GroupPublic<G> for Merlin<H, u8, R>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<G, H, R> GroupWriter<G> for Arthur<H, u8, R>
+impl<G, H, R> GroupWriter<G> for Merlin<H, u8, R>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,

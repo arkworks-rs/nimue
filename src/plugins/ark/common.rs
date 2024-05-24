@@ -8,7 +8,7 @@ use rand::{CryptoRng, RngCore};
 use super::{FieldChallenges, FieldPublic, GroupPublic};
 use crate::plugins::bytes_uniform_modp;
 use crate::{
-    Arthur, ByteChallenges, BytePublic, DuplexHash, IOPatternError, Merlin, ProofError,
+    Merlin, ByteChallenges, BytePublic, DuplexHash, IOPatternError, Arthur, ProofError,
     ProofResult, Unit, UnitTranscript,
 };
 
@@ -93,7 +93,7 @@ where
 
 // Field <-> Field interactions:
 
-impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
 where
     H: DuplexHash<Fp<C, N>>,
     R: RngCore + CryptoRng,
@@ -126,7 +126,7 @@ where
 //
 //
 
-impl<H, C, const N: usize> FieldPublic<Fp<C, N>> for Merlin<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
 where
     H: DuplexHash<Fp<C, N>>,
     C: FpConfig<N>,
@@ -139,7 +139,7 @@ where
     }
 }
 
-impl<H, R, C, const N: usize, G> GroupPublic<G> for Arthur<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize, G> GroupPublic<G> for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     R: RngCore + CryptoRng,
@@ -157,7 +157,7 @@ where
     }
 }
 
-impl<H, C, const N: usize, G> GroupPublic<G> for Merlin<'_, H, Fp<C, N>>
+impl<H, C, const N: usize, G> GroupPublic<G> for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -176,7 +176,7 @@ where
 
 // Field  <-> Bytes interactions:
 
-impl<'a, H, C, const N: usize> BytePublic for Merlin<'a, H, Fp<C, N>>
+impl<'a, H, C, const N: usize> BytePublic for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> BytePublic for Arthur<H, Fp<C, N>, R>
+impl<'a, H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -203,7 +203,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> ByteChallenges for Arthur<H, Fp<C, N>, R>
+impl<'a, H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -225,7 +225,7 @@ where
     }
 }
 
-impl<'a, H, C, const N: usize> ByteChallenges for Merlin<'a, H, Fp<C, N>>
+impl<'a, H, C, const N: usize> ByteChallenges for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,

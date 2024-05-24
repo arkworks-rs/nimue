@@ -46,21 +46,21 @@ where
 }
 
 fn prove<'a, G: CurveGroup>(
-    arthur: &'a mut Arthur,
+    merlin: &'a mut Merlin,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> ProofResult<&'a [u8]>
 where
-    Arthur: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+    Merlin: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
     if witness.0.len() == 1 {
         assert_eq!(generators.0.len(), 1);
 
-        arthur.add_scalars(&[witness.0[0], witness.1[0]])?;
-        return Ok(arthur.transcript());
+        merlin.add_scalars(&[witness.0[0], witness.1[0]])?;
+        return Ok(merlin.transcript());
     }
 
     let n = witness.0.len() / 2;
@@ -78,8 +78,8 @@ where
         + G::msm_unchecked(g_left, a_right)
         + G::msm_unchecked(h_right, b_left);
 
-    arthur.add_points(&[left, right])?;
-    let [x]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
+    merlin.add_points(&[left, right])?;
+    let [x]: [G::ScalarField; 1] = merlin.challenge_scalars()?;
     let x_inv = x.inverse().expect("You just won the lottery!");
 
     let new_g = fold_generators(g_left, g_right, &x_inv, &x);
@@ -92,18 +92,18 @@ where
 
     let new_statement = *statement + left * x.square() + right * x_inv.square();
 
-    let bulletproof = prove(arthur, new_generators, &new_statement, new_witness)?;
+    let bulletproof = prove(merlin, new_generators, &new_statement, new_witness)?;
     Ok(bulletproof)
 }
 
 fn verify<G: CurveGroup>(
-    merlin: &mut Merlin,
+    arthur: &mut Arthur,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
 ) -> ProofResult<()>
 where
-    for<'a> Merlin<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
+    for<'a> Arthur<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
@@ -111,18 +111,18 @@ where
     let mut statement = statement.clone();
 
     while n != 1 {
-        let [left, right]: [G; 2] = merlin.next_points().unwrap();
+        let [left, right]: [G; 2] = arthur.next_points().unwrap();
         n /= 2;
         let (g_left, g_right) = g.split_at(n);
         let (h_left, h_right) = h.split_at(n);
-        let [x]: [G::ScalarField; 1] = merlin.challenge_scalars().unwrap();
+        let [x]: [G::ScalarField; 1] = arthur.challenge_scalars().unwrap();
         let x_inv = x.inverse().expect("You just won the lottery!");
 
         g = fold_generators(g_left, g_right, &x_inv, &x);
         h = fold_generators(h_left, h_right, &x, &x_inv);
         statement = statement + left * x.square() + right * x_inv.square();
     }
-    let [a, b]: [G::ScalarField; 2] = merlin.next_scalars().unwrap();
+    let [a, b]: [G::ScalarField; 2] = arthur.next_scalars().unwrap();
 
     let c = a * b;
     if (g[0] * a + h[0] * b + u * c - statement).is_zero() {
@@ -195,18 +195,18 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut arthur = iopattern.to_arthur();
-    arthur.public_points(&[statement]).unwrap();
-    arthur.ratchet().unwrap();
-    let proof = prove(&mut arthur, generators, &statement, witness).expect("Error proving");
+    let mut merlin = iopattern.to_merlin();
+    merlin.public_points(&[statement]).unwrap();
+    merlin.ratchet().unwrap();
+    let proof = prove(&mut merlin, generators, &statement, witness).expect("Error proving");
     println!(
         "Here's a bulletproof for {} elements:\n{}",
         size,
         hex::encode(proof)
     );
 
-    let mut merlin = iopattern.to_merlin(proof);
-    merlin.public_points(&[statement]).unwrap();
-    merlin.ratchet().unwrap();
-    verify(&mut merlin, generators, size, &statement).expect("Invalid proof");
+    let mut arthur = iopattern.to_arthur(proof);
+    arthur.public_points(&[statement]).unwrap();
+    arthur.ratchet().unwrap();
+    verify(&mut arthur, generators, size, &statement).expect("Invalid proof");
 }

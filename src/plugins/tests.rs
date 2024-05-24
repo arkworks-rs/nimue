@@ -105,8 +105,8 @@ where
     let mut group_chal = [0u8; 16];
 
     // Check that the IO Patterns are the same.
-    let mut ark_prover = ark_io.to_arthur();
-    let mut group_prover = group_io.to_arthur();
+    let mut ark_prover = ark_io.to_merlin();
+    let mut group_prover = group_io.to_merlin();
     assert_eq!(ark_io.as_bytes(), group_io.as_bytes());
 
     // Check that scalars absorption leads to the same transcript.

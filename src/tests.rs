@@ -3,7 +3,7 @@ use rand::RngCore;
 use crate::hash::keccak::Keccak;
 use crate::hash::legacy::DigestBridge;
 use crate::{
-    Arthur, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe,
+    Merlin, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe,
 };
 
 type Sha2 = DigestBridge<sha2::Sha256>;
@@ -18,12 +18,12 @@ fn test_iopattern() {
     assert!(iop.as_bytes().starts_with(b"example.com"));
 }
 
-/// Test Arthur's rng is not doing completely stupid things.
+/// Test Merlin's rng is not doing completely stupid things.
 #[test]
-fn test_arthur_rng_basic() {
+fn test_merlin_rng_basic() {
     let iop = IOPattern::<Keccak>::new("example.com");
-    let mut arthur = iop.to_arthur();
-    let rng = arthur.rng();
+    let mut merlin = iop.to_merlin();
+    let rng = merlin.rng();
 
     let mut random_bytes = [0u8; 32];
     rng.fill_bytes(&mut random_bytes);
@@ -37,28 +37,28 @@ fn test_arthur_rng_basic() {
 
 /// Test adding of public bytes and non-public elements to the transcript.
 #[test]
-fn test_arthur_bytewriter() {
+fn test_merlin_bytewriter() {
     let iop = IOPattern::<Keccak>::new("example.com").absorb(1, "🥕");
-    let mut arthur = iop.to_arthur();
-    assert!(arthur.add_bytes(&[0u8]).is_ok());
-    assert!(arthur.add_bytes(&[1u8]).is_err());
+    let mut merlin = iop.to_merlin();
+    assert!(merlin.add_bytes(&[0u8]).is_ok());
+    assert!(merlin.add_bytes(&[1u8]).is_err());
     assert_eq!(
-        arthur.transcript(),
+        merlin.transcript(),
         b"\0",
         "Protocol Transcript survives errors"
     );
 
-    let mut arthur = iop.to_arthur();
-    assert!(arthur.public_bytes(&[0u8]).is_ok());
-    assert_eq!(arthur.transcript(), b"");
+    let mut merlin = iop.to_merlin();
+    assert!(merlin.public_bytes(&[0u8]).is_ok());
+    assert_eq!(merlin.transcript(), b"");
 }
 
 /// A protocol flow that does not match the IOPattern should fail.
 #[test]
 fn test_invalid_io_sequence() {
     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
-    let mut merlin = Safe::<Keccak>::new(&iop);
-    assert!(merlin.squeeze(&mut [0u8; 16]).is_err());
+    let mut arthur = Safe::<Keccak>::new(&iop);
+    assert!(arthur.squeeze(&mut [0u8; 16]).is_err());
 }
 
 // Hiding for now. Should it panic ?
@@ -67,7 +67,7 @@ fn test_invalid_io_sequence() {
 // #[should_panic]
 // fn test_unfinished_io() {
 //     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
-//     let _merlin = Merlin::<Keccak>::new(&iop);
+//     let _arthur = Arthur::<Keccak>::new(&iop);
 // }
 
 /// Challenges from the same transcript should be equal.
@@ -97,11 +97,11 @@ fn test_statistics() {
         .absorb(4, "statement")
         .ratchet()
         .squeeze(2048, "gee");
-    let mut merlin = Safe::<Keccak>::new(&iop);
-    merlin.absorb(b"seed").unwrap();
-    merlin.ratchet().unwrap();
+    let mut arthur = Safe::<Keccak>::new(&iop);
+    arthur.absorb(b"seed").unwrap();
+    arthur.ratchet().unwrap();
     let mut output = [0u8; 2048];
-    merlin.squeeze(&mut output).unwrap();
+    arthur.squeeze(&mut output).unwrap();
 
     let frequencies = (0u8..=255)
         .map(|i| output.iter().filter(|&&x| x == i).count())
@@ -118,19 +118,19 @@ fn test_transcript_readwrite() {
         .absorb(10, "hello")
         .squeeze(10, "world");
 
-    let mut arthur = io.to_arthur();
-    arthur.add_units(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
-    let arthur_challenges = arthur.challenge_bytes::<10>().unwrap();
-    let transcript = arthur.transcript();
-
-    let mut merlin = io.to_merlin(transcript);
-    let mut input = [0u8; 5];
-    merlin.fill_next_units(&mut input).unwrap();
-    assert_eq!(input, [0, 1, 2, 3, 4]);
-    merlin.fill_next_units(&mut input).unwrap();
-    assert_eq!(input, [5, 6, 7, 8, 9]);
+    let mut merlin = io.to_merlin();
+    merlin.add_units(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
     let merlin_challenges = merlin.challenge_bytes::<10>().unwrap();
-    assert_eq!(merlin_challenges, arthur_challenges);
+    let transcript = merlin.transcript();
+
+    let mut arthur = io.to_arthur(transcript);
+    let mut input = [0u8; 5];
+    arthur.fill_next_units(&mut input).unwrap();
+    assert_eq!(input, [0, 1, 2, 3, 4]);
+    arthur.fill_next_units(&mut input).unwrap();
+    assert_eq!(input, [5, 6, 7, 8, 9]);
+    let arthur_challenges = arthur.challenge_bytes::<10>().unwrap();
+    assert_eq!(arthur_challenges, merlin_challenges);
 }
 
 /// An IO that is not fully finished should fail.
@@ -141,26 +141,26 @@ fn test_incomplete_io() {
         .absorb(10, "hello")
         .squeeze(1, "nop");
 
-    let mut arthur = io.to_arthur();
-    arthur.add_units(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
-    arthur.fill_challenge_bytes(&mut [0u8; 10]).unwrap();
+    let mut merlin = io.to_merlin();
+    merlin.add_units(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).unwrap();
+    merlin.fill_challenge_bytes(&mut [0u8; 10]).unwrap();
 }
 
 /// The user should respect the IO pattern even with empty length.
 #[test]
-fn test_arthur_empty_absorb() {
+fn test_merlin_empty_absorb() {
     let io = IOPattern::<Keccak>::new("domain separator")
         .absorb(1, "in")
         .squeeze(1, "something");
 
-    assert!(io.to_arthur().fill_challenge_bytes(&mut [0u8; 1]).is_err());
-    assert!(io.to_merlin(b"").next_bytes::<1>().is_err());
+    assert!(io.to_merlin().fill_challenge_bytes(&mut [0u8; 1]).is_err());
+    assert!(io.to_arthur(b"").next_bytes::<1>().is_err());
 }
 
 /// Absorbs and squeeze over byte-Units should be streamable.
 fn test_streaming_absorb_and_squeeze<H: DuplexHash>()
 where
-    Arthur<H>: ByteWriter + ByteChallenges,
+    Merlin<H>: ByteWriter + ByteChallenges,
 {
     let bytes = b"yellow submarine";
 
@@ -170,28 +170,28 @@ where
         .absorb(1, "level 2: use this as a prng stream")
         .squeeze(1024, "that's a long challenge");
 
-    let mut arthur = io.to_arthur();
-    arthur.add_bytes(bytes).unwrap();
-    let control_chal = arthur.challenge_bytes::<16>().unwrap();
-    let control_transcript = arthur.transcript();
+    let mut merlin = io.to_merlin();
+    merlin.add_bytes(bytes).unwrap();
+    let control_chal = merlin.challenge_bytes::<16>().unwrap();
+    let control_transcript = merlin.transcript();
 
-    let mut stream_arthur = io.to_arthur();
-    stream_arthur.add_bytes(&bytes[..10]).unwrap();
-    stream_arthur.add_bytes(&bytes[10..]).unwrap();
-    let first_chal = stream_arthur.challenge_bytes::<8>().unwrap();
-    let second_chal = stream_arthur.challenge_bytes::<8>().unwrap();
-    let transcript = stream_arthur.transcript();
+    let mut stream_merlin = io.to_merlin();
+    stream_merlin.add_bytes(&bytes[..10]).unwrap();
+    stream_merlin.add_bytes(&bytes[10..]).unwrap();
+    let first_chal = stream_merlin.challenge_bytes::<8>().unwrap();
+    let second_chal = stream_merlin.challenge_bytes::<8>().unwrap();
+    let transcript = stream_merlin.transcript();
 
     assert_eq!(transcript, control_transcript);
     assert_eq!(&first_chal[..], &control_chal[..8]);
     assert_eq!(&second_chal[..], &control_chal[8..]);
 
-    arthur.add_bytes(&[0x42]).unwrap();
-    stream_arthur.add_bytes(&[0x42]).unwrap();
+    merlin.add_bytes(&[0x42]).unwrap();
+    stream_merlin.add_bytes(&[0x42]).unwrap();
 
-    let control_chal = arthur.challenge_bytes::<1024>().unwrap();
+    let control_chal = merlin.challenge_bytes::<1024>().unwrap();
     for control_chunk in control_chal.chunks(16) {
-        let chunk = stream_arthur.challenge_bytes::<16>().unwrap();
+        let chunk = stream_merlin.challenge_bytes::<16>().unwrap();
         assert_eq!(control_chunk, &chunk[..]);
     }
 }

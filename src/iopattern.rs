@@ -32,7 +32,7 @@ const SEP_BYTE: &str = "\0";
 /// ## Guarantees
 ///
 /// The struct [`IOPattern`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
-/// This means that [`Arthur`][`crate::Arthur`] or [`Merlin`][`crate::Merlin`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
+/// This means that [`Merlin`][`crate::Merlin`] or [`Arthur`][`crate::Arthur`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
 
 #[derive(Clone)]
 pub struct IOPattern<H = crate::DefaultHash, U = u8>
@@ -186,14 +186,14 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
-    /// Create an [`crate::Arthur`] instance from the IO Pattern.
-    pub fn to_arthur(&self) -> crate::Arthur<H, U, crate::DefaultRng> {
+    /// Create an [`crate::Merlin`] instance from the IO Pattern.
+    pub fn to_merlin(&self) -> crate::Merlin<H, U, crate::DefaultRng> {
         self.into()
     }
 
-    /// Create a [`crate::Merlin`] instance from the IO Pattern and the protocol transcript (bytes).
-    pub fn to_merlin<'a>(&self, transcript: &'a [u8]) -> crate::Merlin<'a, H, U> {
-        crate::Merlin::<H, U>::new(self, transcript)
+    /// Create a [`crate::Arthur`] instance from the IO Pattern and the protocol transcript (bytes).
+    pub fn to_arthur<'a>(&self, transcript: &'a [u8]) -> crate::Arthur<'a, H, U> {
+        crate::Arthur::<H, U>::new(self, transcript)
     }
 }
 

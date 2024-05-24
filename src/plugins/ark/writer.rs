@@ -4,9 +4,9 @@ use ark_serialize::CanonicalSerialize;
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{Arthur, DuplexHash, ProofResult, UnitTranscript};
+use crate::{Merlin, DuplexHash, ProofResult, UnitTranscript};
 
-impl<F: PrimeField, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Arthur<H, u8, R> {
+impl<F: PrimeField, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Merlin<H, u8, R> {
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
         let serialized = self.public_scalars(input);
         self.transcript.extend(serialized?);
@@ -15,7 +15,7 @@ impl<F: PrimeField, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Ar
 }
 
 impl<C: FpConfig<N>, H: DuplexHash<Fp<C, N>>, R: RngCore + CryptoRng, const N: usize>
-    FieldWriter<Fp<C, N>> for Arthur<H, Fp<C, N>, R>
+    FieldWriter<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
 {
     fn add_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<()> {
         self.public_units(input)?;
@@ -26,12 +26,12 @@ impl<C: FpConfig<N>, H: DuplexHash<Fp<C, N>>, R: RngCore + CryptoRng, const N: u
     }
 }
 
-impl<G, H, R> GroupWriter<G> for Arthur<H, u8, R>
+impl<G, H, R> GroupWriter<G> for Merlin<H, u8, R>
 where
     G: CurveGroup,
     H: DuplexHash,
     R: RngCore + CryptoRng,
-    Arthur<H, u8, R>: GroupPublic<G, Repr = Vec<u8>>,
+    Merlin<H, u8, R>: GroupPublic<G, Repr = Vec<u8>>,
 {
     #[inline(always)]
     fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
@@ -42,12 +42,12 @@ where
 }
 
 impl<G, H, R, C: FpConfig<N>, C2: FpConfig<N>, const N: usize> GroupWriter<G>
-    for Arthur<H, Fp<C, N>, R>
+    for Merlin<H, Fp<C, N>, R>
 where
     G: CurveGroup<BaseField = Fp<C2, N>>,
     H: DuplexHash<Fp<C, N>>,
     R: RngCore + CryptoRng,
-    Arthur<H, Fp<C, N>, R>: GroupPublic<G> + FieldWriter<G::BaseField>,
+    Merlin<H, Fp<C, N>, R>: GroupPublic<G> + FieldWriter<G::BaseField>,
 {
     #[inline(always)]
     fn add_points(&mut self, input: &[G]) -> ProofResult<()> {

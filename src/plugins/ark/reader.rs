@@ -7,9 +7,9 @@ use ark_serialize::CanonicalDeserialize;
 
 use super::{FieldReader, GroupReader};
 use crate::traits::*;
-use crate::{DuplexHash, Merlin, ProofResult};
+use crate::{DuplexHash, Arthur, ProofResult};
 
-impl<'a, F, H> FieldReader<F> for Merlin<'a, H>
+impl<'a, F, H> FieldReader<F> for Arthur<'a, H>
 where
     F: Field,
     H: DuplexHash,
@@ -25,7 +25,7 @@ where
     }
 }
 
-impl<'a, G, H> GroupReader<G> for Merlin<'a, H>
+impl<'a, G, H> GroupReader<G> for Arthur<'a, H>
 where
     G: CurveGroup,
     H: DuplexHash,
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<'a, H, C, const N: usize> FieldReader<Fp<C, N>> for Merlin<'a, H, Fp<C, N>>
+impl<'a, H, C, const N: usize> FieldReader<Fp<C, N>> for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<'a, P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Merlin<'a, H, Fp<C, N>>
+impl<'a, P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<'a, P, H, C, const N: usize> GroupReader<SWCurve<P>> for Merlin<'a, H, Fp<C, N>>
+impl<'a, P, H, C, const N: usize> GroupReader<SWCurve<P>> for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,

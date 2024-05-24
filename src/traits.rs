@@ -3,7 +3,7 @@ use crate::Unit;
 
 /// Absorbing and squeezing native elements from the sponge.
 ///
-/// This trait is typically implemented for [`Merlin`] and [`Arthur`] instances.
+/// This trait is typically implemented for [`Arthur`] and [`Merlin`] instances.
 /// Implementors of this trait are expected to make sure that the unit type `U` matches
 /// the one used by the internal sponge.
 pub trait UnitTranscript<U: Unit> {

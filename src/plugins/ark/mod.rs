@@ -10,67 +10,67 @@
 //! ```rust
 //! use ark_ec::CurveGroup;
 //! use ark_std::UniformRand;
-//! use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
 //! use nimue::plugins::ark::*;
 //!
 //! fn prove<G: CurveGroup>(
-//!     arthur: &mut Arthur,
+//!     merlin: &mut Merlin,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! {
-//!     let k = G::ScalarField::rand(arthur.rng());
-//!     arthur.add_points(&[G::generator() * k])?;
-//!     let [c]: [G::ScalarField; 1] = arthur.challenge_scalars()?;
-//!     arthur.add_scalars(&[k + c * x])?;
-//!     Ok(arthur.transcript())
+//!     let k = G::ScalarField::rand(merlin.rng());
+//!     merlin.add_points(&[G::generator() * k])?;
+//!     let [c]: [G::ScalarField; 1] = merlin.challenge_scalars()?;
+//!     merlin.add_scalars(&[k + c * x])?;
+//!     Ok(merlin.transcript())
 //! }
 //! ```
-//! The type constraint on [`Arthur`][`crate::Arthur`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
+//! The type constraint on [`Merlin`][`crate::Merlin`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::PrimeField;
-//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
 //! # use nimue::plugins::ark::*;
 //!
 //! fn prove<G: CurveGroup>(
-//!     arthur: &mut Arthur,
+//!     merlin: &mut Merlin,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
-//!     Arthur: GroupWriter<G> + ByteChallenges,
+//!     Merlin: GroupWriter<G> + ByteChallenges,
 //! {
-//!     let k = G::ScalarField::rand(arthur.rng());
-//!     arthur.add_points(&[G::generator() * k])?;
-//!     let c_bytes = arthur.challenge_bytes::<16>()?;
+//!     let k = G::ScalarField::rand(merlin.rng());
+//!     merlin.add_points(&[G::generator() * k])?;
+//!     let c_bytes = merlin.challenge_bytes::<16>()?;
 //!     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
-//!     arthur.add_scalars(&[k + c * x])?;
-//!     Ok(arthur.transcript())
+//!     merlin.add_scalars(&[k + c * x])?;
+//!     Ok(merlin.transcript())
 //! }
 //! ```
 //!
-//! [`Arthur`][`crate::Arthur`] is actually more general than this, and can be used with any hash function, over any field.
+//! [`Merlin`][`crate::Merlin`] is actually more general than this, and can be used with any hash function, over any field.
 //! Let's for instance use [`sha2`](https://crates.io/crates/sha2) on the above transcript instead of Keccak.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::PrimeField;
-//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
 //! # use nimue::plugins::ark::*;
 //!
 //! fn prove<G: CurveGroup, H: DuplexHash>(
-//!     arthur: &mut Arthur<H>,
+//!     merlin: &mut Merlin<H>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! # {
-//! #     let k = G::ScalarField::rand(arthur.rng());
-//! #     arthur.add_points(&[G::generator() * k])?;
-//! #     let c_bytes = arthur.challenge_bytes::<16>()?;
+//! #     let k = G::ScalarField::rand(merlin.rng());
+//! #     merlin.add_points(&[G::generator() * k])?;
+//! #     let c_bytes = merlin.challenge_bytes::<16>()?;
 //! #     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
-//! #     arthur.add_scalars(&[k + c * x])?;
-//! #     Ok(arthur.transcript())
+//! #     merlin.add_scalars(&[k + c * x])?;
+//! #     Ok(merlin.transcript())
 //! # }
 //! ```
 //! No change to the function body is needed.
@@ -85,11 +85,11 @@
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::{PrimeField, BigInteger};
-//! # use nimue::{IOPattern, Arthur, DuplexHash, ProofResult};
+//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
 //! # use nimue::plugins::ark::*;
 //!
 //! fn prove<G, H, U>(
-//!     arthur: &mut Arthur<H, U>,
+//!     merlin: &mut Merlin<H, U>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
@@ -101,18 +101,18 @@
 //!     H: DuplexHash<U>,
 //!     // ... and the prover to be able to absorb and squeeze elements from the group and the base field.
 //!     // (normally would be the ScalarField but this is to make it work nicely with algebraic hashes)
-//!     Arthur<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
+//!     Merlin<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 //! {
-//!     let k = G::ScalarField::rand(arthur.rng());
-//!     arthur.add_points(&[G::generator() * k])?;
-//!     let c_bytes = arthur.challenge_bytes::<16>()?;
+//!     let k = G::ScalarField::rand(merlin.rng());
+//!     merlin.add_points(&[G::generator() * k])?;
+//!     let c_bytes = merlin.challenge_bytes::<16>()?;
 //!     let c = G::ScalarField::from_le_bytes_mod_order(&c_bytes);
 //!     // XXX. very YOLO code, don't do this at home.
 //!     // The resulting proof is malleable and could also not be correct if
 //!     // G::BaseField::MODULUS < G::ScalarField::MODULUS
 //!     let r = G::BaseField::from_le_bytes_mod_order(&(k + c * x).into_bigint().to_bytes_le());
-//!     arthur.add_scalars(&[r])?;
-//!     Ok(arthur.transcript())
+//!     merlin.add_scalars(&[r])?;
+//!     Ok(merlin.transcript())
 //! }
 //! ```
 //! Now the above code should work with algebraic hashes such as [`PoseidonHash`][`crate::plugins::ark::poseidon::PoseidonHash`] just as fine as [`Keccak`][`crate::hash::Keccak`].
@@ -136,7 +136,7 @@ mod tests;
 pub mod anemoi;
 
 pub use crate::traits::*;
-pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
+pub use crate::{hash::Unit, Merlin, DuplexHash, IOPattern, Arthur, ProofError, ProofResult, Safe};
 
 super::traits::field_traits!(ark_ff::Field);
 super::traits::group_traits!(ark_ec::CurveGroup, Scalar: ark_ff::PrimeField);
@@ -173,6 +173,6 @@ pub fn swap_field<F1: ark_ff::PrimeField, F2: ark_ff::PrimeField>(a_f1: F1) -> P
 //     }
 // }
 
-// impl<'a, P: ark_ec::pairing::Pairing, H, U> PairingWriter<P> for Merlin<'a, H, U> where
+// impl<'a, P: ark_ec::pairing::Pairing, H, U> PairingWriter<P> for Arthur<'a, H, U> where
 // U: Unit, H: DuplexHash<U>,
-// Merlin<'a, H, U>:  GroupWriter<P::G1> + GroupWriter<P::G2>  {}
+// Arthur<'a, H, U>:  GroupWriter<P::G1> + GroupWriter<P::G2>  {}

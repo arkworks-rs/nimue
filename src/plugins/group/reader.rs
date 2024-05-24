@@ -1,8 +1,8 @@
 use super::FieldReader;
-use crate::{ByteReader, DuplexHash, Merlin, ProofError};
+use crate::{ByteReader, DuplexHash, Arthur, ProofError};
 use group::ff::PrimeField;
 
-impl<'a, F, H, const N: usize> FieldReader<F> for Merlin<'a, H>
+impl<'a, F, H, const N: usize> FieldReader<F> for Arthur<'a, H>
 where
     H: DuplexHash,
     F: PrimeField<Repr = [u8; N]>,
