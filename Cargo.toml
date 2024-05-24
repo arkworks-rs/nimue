@@ -1,7 +1,7 @@
 [package]
 name = "nimue"
-version = "0.0.1"
-authors = ["Michele Orrù <michele@tumbolandia.net>"]
+version = "0.1.0"
+authors = ["Michele Orrù <m@orru.net>"]
 description = "A library for Fiat-Shamir transcripts."
 edition = "2021"
 license = "MIT/Apache-2.0"
