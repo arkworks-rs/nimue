@@ -17,7 +17,6 @@ ark-curve25519 = {git = "https://github.com/arkworks-rs/algebra"}
 ark-pallas = {git = "https://github.com/arkworks-rs/algebra"}
 ark-vesta = {git = "https://github.com/arkworks-rs/algebra"}
 
-
 [dependencies]
 zeroize = {version="1.6.0", features=["zeroize_derive"]}
 rand = {version="0.8.5", features=["getrandom"]}
