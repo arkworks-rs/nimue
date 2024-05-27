@@ -1,8 +1,8 @@
+#[cfg(feature = "ark-bls12-381")]
+use super::poseidon::PoseidonHash;
 use crate::{DefaultHash, DuplexHash, IOPattern, Unit, UnitTranscript};
 #[cfg(feature = "ark-bls12-381")]
 use ark_bls12_381::Fr;
-#[cfg(feature = "ark-bls12-381")]
-use super::poseidon::PoseidonHash;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
 fn check_iv_is_used<H: DuplexHash<F>, F: Unit + Copy + Default + Eq + core::fmt::Debug>() {

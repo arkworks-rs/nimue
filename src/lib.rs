@@ -143,7 +143,7 @@ pub mod traits;
 
 pub use merlin::Merlin;
 pub use errors::{IOPatternError, ProofError, ProofResult};
-pub use hash::{DuplexHash, Unit, legacy::DigestBridge};
+pub use hash::{legacy::DigestBridge, DuplexHash, Unit};
 pub use iopattern::IOPattern;
 pub use arthur::Arthur;
 pub use safe::Safe;
