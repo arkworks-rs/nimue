@@ -9,8 +9,7 @@
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use nimue::plugins::ark::{FieldChallenges, FieldIOPattern, FieldWriter};
-use nimue::ProofResult;
-use nimue::{Arthur, IOPattern};
+use nimue::{Arthur, IOPattern, Merlin, ProofResult};
 
 trait SumcheckIOPattern<F: PrimeField> {
     fn add_sumcheck(self, num_var: usize) -> Self;
@@ -33,13 +32,13 @@ where
 }
 
 fn prove<'a, F>(
-    arthur: &'a mut Arthur,
+    merlin: &'a mut Merlin,
     polynomial: &impl MultilinearExtension<F>,
     value: &F,
-) -> ProofResult<&'a mut Arthur>
+) -> ProofResult<&'a mut Merlin>
 where
     F: PrimeField,
-    Arthur: FieldWriter<F> + FieldChallenges<F>,
+    Merlin: FieldWriter<F> + FieldChallenges<F>,
 {
     // FIXME
     let num_var = polynomial.num_vars();
@@ -47,9 +46,9 @@ where
     for i in 0..num_var {
         let a = eval.iter().step_by(2).sum();
         let b = eval.iter().skip(1).step_by(2).sum();
-        arthur.add_scalars(&[a, b])?;
+        merlin.add_scalars(&[a, b])?;
     }
-    Ok(arthur)
+    Ok(merlin)
 }
 
 fn main() {}
