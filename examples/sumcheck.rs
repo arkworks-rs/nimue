@@ -34,7 +34,7 @@ where
 fn prove<'a, F>(
     merlin: &'a mut Merlin,
     polynomial: &impl MultilinearExtension<F>,
-    value: &F,
+    _value: &F,
 ) -> ProofResult<&'a mut Merlin>
 where
     F: PrimeField,
@@ -42,12 +42,18 @@ where
 {
     // FIXME
     let num_var = polynomial.num_vars();
-    let eval = polynomial.to_evaluations();
-    for i in 0..num_var {
+    let mut partial_poly = polynomial.clone();
+    for _ in 0..num_var {
+        let eval = partial_poly.to_evaluations();
         let a = eval.iter().step_by(2).sum();
         let b = eval.iter().skip(1).step_by(2).sum();
         merlin.add_scalars(&[a, b])?;
+        let [r] = merlin.challenge_scalars()?;
+        partial_poly = partial_poly.fix_variables(&[r]);
     }
+    // The folded polynomial
+    let folded = partial_poly.to_evaluations()[0];
+    merlin.add_scalars(&[folded])?;
     Ok(merlin)
 }
 
