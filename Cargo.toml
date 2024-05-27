@@ -36,7 +36,7 @@ rand_chacha = { version = "0.3", optional=true }
 
 
 [features]
-default = [ "pow" ] #TODO: REMOVE
+default = [] 
 ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
 group = ["dep:group"]
 pow = ["dep:rand_chacha"]
