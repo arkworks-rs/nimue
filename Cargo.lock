@@ -948,6 +948,7 @@ dependencies = [
  "pallas",
  "pasta_curves",
  "rand",
+ "rand_chacha",
  "sha2",
  "zeroize",
 ]

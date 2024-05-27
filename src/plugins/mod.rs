@@ -12,6 +12,10 @@ pub mod ark;
 /// This plugin is experimental and has not yet been thoroughly tested.
 pub mod group;
 
+//#[cfg(feature = "pow")]
+/// Experimental PoW support
+pub mod proof_of_work;
+
 /// Bits needed in order to obtain a (pseudo-random) uniform distribution in F.
 pub(super) const fn bytes_uniform_modp(modulus_bits: u32) -> usize {
     (modulus_bits as usize + 128) / 8
