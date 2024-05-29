@@ -1,5 +1,5 @@
 use super::FieldReader;
-use crate::{ByteReader, DuplexHash, Arthur, ProofError};
+use crate::{Arthur, ByteReader, DuplexHash, ProofError};
 use group::ff::PrimeField;
 
 impl<'a, F, H, const N: usize> FieldReader<F> for Arthur<'a, H>

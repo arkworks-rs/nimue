@@ -119,16 +119,16 @@ This crate doesn't support big-endian targets.
 "#
 );
 
-/// Prover's internal state and transcript generation.
-mod merlin;
+/// Verifier state and transcript deserialization.
+mod arthur;
 /// Built-in proof results.
 mod errors;
 /// Hash functions traits and implementations.
 pub mod hash;
 /// IO Pattern
 mod iopattern;
-/// Verifier state and transcript deserialization.
-mod arthur;
+/// Prover's internal state and transcript generation.
+mod merlin;
 /// APIs for common zkp libraries.
 #[cfg(any(feature = "ark", feature = "group"))]
 pub mod plugins;
@@ -141,11 +141,11 @@ mod tests;
 /// Traits for byte support.
 pub mod traits;
 
-pub use merlin::Merlin;
+pub use arthur::Arthur;
 pub use errors::{IOPatternError, ProofError, ProofResult};
 pub use hash::{legacy::DigestBridge, DuplexHash, Unit};
 pub use iopattern::IOPattern;
-pub use arthur::Arthur;
+pub use merlin::Merlin;
 pub use safe::Safe;
 pub use traits::*;
 

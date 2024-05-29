@@ -7,7 +7,7 @@ use ark_serialize::CanonicalDeserialize;
 
 use super::{FieldReader, GroupReader};
 use crate::traits::*;
-use crate::{DuplexHash, Arthur, ProofResult};
+use crate::{Arthur, DuplexHash, ProofResult};
 
 impl<'a, F, H> FieldReader<F> for Arthur<'a, H>
 where

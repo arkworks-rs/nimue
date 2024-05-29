@@ -8,8 +8,8 @@
 // TODO Add doc for rust-analyzer.cargo.features for examples.
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
-use nimue::plugins::ark::{FieldChallenges, FieldIOPattern, FieldWriter};
-use nimue::{Arthur, IOPattern, Merlin, ProofResult};
+use nimue::plugins::ark::{FieldChallenges, FieldIOPattern, FieldReader, FieldWriter};
+use nimue::{Arthur, IOPattern, Merlin, ProofError, ProofResult};
 
 trait SumcheckIOPattern<F: PrimeField> {
     fn add_sumcheck(self, num_var: usize) -> Self;
@@ -34,13 +34,11 @@ where
 fn prove<'a, F>(
     merlin: &'a mut Merlin,
     polynomial: &impl MultilinearExtension<F>,
-    _value: &F,
 ) -> ProofResult<&'a mut Merlin>
 where
     F: PrimeField,
     Merlin: FieldWriter<F> + FieldChallenges<F>,
 {
-    // FIXME
     let num_var = polynomial.num_vars();
     let mut partial_poly = polynomial.clone();
     for _ in 0..num_var {
@@ -55,6 +53,33 @@ where
     let folded = partial_poly.to_evaluations()[0];
     merlin.add_scalars(&[folded])?;
     Ok(merlin)
+}
+
+fn verify<F>(
+    arthur: &mut Arthur,
+    polynomial: &impl MultilinearExtension<F>,
+    value: &F,
+) -> ProofResult<()>
+where
+    F: PrimeField,
+    for<'a> Arthur<'a>: FieldReader<F> + FieldChallenges<F>,
+{
+    let mut value = value.clone();
+    let num_vars = polynomial.num_vars();
+    for _ in 1..num_vars {
+        let [a, b] = arthur.next_scalars()?;
+        if a + b != value {
+            return Err(ProofError::InvalidProof);
+        }
+        let [r] = arthur.challenge_scalars()?;
+        value = a * r + b;
+    }
+    let [folded] = arthur.next_scalars()?;
+    if folded != value {
+        Err(ProofError::InvalidProof)
+    } else {
+        Ok(())
+    }
 }
 
 fn main() {}
