@@ -1,8 +1,8 @@
 //! This is the example of a.
 //!
 //! Sumcheck proofs allow to prove that, given a multilinear polynomial $g$
-//! defined over field $\mathbb{F}$, the sum of $g$ over
-//! $H \subseteq \mathbb{F}$ is equal to $C$.
+//! defined over field $\mathbb{F}$, the sum of $g$ over boolean hypercube
+//! is equal to $C$.
 //!
 
 // TODO Add doc for rust-analyzer.cargo.features for examples.
@@ -23,7 +23,7 @@ where
     fn add_sumcheck(mut self, num_var: usize) -> Self {
         for _ in 0..num_var {
             self = self
-                .add_scalars(1, "partial evaluation")
+                .add_scalars(2, "partial evaluation")
                 .challenge_scalars(1, "sumcheck challenge");
         }
         self = self.add_scalars(1, "folded polynomial");
@@ -66,13 +66,13 @@ where
 {
     let mut value = value.clone();
     let num_vars = polynomial.num_vars();
-    for _ in 1..num_vars {
+    for _ in 0..num_vars {
         let [a, b] = arthur.next_scalars()?;
         if a + b != value {
             return Err(ProofError::InvalidProof);
         }
         let [r] = arthur.challenge_scalars()?;
-        value = a * r + b;
+        value = (b - a) * r + a;
     }
     let [folded] = arthur.next_scalars()?;
     if folded != value {
@@ -82,4 +82,34 @@ where
     }
 }
 
-fn main() {}
+fn main() {
+    use ark_curve25519::Fq;
+    use rand::rngs::OsRng;
+    use ark_poly::DenseMultilinearExtension;
+
+    let num_vars= 4;
+
+
+    // initialize the IO Pattern putting the domain separator ("example.com")
+    let iopattern = IOPattern::new("example.com");
+    // // add the IO of the sumcheck statement
+    // let iopattern = SumcheckIOPattern::<F>::sumcheck_statement(iopattern).ratchet();
+    // add the IO of the sumcheck protocol (the transcript)
+    let iopattern = SumcheckIOPattern::<Fq>::add_sumcheck(iopattern, num_vars);
+
+    let poly: DenseMultilinearExtension<Fq> = DenseMultilinearExtension::rand(num_vars, &mut OsRng);
+    let statement = poly.to_evaluations().iter().sum::<Fq>();
+
+    let mut merlin = iopattern.to_merlin();
+    // merlin.ratchet().unwrap();
+    let proof = prove(&mut merlin, &poly).expect("Error proving");
+    println!(
+        "Here's a sumcheck for {} variables:\n{}",
+        num_vars,
+        hex::encode(proof.transcript())
+    );
+
+    let mut arthur = iopattern.to_arthur(proof.transcript());
+    // arthur.ratchet().unwrap();
+    verify(&mut arthur, &poly, &statement).expect("Invalid proof");
+}
