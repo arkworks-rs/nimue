@@ -12,7 +12,6 @@ pub mod ark;
 /// This plugin is experimental and has not yet been thoroughly tested.
 pub mod group;
 
-#[cfg(feature = "pow")]
 /// Experimental PoW support
 pub mod proof_of_work;
 

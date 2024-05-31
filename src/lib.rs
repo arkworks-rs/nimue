@@ -130,7 +130,6 @@ mod iopattern;
 /// Prover's internal state and transcript generation.
 mod merlin;
 /// APIs for common zkp libraries.
-#[cfg(any(feature = "ark", feature = "group", feature = "pow"))]
 pub mod plugins;
 /// SAFE API.
 mod safe;

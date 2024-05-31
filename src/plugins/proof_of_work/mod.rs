@@ -43,22 +43,37 @@ fn increment(challenge: [u8; 16]) -> [u8; 16] {
     res
 }
 
+fn prepare_keccak_buf(challenge: &[u8; 16], counter: &[u8; 16]) -> [u64; 25] {
+    let mut buf = [0xdeadbeef; 25];
+
+    for i in 0..2 {
+        let mut temp = [0u8; 8];
+        temp.copy_from_slice(&challenge[i..i + 8]);
+        buf[i] = u64::from_be_bytes(temp);
+
+        temp.copy_from_slice(&counter[i..i + 8]);
+        buf[2 + i] = u64::from_be_bytes(temp);
+    }
+
+    buf
+}
+
 impl POWChallenge for Merlin
 where
     Merlin: ByteWriter,
 {
     fn challenge_pow(&mut self, bits: POWBits) -> ProofResult<POWNonce> {
         // Squeeze 16 bytes as a challenge from the spong
-        let mut seed = [0u8; 32];
-        self.fill_challenge_bytes(&mut seed[..16])?;
+        let mut challenge = [0u8; 16];
+        self.fill_challenge_bytes(&mut challenge)?;
 
         // Loop to find a 16-byte nonce
         let mut counter = [0u8; 16];
         loop {
             // Seed rng with the 32-byte (challenge + nonce) seed
-            seed[16..].copy_from_slice(&counter);
-            let mut rng = rand_chacha::ChaCha20Rng::from_seed(seed);
-            let num: u64 = rng.gen();
+            let mut keccak_buf = prepare_keccak_buf(&challenge, &counter);
+            keccak::f1600(&mut keccak_buf);
+            let num = keccak_buf[0];
             if num < (1 << bits.0) {
                 // Add to the transcript the nonce
                 self.add_bytes(&counter)?;
@@ -75,14 +90,14 @@ where
 {
     fn challenge_pow(&mut self, bits: POWBits) -> ProofResult<POWNonce> {
         // Get the 32 byte seed
-        let mut seed = [0u8; 32];
-        self.fill_challenge_bytes(&mut seed[..16])?;
+        let mut challenge = [0u8; 16];
+        self.fill_challenge_bytes(&mut challenge)?;
         let counter: [u8; 16] = self.next_bytes()?;
-        seed[16..].copy_from_slice(&counter);
 
-        // Instantiate rng and verify.
-        let mut rng = rand_chacha::ChaCha20Rng::from_seed(seed);
-        let num: u64 = rng.gen();
+        // Instantiate keccak and verify.
+        let mut keccak_buf = prepare_keccak_buf(&challenge, &counter);
+        keccak::f1600(&mut keccak_buf);
+        let num = keccak_buf[0];
 
         if num < (1 << bits.0) {
             Ok(POWNonce(counter))
