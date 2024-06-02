@@ -136,7 +136,7 @@ mod tests;
 pub mod anemoi;
 
 pub use crate::traits::*;
-pub use crate::{hash::Unit, Merlin, DuplexHash, IOPattern, Arthur, ProofError, ProofResult, Safe};
+pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
 
 super::traits::field_traits!(ark_ff::Field);
 super::traits::group_traits!(ark_ec::CurveGroup, Scalar: ark_ff::PrimeField);

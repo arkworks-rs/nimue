@@ -2,7 +2,7 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{Merlin, ByteWriter, DuplexHash, ProofResult};
+use crate::{ByteWriter, DuplexHash, Merlin, ProofResult};
 
 impl<F, H, R> FieldWriter<F> for Merlin<H, u8, R>
 where

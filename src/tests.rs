@@ -3,7 +3,7 @@ use rand::RngCore;
 use crate::hash::keccak::Keccak;
 use crate::hash::legacy::DigestBridge;
 use crate::{
-    Merlin, ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Safe,
+    ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Merlin, Safe,
 };
 
 type Sha2 = DigestBridge<sha2::Sha256>;

@@ -8,7 +8,7 @@ use rand::{CryptoRng, RngCore};
 use super::{FieldChallenges, FieldPublic, GroupPublic};
 use crate::plugins::bytes_uniform_modp;
 use crate::{
-    Merlin, ByteChallenges, BytePublic, DuplexHash, IOPatternError, Arthur, ProofError,
+    Arthur, ByteChallenges, BytePublic, DuplexHash, IOPatternError, Merlin, ProofError,
     ProofResult, Unit, UnitTranscript,
 };
 
