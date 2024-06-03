@@ -12,7 +12,6 @@ pub trait UnitTranscript<U: Unit> {
     fn fill_challenge_units(&mut self, output: &mut [U]) -> Result<(), IOPatternError>;
 }
 
-
 /// Absorbing bytes from the sponge, without reading or writing them into the protocol transcript.
 ///
 /// This trait is trivial for byte-oriented sponges, but non-trivial for algebraic hashes.
