@@ -47,7 +47,7 @@ where
         // Output buffer for the hash
         let mut chal_bytes = [0u8; 16];
 
-        // Loop to find a 16-byte nonce
+        // Loop over a 64-bit integer to find a PoWChal sufficiently small.
         for nonce in 0u64.. {
             hash.clone()
                 .absorb_unchecked(&nonce.to_be_bytes())
