@@ -194,7 +194,7 @@ fn test_shosha() {
     \x20\x08\x2F\xB2\x70\x59\x71\xF0\x7B\x31\x58\xB0\x72\xB6\
     \x3A\xB0\x93\x4A\x05\xE6\xAF\x64";
     let mut sho = DigestBridge::<sha2::Sha256>::default();
-    let mut got = vec![0u8; 64];
+    let mut got = [0u8; 64];
     sho.absorb_unchecked(b"asd");
     sho.ratchet_unchecked();
     // streaming absorb
@@ -203,7 +203,7 @@ fn test_shosha() {
     // streaming squeeze
     sho.squeeze_unchecked(&mut got[..32]);
     sho.squeeze_unchecked(&mut got[32..]);
-    assert_eq!(got, expected);
+    assert_eq!(&got, expected);
 
     let expected = b"\xEB\xE4\xEF\x29\xE1\x8A\xA5\x41\x37\xED\xD8\x9C\x23\xF8\
     \xBF\xEA\xC2\x73\x1C\x9F\x67\x5D\xA2\x0E\x7C\x67\xD5\xAD\
@@ -211,12 +211,12 @@ fn test_shosha() {
     \x20\x08\x2F\xB2\x70\x59\x71\xF0\x7B\x31\x58\xB0\x72\xB6\
     \x3A\xB0\x93\x4A\x05\xE6\xAF\x64\x48";
     let mut sho = DigestBridge::<sha2::Sha256>::default();
-    let mut got = vec![0u8; 65];
+    let mut got = [0u8; 65];
     sho.absorb_unchecked(b"asd");
     sho.ratchet_unchecked();
     sho.absorb_unchecked(b"asdasd");
     sho.squeeze_unchecked(&mut got);
-    assert_eq!(got, expected);
+    assert_eq!(&got, expected);
 
     let expected = b"\x0D\xDE\xEA\x97\x3F\x32\x10\xF7\x72\x5A\x3C\xDB\x24\x73\
     \xF8\x73\xAE\xAB\x8F\xEB\x32\xB8\x0D\xEE\x67\xF0\xCD\xE7\
@@ -225,7 +225,7 @@ fn test_shosha() {
     \x57\xAD\xD0\x15\x0D\xF7\xD9";
 
     let mut sho = DigestBridge::<sha2::Sha256>::default();
-    let mut got = vec![0u8; 150];
+    let mut got = [0u8; 150];
     sho.absorb_unchecked(b"");
     sho.ratchet_unchecked();
     sho.absorb_unchecked(b"abc");
