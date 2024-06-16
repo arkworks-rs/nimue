@@ -39,36 +39,37 @@ where
     F: PrimeField,
     Merlin: FieldWriter<F> + FieldChallenges<F>,
 {
-    let num_var = polynomial.num_vars();
-    let mut partial_poly = polynomial.clone();
-    for _ in 0..num_var {
-        let eval = partial_poly.to_evaluations();
+    let mut round_polynomial = polynomial.clone();
+    for _round in 0..polynomial.num_vars() {
+        let eval = round_polynomial.to_evaluations();
         // The partial polynomial of each round is of the form b * x + a.
-        let a = eval.iter().step_by(2).sum();
-        merlin.add_scalars(&[a])?;
-        let [r] = merlin.challenge_scalars()?;
-        partial_poly = partial_poly.fix_variables(&[r]);
+        let round_message = eval.iter().step_by(2).sum();
+        merlin.add_scalars(&[round_message])?;
+        let [challenge] = merlin.challenge_scalars()?;
+        round_polynomial = round_polynomial.fix_variables(&[challenge]);
     }
-    // The folded polynomial
-    let folded = partial_poly.to_evaluations()[0];
-    merlin.add_scalars(&[folded])?;
+    // The last round message
+    let folded_polynomial = round_polynomial.to_evaluations()[0];
+    // One may also check that the folded polynomial is equal to the polynomial evaluated at the challenges
+    // defining `challenges` as the vector of challenges in each round.
+    // debug_assert_eq!(polynomial.evaluate(&challenges), folded);
+    merlin.add_scalars(&[folded_polynomial])?;
     Ok(merlin)
 }
 
 fn verify<F>(
     arthur: &mut Arthur,
     polynomial: &impl MultilinearExtension<F>,
-    value: &F,
+    mut value: F,
 ) -> ProofResult<()>
 where
     F: PrimeField,
     for<'a> Arthur<'a>: FieldReader<F> + FieldChallenges<F>,
 {
-    let mut value = value.clone();
     let num_vars = polynomial.num_vars();
     for _ in 0..num_vars {
         let [a] = arthur.next_scalars()?;
-        let b = value - a - a;
+        let b = value - a.double();
         let [r] = arthur.challenge_scalars()?;
         value = b * r + a;
     }
@@ -87,26 +88,27 @@ fn main() {
 
     let num_vars = 4;
 
-    // initialize the IO Pattern putting the domain separator ("example.com")
-    let iopattern = IOPattern::new("example.com");
-    // // add the IO of the sumcheck statement
-    // let iopattern = SumcheckIOPattern::<F>::sumcheck_statement(iopattern).ratchet();
-    // add the IO of the sumcheck protocol (the transcript)
+    // Initialize the IO Pattern putting the domain separator
+    let iopattern = IOPattern::new("test sumcheck protocol");
+
+    // !Warning! A good practice would be to add here the statement of the proof being performed,
+    // but this example is just performing the information-theoretic part of protocol and is not a full proof.
+
+    // Add the IO of the sumcheck protocol (the transcript)
     let iopattern = SumcheckIOPattern::<Fq>::add_sumcheck(iopattern, num_vars);
 
-    let poly: DenseMultilinearExtension<Fq> = DenseMultilinearExtension::rand(num_vars, &mut OsRng);
-    let statement = poly.to_evaluations().iter().sum::<Fq>();
+    let polynomial: DenseMultilinearExtension<Fq> = DenseMultilinearExtension::rand(num_vars, &mut OsRng);
+    let statement = polynomial.to_evaluations().iter().sum::<Fq>();
 
     let mut merlin = iopattern.to_merlin();
     // merlin.ratchet().unwrap();
-    let proof = prove(&mut merlin, &poly).expect("Error proving");
+    let proof = prove(&mut merlin, &polynomial).expect("Error proving");
     println!(
-        "Here's a sumcheck for {} variables:\n{}",
+        "Here's the transcript for the sumcheck protocol over a polynomial in {} variables:\n{}",
         num_vars,
         hex::encode(proof.transcript())
     );
 
     let mut arthur = iopattern.to_arthur(proof.transcript());
-    // arthur.ratchet().unwrap();
-    verify(&mut arthur, &poly, &statement).expect("Invalid proof");
+    verify(&mut arthur, &polynomial, statement).expect("Invalid proof");
 }
