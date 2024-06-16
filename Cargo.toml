@@ -30,16 +30,14 @@ log = "0.4.20"
 ark-ff = {version="0.4.0", optional=true}
 ark-ec = {version="0.4.0", optional=true}
 ark-serialize = {version="0.4.2", optional=true, features=["std"]}
-ark-poly = {version="0.4.0", optional=true}
 # anemoi = {git = "https://github.com/anemoi-hash/anemoi-rust", optional=true}
 group = {version="0.13.0", optional=true}
 ark-bls12-381 = {version="0.4.0", optional=true}
 
 
 [features]
-default = [] 
+default = []
 ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
-ark-polynomial = [ "ark-poly" ]
 group = ["dep:group"]
 ark-bls12-381 = ["ark", "dep:ark-bls12-381"]
 # anemoi = ["dep:anemoi"]
@@ -59,6 +57,7 @@ ark-pallas = { version = "0.4.0", features = ["std"] }
 pallas = "0.22.0"
 pasta_curves = "0.5.1"
 ark-vesta = { version = "0.4.0", features = ["std"] }
+ark-poly = {version="0.4.0"}
 
 [package.metadata.docs.rs]
 rustdoc-args = [
@@ -81,4 +80,4 @@ required-features = ["ark"]
 
 [[example]]
 name = "sumcheck"
-required-features = ["ark", "ark-polynomial"]
+required-features = ["ark"]
