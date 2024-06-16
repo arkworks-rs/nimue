@@ -1,27 +1,15 @@
-name: Linter and Formatter
+
 
 on:
-    pull_request:
-      branches:
-        - main
-      paths-ignore:
-        - 'README.md'
-        - 'scripts/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
 
+name: Linter and Formatter
 
 jobs:
-  format:
-    name: Checkout PR
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout
-        run: gh pr checkout ${{ github.event.pull_request.number }}
-
-- name: Push changes
-env:
-GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-run: git push
   fmt:
     name: Rustfmt
     env:
@@ -40,6 +28,7 @@ run: git push
         with:
           command: fmt
           args: --all -- --check
+
   clippy:
     name: Clippy
     env:
