@@ -1,11 +1,30 @@
-//! This is the example of a.
+//! Example: multilinear sumcheck proofs.
 //!
 //! Sumcheck proofs allow to prove that, given a multilinear polynomial $g$
 //! defined over field $\mathbb{F}$, the sum of $g$ over boolean hypercube
 //! is equal to $C$.
 //!
+//! In the interactive version of the protocol, the number of rounds is equal
+//! to the number of variables. In each round, the prover sums the
+//! "round polynomial" over all the variables except for the first variable,
+//! and gets a linear polynomial described by two points. Then, it sends the
+//! description to the verifier, gets a challenge from the verifier, fixes the
+//! first variable of round polynomial on that challenge and obtains the next
+//! round polynomial (with one fewer variable).
+//! 
+//! The verifier in each round checks whether the sum of received polynomial
+//! over boolean hypercube is equal to the expected value set in the previous
+//! round. If not, it rejects. In the final round, it checks whether the
+//! evaluation of the received polynomial at the challenge is equal to
+//! evaluation of the $g$ at the tuple of all challenges. If not, it rejects.
+//! 
+//! In the Fiat-Shamir-transformed sumcheck, we do the same, with a minor
+//! optimization to reduce the transcript size. The prover, sends only one
+//! point as the description of the sent polynomial in each round. The verifier
+//! "deduces" the second point using the expected value that is set in the
+//! previous round. In the case of dishonest prover, this deduction results in
+//! the rejection in the last round.
 
-// TODO Add doc for rust-analyzer.cargo.features for examples.
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use nimue::plugins::ark::{FieldChallenges, FieldIOPattern, FieldReader, FieldWriter};
@@ -42,7 +61,8 @@ where
     let mut round_polynomial = polynomial.clone();
     for _round in 0..polynomial.num_vars() {
         let eval = round_polynomial.to_evaluations();
-        // The partial polynomial of each round is of the form b * x + a.
+        // The message polynomial is of the form $b * x + a$. As explained at
+        //the beginning of the file, the prover is required to send only $a$.
         let round_message = eval.iter().step_by(2).sum();
         merlin.add_scalars(&[round_message])?;
         let [challenge] = merlin.challenge_scalars()?;
@@ -52,7 +72,7 @@ where
     let folded_polynomial = round_polynomial.to_evaluations()[0];
     // One may also check that the folded polynomial is equal to the polynomial evaluated at the challenges
     // defining `challenges` as the vector of challenges in each round.
-    // debug_assert_eq!(polynomial.evaluate(&challenges), folded);
+    // debug_assert_eq!(polynomial.evaluate(&challenges), folded_polynomial);
     merlin.add_scalars(&[folded_polynomial])?;
     Ok(merlin)
 }
@@ -69,6 +89,8 @@ where
     let num_vars = polynomial.num_vars();
     for _ in 0..num_vars {
         let [a] = arthur.next_scalars()?;
+        // The message polynomial is of the form $b * x + a$. The verifier
+        // expects $value = (b * 0 + a) + (b * 1 + a)$.
         let b = value - a.double();
         let [r] = arthur.challenge_scalars()?;
         value = b * r + a;
