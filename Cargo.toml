@@ -11,6 +11,7 @@ resolver = "2"
 ark-std = {git = "https://github.com/arkworks-rs/utils"}
 ark-ec = {git = "https://github.com/arkworks-rs/algebra"}
 ark-ff = {git = "https://github.com/arkworks-rs/algebra"}
+ark-poly = {git = "https://github.com/arkworks-rs/algebra"}
 ark-serialize = {git = "https://github.com/arkworks-rs/algebra"}
 ark-bls12-381 = {git = "https://github.com/arkworks-rs/algebra"}
 ark-curve25519 = {git = "https://github.com/arkworks-rs/algebra"}
@@ -35,7 +36,7 @@ ark-bls12-381 = {version="0.4.0", optional=true}
 
 
 [features]
-default = [] 
+default = []
 ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
 group = ["dep:group"]
 ark-bls12-381 = ["ark", "dep:ark-bls12-381"]
@@ -56,6 +57,7 @@ ark-pallas = { version = "0.4.0", features = ["std"] }
 pallas = "0.22.0"
 pasta_curves = "0.5.1"
 ark-vesta = { version = "0.4.0", features = ["std"] }
+ark-poly = {version="0.4.0"}
 
 [package.metadata.docs.rs]
 rustdoc-args = [
@@ -74,4 +76,8 @@ required-features = ["ark"]
 
 [[example]]
 name = "bulletproof"
+required-features = ["ark"]
+
+[[example]]
+name = "sumcheck"
 required-features = ["ark"]

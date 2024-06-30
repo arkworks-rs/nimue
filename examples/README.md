@@ -1,0 +1,1 @@
+Note: When using VSCode, if you would like to use rust-analyzer for the examples, you need to set `rust-analyzer.cargo.features=true` for `examples`.
