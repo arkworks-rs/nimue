@@ -11,13 +11,13 @@
 //! description to the verifier, gets a challenge from the verifier, fixes the
 //! first variable of round polynomial on that challenge and obtains the next
 //! round polynomial (with one fewer variable).
-//! 
+//!
 //! The verifier in each round checks whether the sum of received polynomial
 //! over boolean hypercube is equal to the expected value set in the previous
 //! round. If not, it rejects. In the final round, it checks whether the
 //! evaluation of the received polynomial at the challenge is equal to
 //! evaluation of the $g$ at the tuple of all challenges. If not, it rejects.
-//! 
+//!
 //! In the Fiat-Shamir-transformed sumcheck, we do the same, with a minor
 //! optimization to reduce the transcript size. The prover, sends only one
 //! point as the description of the sent polynomial in each round. The verifier
@@ -119,7 +119,8 @@ fn main() {
     // Add the IO of the sumcheck protocol (the transcript)
     let iopattern = SumcheckIOPattern::<Fq>::add_sumcheck(iopattern, num_vars);
 
-    let polynomial: DenseMultilinearExtension<Fq> = DenseMultilinearExtension::rand(num_vars, &mut OsRng);
+    let polynomial: DenseMultilinearExtension<Fq> =
+        DenseMultilinearExtension::rand(num_vars, &mut OsRng);
     let statement = polynomial.to_evaluations().iter().sum::<Fq>();
 
     let mut merlin = iopattern.to_merlin();
