@@ -35,7 +35,7 @@ ark-bls12-381 = {version="0.4.0", optional=true}
 
 
 [features]
-default = [ "ark" ] 
+default = [] 
 ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
 group = ["dep:group"]
 ark-bls12-381 = ["ark", "dep:ark-bls12-381"]
