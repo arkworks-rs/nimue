@@ -28,17 +28,18 @@ where
     }
 }
 
-impl<C, H, const N: usize> FieldIOPattern<Fp<C, N>> for IOPattern<H, Fp<C, N>>
+impl<F, C, H, const N: usize> FieldIOPattern<F> for IOPattern<H, Fp<C, N>>
 where
+    F: Field<BasePrimeField = Fp<C, N>>,
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
-        self.absorb(count, label)
+        self.absorb(count * F::extension_degree() as usize, label)
     }
 
     fn challenge_scalars(self, count: usize, label: &str) -> Self {
-        self.squeeze(count, label)
+        self.squeeze(count * F::extension_degree() as usize, label)
     }
 }
 
