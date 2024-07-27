@@ -1,20 +1,30 @@
 use ark_ec::CurveGroup;
-use ark_ff::{Fp, FpConfig, PrimeField};
+use ark_ff::{Field, Fp, FpConfig, PrimeField};
 
 use super::*;
 use crate::plugins::{bytes_modp, bytes_uniform_modp};
 
 impl<F, H> FieldIOPattern<F> for IOPattern<H>
 where
-    F: PrimeField,
+    F: Field,
     H: DuplexHash,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
-        self.add_bytes(count * bytes_modp(F::MODULUS_BIT_SIZE), label)
+        self.add_bytes(
+            count
+                * F::extension_degree() as usize
+                * bytes_modp(F::BasePrimeField::MODULUS_BIT_SIZE),
+            label,
+        )
     }
 
     fn challenge_scalars(self, count: usize, label: &str) -> Self {
-        self.challenge_bytes(count * bytes_uniform_modp(F::MODULUS_BIT_SIZE), label)
+        self.challenge_bytes(
+            count
+                * F::extension_degree() as usize
+                * bytes_uniform_modp(F::BasePrimeField::MODULUS_BIT_SIZE),
+            label,
+        )
     }
 }
 
