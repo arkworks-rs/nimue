@@ -98,16 +98,22 @@ where
 
 // Field <-> Field interactions:
 
-impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+impl<F, H, R, C, const N: usize> FieldPublic<F> for Merlin<H, Fp<C, N>, R>
 where
+    F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexHash<Fp<C, N>>,
     R: RngCore + CryptoRng,
     C: FpConfig<N>,
 {
     type Repr = ();
 
-    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
-        self.public_units(input)?;
+    fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
+        let flattened: Vec<_> = input
+            .into_iter()
+            .map(|f| f.to_base_prime_field_elements())
+            .flatten()
+            .collect();
+        self.public_units(&flattened)?;
         Ok(())
     }
 }
@@ -131,15 +137,21 @@ where
 //
 //
 
-impl<H, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
+impl<F, H, C, const N: usize> FieldPublic<F> for Arthur<'_, H, Fp<C, N>>
 where
+    F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexHash<Fp<C, N>>,
     C: FpConfig<N>,
 {
     type Repr = ();
 
-    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
-        self.public_units(input)?;
+    fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
+        let flattened: Vec<_> = input
+            .into_iter()
+            .map(|f| f.to_base_prime_field_elements())
+            .flatten()
+            .collect();
+        self.public_units(&flattened)?;
         Ok(())
     }
 }
