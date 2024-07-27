@@ -77,15 +77,20 @@ where
 
 impl<F, T> FieldChallenges<F> for T
 where
-    F: PrimeField,
+    F: Field,
     T: ByteChallenges,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
-        let mut buf = vec![0u8; bytes_uniform_modp(F::MODULUS_BIT_SIZE)];
+        let base_field_size = bytes_uniform_modp(F::BasePrimeField::MODULUS_BIT_SIZE);
+        let mut buf = vec![0u8; F::extension_degree() as usize * base_field_size];
 
         for o in output.iter_mut() {
             self.fill_challenge_bytes(&mut buf)?;
-            *o = F::from_be_bytes_mod_order(&buf).into();
+            *o = F::from_base_prime_field_elems(
+                buf.chunks(base_field_size)
+                    .map(F::BasePrimeField::from_be_bytes_mod_order),
+            )
+            .expect("Could not convert");
         }
         Ok(())
     }
