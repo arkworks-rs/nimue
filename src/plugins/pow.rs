@@ -1,3 +1,5 @@
+use std::u64;
+
 use crate::{
     hash::Keccak, Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash,
     IOPattern, Merlin, ProofError, ProofResult,
@@ -32,16 +34,16 @@ impl PoWIOPattern for IOPattern {
 
 pub trait PoWChallenge {
     /// Extension trait for generating a proof-of-work challenge.
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()>;
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()>;
 }
 
 impl PoWChallenge for Merlin
 where
     Merlin: ByteWriter,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()> {
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
-        let nonce = Pow::new(challenge, bits as f64)
+        let nonce = Pow::new(challenge, bits)
             .solve()
             .ok_or(ProofError::InvalidProof)?;
         self.add_bytes(&nonce.to_be_bytes())?;
@@ -53,10 +55,10 @@ impl<'a> PoWChallenge for Arthur<'a>
 where
     Arthur<'a>: ByteReader,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()> {
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
         let nonce = u64::from_be_bytes(self.next_bytes()?);
-        if Pow::new(challenge, bits as f64).check(nonce) {
+        if Pow::new(challenge, bits).check(nonce) {
             Ok(())
         } else {
             Err(ProofError::InvalidProof)
@@ -67,24 +69,29 @@ where
 #[derive(Clone, Copy)]
 struct Pow {
     challenge: [u8; 32],
-    bits: usize,
+    threshold: u64,
 }
 
 impl Pow {
+    /// Creates a new proof-of-work challenge.
+    /// The `challenge` is a 32-byte array that represents the challenge.
+    /// The `bits` is the binary logarithm of the expected amount of work.
+    /// When `bits` is large (i.e. close to 64), a valid solution may not be found.
     fn new(challenge: [u8; 32], bits: f64) -> Self {
+        assert!((0.0..60.0).contains(&bits), "bits must be smaller than 60");
+        let threshold = (64.0 - bits).exp2().ceil() as u64;
         Self {
             challenge,
-            bits: bits as usize,
+            threshold,
         }
     }
 
     fn check(&mut self, nonce: u64) -> bool {
-        let mut chal_bytes = [0u8; 16];
+        let mut chal_bytes = [0u8; 8];
         Keccak::new(self.challenge)
-            .absorb_unchecked(&nonce.to_be_bytes())
+            .absorb_unchecked(&nonce.to_le_bytes())
             .squeeze_unchecked(&mut chal_bytes);
-        let chal = u128::from_be_bytes(chal_bytes);
-        (chal << self.bits) >> self.bits == chal
+        u64::from_le_bytes(chal_bytes) < self.threshold
     }
 
     /// Finds the minimal `nonce` that satisfies the challenge.
@@ -131,10 +138,10 @@ fn test_pow() {
 
     let mut prover = iopattern.to_merlin();
     prover.add_bytes(b"\0").expect("Invalid IOPattern");
-    prover.challenge_pow(5).unwrap();
+    prover.challenge_pow(15.5).unwrap();
 
     let mut verifier = iopattern.to_arthur(prover.transcript());
     let byte = verifier.next_bytes::<1>().unwrap();
     assert_eq!(&byte, b"\0");
-    verifier.challenge_pow(5).unwrap();
+    verifier.challenge_pow(15.5).unwrap();
 }
