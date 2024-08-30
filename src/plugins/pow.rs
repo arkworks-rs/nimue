@@ -8,10 +8,6 @@ use {
     std::sync::atomic::{AtomicU64, Ordering},
 };
 
-/// Wrapper type for a challenge generated via a proof-of-work.
-/// The challenge is a 128-bit integer.
-pub struct PoWChal(pub u128);
-
 /// [`IOPattern`] for proof-of-work challenges.
 pub trait PoWIOPattern {
     /// Adds a [`PoWChal`] to the [`IOPattern`].
@@ -36,20 +32,20 @@ impl PoWIOPattern for IOPattern {
 
 pub trait PoWChallenge {
     /// Extension trait for generating a proof-of-work challenge.
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal>;
+    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()>;
 }
 
 impl PoWChallenge for Merlin
 where
     Merlin: ByteWriter,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
+    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
         let nonce = Pow::new(challenge, bits as f64)
             .solve()
             .ok_or(ProofError::InvalidProof)?;
         self.add_bytes(&nonce.to_be_bytes())?;
-        Ok(PoWChal(nonce as u128)) // TODO: Value is nonsensical
+        Ok(())
     }
 }
 
@@ -57,11 +53,11 @@ impl<'a> PoWChallenge for Arthur<'a>
 where
     Arthur<'a>: ByteReader,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
+    fn challenge_pow(&mut self, bits: usize) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
         let nonce = u64::from_be_bytes(self.next_bytes()?);
         if Pow::new(challenge, bits as f64).check(nonce) {
-            Ok(PoWChal(nonce as u128))
+            Ok(())
         } else {
             Err(ProofError::InvalidProof)
         }
@@ -135,11 +131,10 @@ fn test_pow() {
 
     let mut prover = iopattern.to_merlin();
     prover.add_bytes(b"\0").expect("Invalid IOPattern");
-    let expected = prover.challenge_pow(5).unwrap();
+    prover.challenge_pow(5).unwrap();
 
     let mut verifier = iopattern.to_arthur(prover.transcript());
     let byte = verifier.next_bytes::<1>().unwrap();
     assert_eq!(&byte, b"\0");
-    let got = verifier.challenge_pow(5).unwrap();
-    assert_eq!(expected.0, got.0);
+    verifier.challenge_pow(5).unwrap();
 }
