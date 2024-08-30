@@ -68,8 +68,9 @@ where
 
 #[derive(Clone, Copy)]
 struct Pow {
-    challenge: [u8; 32],
+    challenge: [u64; 4],
     threshold: u64,
+    state: [u64; 25],
 }
 
 impl Pow {
@@ -81,17 +82,20 @@ impl Pow {
         assert!((0.0..60.0).contains(&bits), "bits must be smaller than 60");
         let threshold = (64.0 - bits).exp2().ceil() as u64;
         Self {
-            challenge,
+            challenge: bytemuck::cast(challenge),
             threshold,
+            state: [0; 25],
         }
     }
 
     fn check(&mut self, nonce: u64) -> bool {
-        let mut chal_bytes = [0u8; 8];
-        Keccak::new(self.challenge)
-            .absorb_unchecked(&nonce.to_le_bytes())
-            .squeeze_unchecked(&mut chal_bytes);
-        u64::from_le_bytes(chal_bytes) < self.threshold
+        self.state[..4].copy_from_slice(&self.challenge);
+        self.state[4] = nonce;
+        for s in self.state.iter_mut().skip(5) {
+            *s = 0;
+        }
+        keccak::f1600(&mut self.state);
+        self.state[0] < self.threshold
     }
 
     /// Finds the minimal `nonce` that satisfies the challenge.
@@ -132,16 +136,18 @@ impl Pow {
 
 #[test]
 fn test_pow() {
+    const BITS: f64 = 10.0;
+
     let iopattern = IOPattern::new("the proof of work lottery 🎰")
         .add_bytes(1, "something")
         .challenge_pow("rolling dices");
 
     let mut prover = iopattern.to_merlin();
     prover.add_bytes(b"\0").expect("Invalid IOPattern");
-    prover.challenge_pow(15.5).unwrap();
+    prover.challenge_pow(BITS).unwrap();
 
     let mut verifier = iopattern.to_arthur(prover.transcript());
     let byte = verifier.next_bytes::<1>().unwrap();
     assert_eq!(&byte, b"\0");
-    verifier.challenge_pow(15.5).unwrap();
+    verifier.challenge_pow(BITS).unwrap();
 }
