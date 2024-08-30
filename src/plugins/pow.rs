@@ -2,6 +2,11 @@ use crate::{
     hash::Keccak, Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash,
     IOPattern, Merlin, ProofError, ProofResult,
 };
+#[cfg(feature = "parallel")]
+use {
+    rayon::broadcast,
+    std::sync::atomic::{AtomicU64, Ordering},
+};
 
 /// Wrapper type for a challenge generated via a proof-of-work.
 /// The challenge is a 128-bit integer.
@@ -39,28 +44,12 @@ where
     Merlin: ByteWriter,
 {
     fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
-        // Seed a new hash with the 32-byte challenge.
-        let mut challenge = [0u8; 32];
-        self.fill_challenge_bytes(&mut challenge)?;
-        let hash = Keccak::new(challenge);
-
-        // Output buffer for the hash
-        let mut chal_bytes = [0u8; 16];
-
-        // Loop over a 64-bit integer to find a PoWChal sufficiently small.
-        for nonce in 0u64.. {
-            hash.clone()
-                .absorb_unchecked(&nonce.to_be_bytes())
-                .squeeze_unchecked(&mut chal_bytes);
-            let chal = u128::from_be_bytes(chal_bytes);
-            if (chal << bits) >> bits == chal {
-                self.add_bytes(&nonce.to_be_bytes())?;
-                return Ok(PoWChal(chal));
-            }
-        }
-
-        // Congratulations, you wasted 2^64 Keccak calls. You're a winner.
-        Err(ProofError::InvalidProof)
+        let challenge = self.challenge_bytes()?;
+        let nonce = Pow::new(challenge, bits as f64)
+            .solve()
+            .ok_or(ProofError::InvalidProof)?;
+        self.add_bytes(&nonce.to_be_bytes())?;
+        Ok(PoWChal(nonce as u128)) // TODO: Value is nonsensical
     }
 }
 
@@ -69,20 +58,71 @@ where
     Arthur<'a>: ByteReader,
 {
     fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
-        // Re-compute the challenge and store it in chal_bytes
-        let mut chal_bytes = [0u8; 16];
-        let iv = self.challenge_bytes::<32>()?;
-        let nonce = self.next_bytes::<8>()?;
-        Keccak::new(iv)
-            .absorb_unchecked(&nonce)
-            .squeeze_unchecked(&mut chal_bytes);
-
-        // Check if the challenge is valid
-        let chal = u128::from_be_bytes(chal_bytes);
-        if (chal << bits) >> bits == chal {
-            Ok(PoWChal(chal))
+        let challenge = self.challenge_bytes()?;
+        let nonce = u64::from_be_bytes(self.next_bytes()?);
+        if Pow::new(challenge, bits as f64).check(nonce) {
+            Ok(PoWChal(nonce as u128))
         } else {
             Err(ProofError::InvalidProof)
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Pow {
+    challenge: [u8; 32],
+    bits: usize,
+}
+
+impl Pow {
+    fn new(challenge: [u8; 32], bits: f64) -> Self {
+        Self {
+            challenge,
+            bits: bits as usize,
+        }
+    }
+
+    fn check(&mut self, nonce: u64) -> bool {
+        let mut chal_bytes = [0u8; 16];
+        Keccak::new(self.challenge)
+            .absorb_unchecked(&nonce.to_be_bytes())
+            .squeeze_unchecked(&mut chal_bytes);
+        let chal = u128::from_be_bytes(chal_bytes);
+        (chal << self.bits) >> self.bits == chal
+    }
+
+    /// Finds the minimal `nonce` that satisfies the challenge.
+    #[cfg(not(feature = "parallel"))]
+    fn solve(&mut self) -> Option<u64> {
+        (0u64..).find(|n| self.check(n))
+    }
+
+    /// Finds the minimal `nonce` that satisfies the challenge.
+    #[cfg(feature = "parallel")]
+    fn solve(&mut self) -> Option<u64> {
+        // Split the work across all available threads.
+        // Use atomics to find the unique deterministic lowest satisfying nonce.
+        let global_min = AtomicU64::new(u64::MAX);
+        let _ = broadcast(|ctx| {
+            let mut worker = self.clone();
+            let nonces = (ctx.index() as u64..).step_by(ctx.num_threads());
+            for nonce in nonces {
+                // Use relaxed ordering to eventually get notified of another thread's solution.
+                // (Propagation delay should be in the order of tens of nanoseconds.)
+                if nonce >= global_min.load(Ordering::Relaxed) {
+                    break;
+                }
+                if worker.check(nonce) {
+                    // We found a solution, store it in the global_min.
+                    // Use fetch_min to solve race condition with simultaneous solutions.
+                    global_min.fetch_min(nonce, Ordering::SeqCst);
+                    break;
+                }
+            }
+        });
+        match global_min.load(Ordering::SeqCst) {
+            u64::MAX => self.check(u64::MAX).then_some(u64::MAX),
+            nonce => Some(nonce),
         }
     }
 }
