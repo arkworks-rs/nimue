@@ -6,6 +6,7 @@ use crate::{
 };
 #[cfg(feature = "parallel")]
 use {
+    blake3::platform::{Platform, MAX_SIMD_DEGREE},
     rayon::broadcast,
     std::sync::atomic::{AtomicU64, Ordering},
 };
@@ -70,6 +71,7 @@ where
 struct Pow {
     challenge: [u64; 4],
     threshold: u64,
+    platform: Platform,
     state: [u64; 25],
 }
 
@@ -81,11 +83,19 @@ impl Pow {
     fn new(challenge: [u8; 32], bits: f64) -> Self {
         assert!((0.0..60.0).contains(&bits), "bits must be smaller than 60");
         let threshold = (64.0 - bits).exp2().ceil() as u64;
+        let platform = Platform::detect();
+        eprintln!(
+            "Parallelism: {} out of {} using {:?}",
+            platform.simd_degree(),
+            MAX_SIMD_DEGREE,
+            platform
+        );
         Self {
             // Convert the 32-byte challenge into a 4-element array of u64.
             // This assumes that the prover and verifier have the same endianess.
             challenge: bytemuck::cast(challenge),
             threshold,
+            platform,
             state: [0; 25],
         }
     }
