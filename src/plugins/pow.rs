@@ -82,6 +82,8 @@ impl Pow {
         assert!((0.0..60.0).contains(&bits), "bits must be smaller than 60");
         let threshold = (64.0 - bits).exp2().ceil() as u64;
         Self {
+            // Convert the 32-byte challenge into a 4-element array of u64.
+            // This assumes that the prover and verifier have the same endianess.
             challenge: bytemuck::cast(challenge),
             threshold,
             state: [0; 25],
@@ -89,6 +91,8 @@ impl Pow {
     }
 
     fn check(&mut self, nonce: u64) -> bool {
+        // TODO: Apply correct padding to be compatible with Keccak or SHA-3.
+        // TODO: Use `blake3::platform::hash_many` to leverage SIMD instructions.
         self.state[..4].copy_from_slice(&self.challenge);
         self.state[4] = nonce;
         for s in self.state.iter_mut().skip(5) {
