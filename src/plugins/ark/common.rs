@@ -77,15 +77,20 @@ where
 
 impl<F, T> FieldChallenges<F> for T
 where
-    F: PrimeField,
+    F: Field,
     T: ByteChallenges,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
-        let mut buf = vec![0u8; bytes_uniform_modp(F::MODULUS_BIT_SIZE)];
+        let base_field_size = bytes_uniform_modp(F::BasePrimeField::MODULUS_BIT_SIZE);
+        let mut buf = vec![0u8; F::extension_degree() as usize * base_field_size];
 
         for o in output.iter_mut() {
             self.fill_challenge_bytes(&mut buf)?;
-            *o = F::from_be_bytes_mod_order(&buf).into();
+            *o = F::from_base_prime_field_elems(
+                buf.chunks(base_field_size)
+                    .map(F::BasePrimeField::from_be_bytes_mod_order),
+            )
+            .expect("Could not convert");
         }
         Ok(())
     }
@@ -93,16 +98,22 @@ where
 
 // Field <-> Field interactions:
 
-impl<H, R, C, const N: usize> FieldPublic<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+impl<F, H, R, C, const N: usize> FieldPublic<F> for Merlin<H, Fp<C, N>, R>
 where
+    F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexHash<Fp<C, N>>,
     R: RngCore + CryptoRng,
     C: FpConfig<N>,
 {
     type Repr = ();
 
-    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
-        self.public_units(input)?;
+    fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
+        let flattened: Vec<_> = input
+            .into_iter()
+            .map(|f| f.to_base_prime_field_elements())
+            .flatten()
+            .collect();
+        self.public_units(&flattened)?;
         Ok(())
     }
 }
@@ -126,15 +137,21 @@ where
 //
 //
 
-impl<H, C, const N: usize> FieldPublic<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
+impl<F, H, C, const N: usize> FieldPublic<F> for Arthur<'_, H, Fp<C, N>>
 where
+    F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexHash<Fp<C, N>>,
     C: FpConfig<N>,
 {
     type Repr = ();
 
-    fn public_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<Self::Repr> {
-        self.public_units(input)?;
+    fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
+        let flattened: Vec<_> = input
+            .into_iter()
+            .map(|f| f.to_base_prime_field_elements())
+            .flatten()
+            .collect();
+        self.public_units(&flattened)?;
         Ok(())
     }
 }

@@ -1,11 +1,18 @@
 use crate::{
-    hash::Keccak, Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash,
-    IOPattern, Merlin, ProofError, ProofResult,
+    Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, IOPattern, Merlin, ProofError,
+    ProofResult,
+};
+use {
+    blake3::{
+        guts::BLOCK_LEN,
+        platform::{Platform, MAX_SIMD_DEGREE},
+        IncrementCounter, OUT_LEN,
+    },
+    std::sync::atomic::{AtomicU64, Ordering},
 };
 
-/// Wrapper type for a challenge generated via a proof-of-work.
-/// The challenge is a 128-bit integer.
-pub struct PoWChal(pub u128);
+#[cfg(feature = "parallel")]
+use rayon::broadcast;
 
 /// [`IOPattern`] for proof-of-work challenges.
 pub trait PoWIOPattern {
@@ -31,36 +38,20 @@ impl PoWIOPattern for IOPattern {
 
 pub trait PoWChallenge {
     /// Extension trait for generating a proof-of-work challenge.
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal>;
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()>;
 }
 
 impl PoWChallenge for Merlin
 where
     Merlin: ByteWriter,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
-        // Seed a new hash with the 32-byte challenge.
-        let mut challenge = [0u8; 32];
-        self.fill_challenge_bytes(&mut challenge)?;
-        let hash = Keccak::new(challenge);
-
-        // Output buffer for the hash
-        let mut chal_bytes = [0u8; 16];
-
-        // Loop over a 64-bit integer to find a PoWChal sufficiently small.
-        for nonce in 0u64.. {
-            hash.clone()
-                .absorb_unchecked(&nonce.to_be_bytes())
-                .squeeze_unchecked(&mut chal_bytes);
-            let chal = u128::from_be_bytes(chal_bytes);
-            if (chal << bits) >> bits == chal {
-                self.add_bytes(&nonce.to_be_bytes())?;
-                return Ok(PoWChal(chal));
-            }
-        }
-
-        // Congratulations, you wasted 2^64 Keccak calls. You're a winner.
-        Err(ProofError::InvalidProof)
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()> {
+        let challenge = self.challenge_bytes()?;
+        let nonce = Pow::new(challenge, bits)
+            .solve()
+            .ok_or(ProofError::InvalidProof)?;
+        self.add_bytes(&nonce.to_be_bytes())?;
+        Ok(())
     }
 }
 
@@ -68,38 +59,163 @@ impl<'a> PoWChallenge for Arthur<'a>
 where
     Arthur<'a>: ByteReader,
 {
-    fn challenge_pow(&mut self, bits: usize) -> ProofResult<PoWChal> {
-        // Re-compute the challenge and store it in chal_bytes
-        let mut chal_bytes = [0u8; 16];
-        let iv = self.challenge_bytes::<32>()?;
-        let nonce = self.next_bytes::<8>()?;
-        Keccak::new(iv)
-            .absorb_unchecked(&nonce)
-            .squeeze_unchecked(&mut chal_bytes);
-
-        // Check if the challenge is valid
-        let chal = u128::from_be_bytes(chal_bytes);
-        if (chal << bits) >> bits == chal {
-            Ok(PoWChal(chal))
+    fn challenge_pow(&mut self, bits: f64) -> ProofResult<()> {
+        let challenge = self.challenge_bytes()?;
+        let nonce = u64::from_be_bytes(self.next_bytes()?);
+        if Pow::new(challenge, bits).check(nonce) {
+            Ok(())
         } else {
             Err(ProofError::InvalidProof)
         }
     }
 }
 
+#[derive(Clone, Copy)]
+struct Pow {
+    challenge: [u8; 32],
+    threshold: u64,
+    platform: Platform,
+    inputs: [u8; BLOCK_LEN * MAX_SIMD_DEGREE],
+    outputs: [u8; OUT_LEN * MAX_SIMD_DEGREE],
+}
+
+impl Pow {
+    /// Default Blake3 initialization vector. Copied here because it is not publicly exported.
+    const BLAKE3_IV: [u32; 8] = [
+        0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB,
+        0x5BE0CD19,
+    ];
+    const BLAKE3_FLAGS: u8 = 0x0B; // CHUNK_START | CHUNK_END | ROOT
+
+    /// Creates a new proof-of-work challenge.
+    /// The `challenge` is a 32-byte array that represents the challenge.
+    /// The `bits` is the binary logarithm of the expected amount of work.
+    /// When `bits` is large (i.e. close to 64), a valid solution may not be found.
+    fn new(challenge: [u8; 32], bits: f64) -> Self {
+        assert_eq!(BLOCK_LEN, 64);
+        assert_eq!(OUT_LEN, 32);
+        assert!((0.0..60.0).contains(&bits), "bits must be smaller than 60");
+        let threshold = (64.0 - bits).exp2().ceil() as u64;
+        let platform = Platform::detect();
+        let mut inputs = [0; BLOCK_LEN * MAX_SIMD_DEGREE];
+        for input in inputs.chunks_exact_mut(BLOCK_LEN) {
+            input[..challenge.len()].copy_from_slice(&challenge);
+        }
+        let outputs = [0; OUT_LEN * MAX_SIMD_DEGREE];
+        Self {
+            challenge,
+            threshold,
+            platform,
+            inputs,
+            outputs,
+        }
+    }
+
+    /// Check if the `nonce` satisfies the challenge.
+    /// This deliberately uses the high level interface to guarantee
+    /// compatibility with standard Blake3.
+    fn check(&mut self, nonce: u64) -> bool {
+        // Ingest the challenge and the nonce.
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&self.challenge);
+        hasher.update(&nonce.to_le_bytes());
+        hasher.update(&[0; 24]); // Nonce is zero extended to 32 bytes.
+
+        // Check if the hash is below the threshold.
+        let mut result_bytes = [0; 8];
+        hasher.finalize_xof().fill(&mut result_bytes);
+        let result = u64::from_le_bytes(result_bytes);
+        result < self.threshold
+    }
+
+    /// Find the minimal nonce that satisfies the challenge (if any) in a
+    /// length `MAX_SIMD_DEGREE` sequence of nonces starting from `nonce`.
+    fn check_many(&mut self, nonce: u64) -> Option<u64> {
+        for (i, input) in self.inputs.chunks_exact_mut(BLOCK_LEN).enumerate() {
+            input[32..40].copy_from_slice(&(nonce + i as u64).to_le_bytes())
+        }
+        // `hash_many` requires an array of references. We need to construct this fresh
+        // each call as we cannot store the references and mutate the array.
+        let inputs: [&[u8; BLOCK_LEN]; MAX_SIMD_DEGREE] = std::array::from_fn(|i| {
+            self.inputs[(i * BLOCK_LEN)..((i + 1) * BLOCK_LEN)]
+                .try_into()
+                .unwrap()
+        });
+        let counter = 0;
+        let flags_start = 0;
+        let flags_end = 0;
+        self.platform.hash_many::<BLOCK_LEN>(
+            &inputs,
+            &Self::BLAKE3_IV,
+            counter,
+            IncrementCounter::No,
+            Self::BLAKE3_FLAGS,
+            flags_start,
+            flags_end,
+            &mut self.outputs,
+        );
+        for (i, input) in self.outputs.chunks_exact_mut(OUT_LEN).enumerate() {
+            let result = u64::from_le_bytes(input[..8].try_into().unwrap());
+            if result < self.threshold {
+                return Some(nonce + i as u64);
+            }
+        }
+        None
+    }
+
+    /// Finds the minimal `nonce` that satisfies the challenge.
+    #[cfg(not(feature = "parallel"))]
+    fn solve(&mut self) -> Option<u64> {
+        (0u64..)
+            .step_by(MAX_SIMD_DEGREE)
+            .find_map(|nonce| self.check_many(nonce))
+    }
+
+    /// Finds the minimal `nonce` that satisfies the challenge.
+    #[cfg(feature = "parallel")]
+    fn solve(&mut self) -> Option<u64> {
+        // Split the work across all available threads.
+        // Use atomics to find the unique deterministic lowest satisfying nonce.
+        let global_min = AtomicU64::new(u64::MAX);
+        let _ = broadcast(|ctx| {
+            let mut worker = self.clone();
+            let nonces = ((MAX_SIMD_DEGREE * ctx.index()) as u64..)
+                .step_by(MAX_SIMD_DEGREE * ctx.num_threads());
+            for nonce in nonces {
+                // Use relaxed ordering to eventually get notified of another thread's solution.
+                // (Propagation delay should be in the order of tens of nanoseconds.)
+                if nonce >= global_min.load(Ordering::Relaxed) {
+                    break;
+                }
+                if let Some(nonce) = worker.check_many(nonce) {
+                    // We found a solution, store it in the global_min.
+                    // Use fetch_min to solve race condition with simultaneous solutions.
+                    global_min.fetch_min(nonce, Ordering::SeqCst);
+                    break;
+                }
+            }
+        });
+        match global_min.load(Ordering::SeqCst) {
+            u64::MAX => self.check(u64::MAX).then_some(u64::MAX),
+            nonce => Some(nonce),
+        }
+    }
+}
+
 #[test]
 fn test_pow() {
+    const BITS: f64 = 10.0;
+
     let iopattern = IOPattern::new("the proof of work lottery 🎰")
         .add_bytes(1, "something")
         .challenge_pow("rolling dices");
 
     let mut prover = iopattern.to_merlin();
     prover.add_bytes(b"\0").expect("Invalid IOPattern");
-    let expected = prover.challenge_pow(5).unwrap();
+    prover.challenge_pow(BITS).unwrap();
 
     let mut verifier = iopattern.to_arthur(prover.transcript());
     let byte = verifier.next_bytes::<1>().unwrap();
     assert_eq!(&byte, b"\0");
-    let got = verifier.challenge_pow(5).unwrap();
-    assert_eq!(expected.0, got.0);
+    verifier.challenge_pow(BITS).unwrap();
 }
