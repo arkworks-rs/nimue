@@ -70,7 +70,7 @@ required-features = ["ark"]
 
 [[example]]
 name = "schnorr_algebraic_hash"
-required-features = ["ark"]
+required-features = ["ark", "ark-bls12-381"]
 
 [[example]]
 name = "bulletproof"
