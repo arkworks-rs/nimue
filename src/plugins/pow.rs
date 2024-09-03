@@ -128,7 +128,7 @@ impl Pow {
         result < self.threshold
     }
 
-    /// Find the mininal nonce that satisfies the challenge (if any) in a
+    /// Find the minimal nonce that satisfies the challenge (if any) in a
     /// length `MAX_SIMD_DEGREE` sequence of nonces starting from `nonce`.
     fn check_many(&mut self, nonce: u64) -> Option<u64> {
         for (i, input) in self.inputs.chunks_exact_mut(BLOCK_LEN).enumerate() {
