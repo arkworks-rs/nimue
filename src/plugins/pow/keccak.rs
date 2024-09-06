@@ -17,8 +17,6 @@ impl PowStrategy for KeccakPoW {
         }
     }
 
-    /// This deliberately uses the high level interface to guarantee
-    /// compatibility with standard Blake3.
     fn check(&mut self, nonce: u64) -> bool {
         self.state[..4].copy_from_slice(&self.challenge);
         self.state[4] = nonce;
