@@ -29,3 +29,26 @@ impl PowStrategy for KeccakPoW {
         self.state[0] < self.threshold
     }
 }
+
+#[test]
+fn test_pow_keccak() {
+    use crate::{
+        plugins::pow::{PoWChallenge, PoWIOPattern},
+        ByteIOPattern, ByteReader, ByteWriter, IOPattern,
+    };
+
+    const BITS: f64 = 10.0;
+
+    let iopattern = IOPattern::new("the proof of work lottery 🎰")
+        .add_bytes(1, "something")
+        .challenge_pow("rolling dices");
+
+    let mut prover = iopattern.to_merlin();
+    prover.add_bytes(b"\0").expect("Invalid IOPattern");
+    prover.challenge_pow::<KeccakPoW>(BITS).unwrap();
+
+    let mut verifier = iopattern.to_arthur(prover.transcript());
+    let byte = verifier.next_bytes::<1>().unwrap();
+    assert_eq!(&byte, b"\0");
+    verifier.challenge_pow::<KeccakPoW>(BITS).unwrap();
+}

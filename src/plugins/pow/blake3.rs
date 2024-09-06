@@ -142,7 +142,7 @@ impl Blake3PoW {
 }
 
 #[test]
-fn test_pow() {
+fn test_pow_blake3() {
     use crate::{
         plugins::pow::{PoWChallenge, PoWIOPattern},
         ByteIOPattern, ByteReader, ByteWriter, IOPattern,
