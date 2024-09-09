@@ -1,5 +1,5 @@
-mod blake3;
-mod keccak;
+pub mod blake3;
+pub mod keccak;
 
 use crate::{
     Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, IOPattern, Merlin, ProofError,
