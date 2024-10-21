@@ -10,9 +10,9 @@ $ python3 scripts/useful_bits_modp.py <<< 0x1a0111ea397fe69a4b1ba7b6434bacd76477
 
 def useful_bits(p):
     return max(
-        n for n in range(p.bit_length() - 1, 0, -1)
-        if n + 1 + p.bit_length() - (alpha := p % 2 ** n).bit_length() -
-        (2 ** n - alpha).bit_length() >= 128
+        n for n in range(p.bit_length())
+        if n + p.bit_length() - 1 - (r := p % 2 ** n).bit_length() -
+        (2**n - r).bit_length() >= 128
     )
 
 

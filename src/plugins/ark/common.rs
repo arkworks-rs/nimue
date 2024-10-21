@@ -228,7 +228,7 @@ where
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         let len_good = usize::min(
-            crate::plugins::bytes_uniform_modp(Fp::<C, N>::MODULUS_BIT_SIZE),
+            crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
             output.len(),
         );
         let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
@@ -242,6 +242,8 @@ where
     }
 }
 
+
+/// XXX. duplicate code
 impl<'a, H, C, const N: usize> ByteChallenges for Arthur<'a, H, Fp<C, N>>
 where
     C: FpConfig<N>,
@@ -249,7 +251,7 @@ where
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         let len_good = usize::min(
-            crate::plugins::bytes_uniform_modp(Fp::<C, N>::MODULUS_BIT_SIZE),
+            crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
             output.len(),
         );
         let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);

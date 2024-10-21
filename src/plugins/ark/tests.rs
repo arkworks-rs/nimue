@@ -5,7 +5,7 @@ use crate::{
     ProofResult, Unit, UnitTranscript,
 };
 #[cfg(feature = "ark-bls12-381")]
-use ark_bls12_381::{Fq2, Fr};
+use ark_bls12_381::{Fq, Fq2, Fr};
 use ark_ff::Field;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
@@ -99,6 +99,19 @@ fn test_arkworks_end_to_end<F: Field, H: DuplexHash>() -> ProofResult<()> {
     assert_eq!(b1, c1);
 
     Ok(())
+}
+
+#[cfg(feature = "ark-bls12-381")]
+#[test]
+fn test_squeeze_bytes_from_modp() {
+    use ark_ff::PrimeField;
+    use crate::plugins::random_bytes_in_random_modp;
+
+    let useful_bytes = random_bytes_in_random_modp(Fr::MODULUS);
+    assert_eq!(useful_bytes, 127 / 8);
+
+    let useful_bytes = random_bytes_in_random_modp(Fq::MODULUS);
+    assert_eq!(useful_bytes, 253 / 8);
 }
 
 #[cfg(feature = "ark-bls12-381")]
