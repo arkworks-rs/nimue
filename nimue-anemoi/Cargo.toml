@@ -6,7 +6,7 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 ark-ff = "^0.4.2"
-nimue = { version = "0.1.0", path = "../nimue", features = ["ark"] }
+nimue = { path = "../nimue", features = ["ark"] }
 zeroize = "1.8.1"
 anemoi = {git = "https://github.com/mmaker/anemoi", features=["bls12_381"]}
 ark-bls12-381 = "^0.4.0"
