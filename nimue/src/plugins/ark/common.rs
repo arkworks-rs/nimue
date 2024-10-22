@@ -227,18 +227,24 @@ where
     R: CryptoRng + rand::RngCore,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        let len_good = usize::min(
-            crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
-            output.len(),
-        );
-        let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
-        let mut tmp = [Fp::from(0); 1];
-        let mut buf = vec![0u8; len];
-        self.fill_challenge_units(&mut tmp)?;
-        tmp[0].serialize_compressed(&mut buf).unwrap();
+        if output == &[] {
+            Ok(())
+        } else {
+            let len_good = usize::min(
+                crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
+                output.len(),
+            );
+            let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
+            let mut tmp = [Fp::from(0); 1];
+            let mut buf = vec![0u8; len];
+            self.fill_challenge_units(&mut tmp)?;
+            tmp[0].serialize_compressed(&mut buf).unwrap();
 
-        output[..len_good].copy_from_slice(&buf[..len_good]);
-        Ok(())
+            output[..len_good].copy_from_slice(&buf[..len_good]);
+
+            // recursively fill the rest of the buffer
+            self.fill_challenge_bytes(&mut output[len_good..])
+        }
     }
 }
 
