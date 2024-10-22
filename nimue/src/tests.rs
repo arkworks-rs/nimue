@@ -109,7 +109,7 @@ fn test_statistics() {
     // each element should appear roughly 8 times on average. Checking we're not too far from that.
     assert!(frequencies
         .iter()
-        .all(|&x| x < frequencies[0] + 16 && x > 0));
+        .all(|&x| x < 32 && x > 0));
 }
 
 #[test]
