@@ -130,7 +130,7 @@ fn main() {
     // type H = nimue::hash::Keccak;
     type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
-    // type H = nimue::plugins::ark::poseidon::PoseidonHash;
+    // type H = nimue_poseidon::PoseidonHash;
 
     // Unit type where the hash function works over.
     type U = u8;

@@ -242,7 +242,6 @@ where
     }
 }
 
-
 /// XXX. duplicate code
 impl<'a, H, C, const N: usize> ByteChallenges for Arthur<'a, H, Fp<C, N>>
 where

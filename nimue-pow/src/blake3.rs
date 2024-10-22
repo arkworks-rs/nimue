@@ -1,4 +1,5 @@
 use super::PowStrategy;
+use blake3;
 
 use {
     blake3::{
@@ -144,8 +145,7 @@ impl Blake3PoW {
 #[test]
 fn test_pow_blake3() {
     use crate::{
-        plugins::pow::{PoWChallenge, PoWIOPattern},
-        ByteIOPattern, ByteReader, ByteWriter, IOPattern,
+        ByteIOPattern, IOPattern, PoWIOPattern, ByteReader, ByteWriter, PoWChallenge
     };
 
     const BITS: f64 = 10.0;

@@ -1,10 +1,11 @@
-// pub mod blake3;
+pub mod blake3;
 pub mod keccak;
 
-use crate::{
+use nimue::{
     Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, IOPattern, Merlin, ProofError,
     ProofResult,
 };
+
 /// [`IOPattern`] for proof-of-work challenges.
 pub trait PoWIOPattern {
     /// Adds a [`PoWChallenge`] to the [`IOPattern`].

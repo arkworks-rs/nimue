@@ -31,8 +31,7 @@ impl PowStrategy for KeccakPoW {
 #[test]
 fn test_pow_keccak() {
     use crate::{
-        plugins::pow::{PoWChallenge, PoWIOPattern},
-        ByteIOPattern, ByteReader, ByteWriter, IOPattern,
+        ByteIOPattern, ByteReader, ByteWriter, IOPattern, PoWIOPattern, PoWChallenge
     };
 
     const BITS: f64 = 10.0;

@@ -1,0 +1,64 @@
+[package]
+name = "nimue"
+version = "0.1.0"
+authors = ["Michele Orrù <m@orru.net>"]
+description = "A library for Fiat-Shamir transcripts."
+edition = "2021"
+license = "MIT/Apache-2.0"
+
+[dependencies]
+zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
+rand = { version = "0.8.5", features = ["getrandom"] }
+digest = "0.10.7"
+generic-array = "0.14.7"
+# used as default hasher for the prover
+keccak = { version = "0.1.4"}
+log = "0.4.20"
+# optional dependencies
+ark-ff = { version = "0.4.0", optional = true }
+ark-ec = { version = "0.4.0", optional = true }
+ark-serialize = { version = "0.4.2", optional = true, features = ["std"] }
+group = { version = "0.13.0", optional = true }
+ark-bls12-381 = { version = "0.4.0", optional = true }
+rayon = { version = "1.10.0", optional = true }
+
+[features]
+default = ["parallel"]
+parallel = ["dep:rayon"]
+ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
+group = ["dep:group"]
+ark-bls12-381 = ["ark", "dep:ark-bls12-381"]
+rayon = ["dep:rayon"]
+asm = ["keccak/asm", "keccak/simd"]
+
+[dev-dependencies]
+ark-std = "0.4.0"
+sha2 = "0.10.7"
+blake2 = "0.10.6"
+hex = "0.4.3"
+# test curve25519 compatibility
+curve25519-dalek = { version = "4.0.0", features = ["group"] }
+ark-curve25519 = "0.4.0"
+# test algebraic hashers
+bls12_381 = "0.8.0"
+anyhow = { version = "1.0.75", features = ["backtrace"] }
+ark-pallas = { version = "0.4.0", features = ["std"] }
+pallas = "0.22.0"
+pasta_curves = "0.5.1"
+ark-vesta = { version = "0.4.0", features = ["std"] }
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "../doc/katex-header.html", "--cfg", "docsrs"]
+features = ["ark", "group"]
+
+[[example]]
+name = "schnorr"
+required-features = ["ark"]
+
+[[example]]
+name = "schnorr_algebraic_hash"
+required-features = ["ark", "ark-bls112-381"]
+
+[[example]]
+name = "bulletproof"
+required-features = ["ark"]

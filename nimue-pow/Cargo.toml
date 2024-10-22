@@ -1,0 +1,19 @@
+[package]
+name = "nimue-pow"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Giacomo Fenzi <giacomofenzi@outlook.com>",
+    "Remco Bloemen <remco@wicked.ventures>"
+]
+
+[dependencies]
+nimue = { path = "../nimue" }
+blake3 = "1.5.4"
+keccak = { version = "0.1.4"}
+bytemuck = "1.17.1"
+rayon = { version = "1.10.0", optional = true }
+
+[features]
+default = ["parallel"]
+parallel = ["dep:rayon"]

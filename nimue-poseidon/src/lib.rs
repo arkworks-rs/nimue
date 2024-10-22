@@ -2,8 +2,9 @@
 //! from William Lin, with contributions from Pratyush Mishra, Weikeng Chen, Yuwen Zhang, Kristian Sosnin, Merlyn, Wilson Nguyen, Hossein Moghaddas, and others.
 use ark_ff::PrimeField;
 
-use crate::hash::sponge::Sponge;
-use crate::hash::Unit;
+use nimue::hash::sponge::DuplexSponge;
+use nimue::hash::sponge::Sponge;
+use nimue::hash::Unit;
 
 #[derive(Clone)]
 pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
@@ -23,8 +24,7 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     pub state: [F; N],
 }
 
-pub type PoseidonHash<F, const R: usize, const N: usize> =
-    crate::hash::sponge::DuplexSponge<PoseidonSponge<F, R, N>>;
+pub type PoseidonHash<F, const R: usize, const N: usize> = DuplexSponge<PoseidonSponge<F, R, N>>;
 
 impl<F: PrimeField, const R: usize, const N: usize> AsRef<[F]> for PoseidonSponge<F, R, N> {
     fn as_ref(&self) -> &[F] {
@@ -124,11 +124,11 @@ where
 #[allow(unused)]
 macro_rules! poseidon_sponge {
     ($name: ident, $path: tt) => {
-        pub type $name = crate::hash::sponge::DuplexSponge<
-            poseidon::PoseidonSponge<$path::Field, { $path::R }, { $path::N }>,
+        pub type $name = nimue::hash::sponge::DuplexSponge<
+            crate::PoseidonSponge<$path::Field, { $path::R }, { $path::N }>,
         >;
 
-        impl Default for poseidon::PoseidonSponge<$path::Field, { $path::R }, { $path::N }> {
+        impl Default for crate::PoseidonSponge<$path::Field, { $path::R }, { $path::N }> {
             fn default() -> Self {
                 let alpha = $path::ALPHA;
                 let full_rounds = $path::FULL_ROUNDS;
@@ -147,5 +147,8 @@ macro_rules! poseidon_sponge {
     };
 }
 
-#[cfg(feature = "ark-bls12-381")]
 pub mod bls12_381;
+
+/// Unit-tests.
+#[cfg(test)]
+mod tests;

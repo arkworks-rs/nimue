@@ -1,11 +1,8 @@
-#[cfg(feature = "ark-bls12-381")]
-use super::poseidon::PoseidonHash;
 use crate::{
     ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DefaultHash, DuplexHash, IOPattern,
     ProofResult, Unit, UnitTranscript,
 };
-#[cfg(feature = "ark-bls12-381")]
-use ark_bls12_381::{Fq, Fq2, Fr};
+
 use ark_ff::Field;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
@@ -23,29 +20,6 @@ fn check_iv_is_used<H: DuplexHash<F>, F: Unit + Copy + Default + Eq + core::fmt:
 #[test]
 fn test_iv_is_used() {
     check_iv_is_used::<DefaultHash, u8>();
-    #[cfg(feature = "ark-bls12-381")]
-    check_iv_is_used::<PoseidonHash<Fr, 2, 3>, Fr>();
-}
-
-/// Check that poseidon can indeed be instantiated and doesn't do terribly stupid things like give 0 challenges.
-#[test]
-#[cfg(feature = "ark-bls12-381")]
-fn test_poseidon_basic() {
-    type F = Fr;
-    type H = PoseidonHash<F, 2, 3>;
-
-    let io = IOPattern::<H, F>::new("test")
-        .absorb(1, "in")
-        .squeeze(10, "out");
-    let mut merlin = io.to_merlin();
-    merlin.add_units(&[F::from(0x42)]).unwrap();
-
-    let mut challenges = [F::from(0); 10];
-    merlin.fill_challenge_units(&mut challenges).unwrap();
-
-    for challenge in challenges {
-        assert_ne!(challenge, F::from(0));
-    }
 }
 
 fn ark_iopattern<F, H>() -> IOPattern<H>
@@ -101,12 +75,12 @@ fn test_arkworks_end_to_end<F: Field, H: DuplexHash>() -> ProofResult<()> {
     Ok(())
 }
 
-#[cfg(feature = "ark-bls12-381")]
 #[test]
 fn test_squeeze_bytes_from_modp() {
+    use ark_bls12_381::{Fr, Fq};
     use ark_ff::PrimeField;
-    use crate::plugins::random_bytes_in_random_modp;
 
+    use crate::plugins::random_bytes_in_random_modp;
     let useful_bytes = random_bytes_in_random_modp(Fr::MODULUS);
     assert_eq!(useful_bytes, 127 / 8);
 
@@ -114,9 +88,9 @@ fn test_squeeze_bytes_from_modp() {
     assert_eq!(useful_bytes, 253 / 8);
 }
 
-#[cfg(feature = "ark-bls12-381")]
 #[test]
 fn test_arkworks() {
+    use ark_bls12_381::{Fr, Fq2};
     type F = Fr;
     type F2 = Fq2;
 

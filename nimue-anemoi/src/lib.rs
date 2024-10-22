@@ -2,12 +2,11 @@
 //!
 //! The main reason for this code not being deployed is that [anemoi](https://anemoi-hash.github.io/)'s Rust implementation
 //! is not published as a crate and thus `nimue` cannot publish it along with a new release.
-
-use ark_ff::Field;
-use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
+use anemoi;
+use ark_ff::{Field, PrimeField};
 use zeroize::Zeroize;
 
-use super::sponge::Sponge;
+use nimue::hash::sponge::Sponge;
 
 #[derive(Clone, Zeroize)]
 pub struct AnemoiState<F: Field, const R: usize, const N: usize>([F; N]);
@@ -18,7 +17,17 @@ impl<F: Field, const N: usize, const R: usize> Default for AnemoiState<F, R, N> 
     }
 }
 
-crate::hash::index::impl_indexing!(AnemoiState, 0, Output = F, Params = [F: Field], Constants = [R, N]);
+impl<F: Field, const R: usize, const N: usize> AsRef<[F]> for AnemoiState<F, R, N> {
+    fn as_ref(&self) -> &[F] {
+        &self.0
+    }
+}
+
+impl<F: Field, const R: usize, const N: usize> AsMut<[F]> for AnemoiState<F, R, N> {
+    fn as_mut(&mut self) -> &mut [F] {
+        &mut self.0
+    }
+}
 
 pub type AnemoiBls12_381_2_1 = AnemoiState<anemoi::bls12_381::Felt, 2, 1>;
 use anemoi::bls12_381::anemoi_2_1::AnemoiBls12_381_2_1 as _AnemoiBls12_381_2_1;
@@ -33,13 +42,13 @@ impl Sponge
 {
     type U = anemoi::bls12_381::Felt;
 
-    const CAPACITY: usize = _AnemoiBls12_381_2_1::WIDTH - _AnemoiBls12_381_2_1::RATE;
+    const N: usize = _AnemoiBls12_381_2_1::WIDTH;
 
-    const RATE: usize = _AnemoiBls12_381_2_1::RATE;
+    const R: usize = _AnemoiBls12_381_2_1::RATE;
 
     fn new(iv: [u8; 32]) -> Self {
         let mut state = Self::default();
-        state[RATE] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&iv);
+        state.as_mut()[Self::R] = anemoi::bls12_381::Felt::from_le_bytes_mod_order(&iv);
         state
     }
 

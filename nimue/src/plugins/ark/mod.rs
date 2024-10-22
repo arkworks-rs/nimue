@@ -115,25 +115,21 @@
 //!     Ok(merlin.transcript())
 //! }
 //! ```
-//! Now the above code should work with algebraic hashes such as [`PoseidonHash`][`crate::plugins::ark::poseidon::PoseidonHash`] just as fine as [`Keccak`][`crate::hash::Keccak`].
+//! Now the above code should work with algebraic hashes such as `PoseidonHash` just as well as [`Keccak`][`crate::hash::Keccak`].
 //!
 /// Add public elements (field or group elements) to the protocol transcript.
 mod common;
 /// IO Pattern utilities.
 mod iopattern;
-/// (WIP) Support for the Poseidon Hash function.
-pub mod poseidon;
+
 /// Veririfer's utilities for decoding a transcript.
 mod reader;
 /// Prover's utilities for encoding into a transcript.
 mod writer;
 
-#[cfg(test)]
 /// Tests for arkworks.
+#[cfg(test)]
 mod tests;
-
-#[cfg(feature = "anemoi")]
-pub mod anemoi;
 
 pub use crate::traits::*;
 pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
