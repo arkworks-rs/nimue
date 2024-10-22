@@ -20,7 +20,7 @@ pub use keccak::Keccak;
 
 /// Basic units over which a sponge operates.
 ///
-/// We require the units to have a precise size in memory, to be clonable,
+/// We require the units to have a precise size in memory, to be cloneable,
 /// and that we can zeroize them.
 pub trait Unit: Clone + Sized + zeroize::Zeroize {
     /// Write a bunch of units in the wire.

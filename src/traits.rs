@@ -3,7 +3,7 @@ use crate::Unit;
 
 /// Absorbing and squeezing native elements from the sponge.
 ///
-/// This trait is typically implemented for [`Arthur`] and [`Merlin`] instances.
+/// This trait is typically implemented for [`Arthur`](crate::Arthur) and [`Merlin`](crate::Merlin) instances.
 /// Implementors of this trait are expected to make sure that the unit type `U` matches
 /// the one used by the internal sponge.
 pub trait UnitTranscript<U: Unit> {
@@ -60,7 +60,7 @@ pub trait ByteWriter {
     fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError>;
 }
 
-/// Methods for adding bytes to the [`IOPattern`], properly counting group elements.
+/// Methods for adding bytes to the [`IOPattern`](crate::IOPattern), properly counting group elements.
 pub trait ByteIOPattern {
     fn add_bytes(self, count: usize, label: &str) -> Self;
     fn challenge_bytes(self, count: usize, label: &str) -> Self;

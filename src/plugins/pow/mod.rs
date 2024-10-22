@@ -1,4 +1,4 @@
-pub mod blake3;
+// pub mod blake3;
 pub mod keccak;
 
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
 };
 /// [`IOPattern`] for proof-of-work challenges.
 pub trait PoWIOPattern {
-    /// Adds a [`PoWChal`] to the [`IOPattern`].
+    /// Adds a [`PoWChallenge`] to the [`IOPattern`].
     ///
     /// In order to squeeze a proof-of-work challenge, we extract a 32-byte challenge using
     /// the byte interface, and then we find a 16-byte nonce that satisfies the proof-of-work.
