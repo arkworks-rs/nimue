@@ -77,7 +77,7 @@ fn test_arkworks_end_to_end<F: Field, H: DuplexHash>() -> ProofResult<()> {
 
 #[test]
 fn test_squeeze_bytes_from_modp() {
-    use ark_bls12_381::{Fr, Fq};
+    use ark_bls12_381::{Fq, Fr};
     use ark_ff::PrimeField;
 
     use crate::plugins::random_bytes_in_random_modp;
@@ -90,7 +90,7 @@ fn test_squeeze_bytes_from_modp() {
 
 #[test]
 fn test_arkworks() {
-    use ark_bls12_381::{Fr, Fq2};
+    use ark_bls12_381::{Fq2, Fr};
     type F = Fr;
     type F2 = Fq2;
 

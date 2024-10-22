@@ -144,9 +144,7 @@ impl Blake3PoW {
 
 #[test]
 fn test_pow_blake3() {
-    use crate::{
-        ByteIOPattern, IOPattern, PoWIOPattern, ByteReader, ByteWriter, PoWChallenge
-    };
+    use crate::{ByteIOPattern, ByteReader, ByteWriter, IOPattern, PoWChallenge, PoWIOPattern};
 
     const BITS: f64 = 10.0;
 
