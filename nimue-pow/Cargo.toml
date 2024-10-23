@@ -6,6 +6,7 @@ authors = [
     "Giacomo Fenzi <giacomofenzi@outlook.com>",
     "Remco Bloemen <remco@wicked.ventures>"
 ]
+license = "BSD-3-Clause"
 
 [dependencies]
 nimue = { path = "../nimue" }

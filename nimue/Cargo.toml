@@ -4,7 +4,7 @@ version = "0.2.0"
 authors = ["Michele Orrù <m@orru.net>"]
 description = "A library for Fiat-Shamir transcripts."
 edition = "2021"
-license = "MIT/Apache-2.0"
+license = "BSD-3-Clause"
 
 [dependencies]
 zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
@@ -20,6 +20,7 @@ ark-ec = { version = "0.4.0", optional = true }
 ark-serialize = { version = "0.4.2", optional = true, features = ["std"] }
 group = { version = "0.13.0", optional = true }
 ark-bls12-381 = { version = "0.4.0", optional = true }
+hex = "0.4.3"
 
 [features]
 default = []
@@ -44,6 +45,7 @@ ark-pallas = { version = "0.4.0", features = ["std"] }
 pallas = "0.22.0"
 pasta_curves = "0.5.1"
 ark-vesta = { version = "0.4.0", features = ["std"] }
+sha3 = "0.10.8"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "../doc/katex-header.html", "--cfg", "docsrs"]
