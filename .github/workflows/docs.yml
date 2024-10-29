@@ -28,21 +28,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          profile: minimal
-          override: true
-          components: rustfmt, rust-src
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Build Documentation
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --all-features --enable-index-page
-      - name: Setup Pages
+      - name: git clone
+        uses: actions/checkout@v4
+      - name: install toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: cargo doc
+        run: RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --all-features
+      - name: page configuration
         uses: actions/configure-pages@v3
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
