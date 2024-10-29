@@ -31,7 +31,7 @@ jobs:
       - name: git clone
         uses: actions/checkout@v4
       - name: install toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
       - name: cargo doc
         run: RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --all-features
       - name: page configuration
