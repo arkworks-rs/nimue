@@ -1,13 +1,18 @@
 //! This code has been blatantly stolen from `ark-crypto-primitive::sponge`
 //! from William Lin, with contributions from Pratyush Mishra, Weikeng Chen, Yuwen Zhang, Kristian Sosnin, Merlyn, Wilson Nguyen, Hossein Moghaddas, and others.
-use ark_ff::PrimeField;
+use std::fmt::Debug;
 
+use ark_ff::PrimeField;
 use nimue::hash::sponge::DuplexSponge;
 use nimue::hash::sponge::Sponge;
 use nimue::hash::Unit;
 
+/// Poseidon Sponge.
+///
+/// The `NAME` const is to distinbuish between different bitsizes of the same Field.
+/// For instance Bls12_381 and Bn254 both have field type Fp<MontBackend<FrConfig, 4>, 4> but are different fields.
 #[derive(Clone)]
-pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
+pub struct PoseidonSponge<const NAME: u32, F: PrimeField, const R: usize, const N: usize> {
     /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
     /// Number of rounds in a partial-round operation.
@@ -24,21 +29,26 @@ pub struct PoseidonSponge<F: PrimeField, const R: usize, const N: usize> {
     pub state: [F; N],
 }
 
-pub type PoseidonHash<F, const R: usize, const N: usize> = DuplexSponge<PoseidonSponge<F, R, N>>;
+pub type PoseidonHash<const NAME: u32, F, const R: usize, const N: usize> =
+    DuplexSponge<PoseidonSponge<NAME, F, R, N>>;
 
-impl<F: PrimeField, const R: usize, const N: usize> AsRef<[F]> for PoseidonSponge<F, R, N> {
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> AsRef<[F]>
+    for PoseidonSponge<NAME, F, R, N>
+{
     fn as_ref(&self) -> &[F] {
         &self.state
     }
 }
 
-impl<F: PrimeField, const R: usize, const N: usize> AsMut<[F]> for PoseidonSponge<F, R, N> {
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> AsMut<[F]>
+    for PoseidonSponge<NAME, F, R, N>
+{
     fn as_mut(&mut self) -> &mut [F] {
         &mut self.state
     }
 }
 
-impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonSponge<NAME, F, R, N> {
     fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
         // Full rounds apply the S Box (x^alpha) to every element of state
         if is_full_round {
@@ -52,35 +62,37 @@ impl<F: PrimeField, const R: usize, const N: usize> PoseidonSponge<F, R, N> {
         }
     }
 
+    #[inline]
     fn apply_ark(&self, state: &mut [F], round_number: usize) {
-        for (i, state_elem) in state.iter_mut().enumerate() {
-            state_elem.add_assign(&self.ark[round_number][i]);
-        }
+        state.iter_mut().enumerate().for_each(|(i, state_elem)| {
+            *state_elem += self.ark[round_number][i];
+        });
     }
 
     fn apply_mds(&self, state: &mut [F]) {
-        let mut new_state = Vec::new();
-        for i in 0..state.len() {
+        let mut new_state = [F::ZERO; N];
+        for i in 0..N {
             let mut cur = F::zero();
-            for (j, &state_elem) in state.iter().enumerate() {
-                let term = state_elem * self.mds[i][j];
-                cur.add_assign(&term);
+            for j in 0..N {
+                cur += state[j] * self.mds[i][j];
             }
-            new_state.push(cur);
+            new_state[i] = cur;
         }
-        state.clone_from_slice(&new_state[..state.len()])
+        state.clone_from_slice(&new_state);
     }
 }
 
-impl<F: PrimeField, const R: usize, const N: usize> zeroize::Zeroize for PoseidonSponge<F, R, N> {
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> zeroize::Zeroize
+    for PoseidonSponge<NAME, F, R, N>
+{
     fn zeroize(&mut self) {
         self.state.zeroize();
     }
 }
 
-impl<F, const R: usize, const N: usize> Sponge for PoseidonSponge<F, R, N>
+impl<const NAME: u32, F, const R: usize, const N: usize> Sponge for PoseidonSponge<NAME, F, R, N>
 where
-    PoseidonSponge<F, R, N>: Default,
+    PoseidonSponge<NAME, F, R, N>: Default,
     F: PrimeField + Unit,
 {
     type U = F;
@@ -103,16 +115,14 @@ where
             self.apply_mds(&mut state);
         }
 
-        for i in full_rounds_over_2..(full_rounds_over_2 + self.partial_rounds) {
-            self.apply_ark(&mut state, i);
+        for i in 0..self.partial_rounds {
+            self.apply_ark(&mut state, full_rounds_over_2 + i);
             self.apply_s_box(&mut state, false);
             self.apply_mds(&mut state);
         }
 
-        for i in
-            (full_rounds_over_2 + self.partial_rounds)..(self.partial_rounds + self.full_rounds)
-        {
-            self.apply_ark(&mut state, i);
+        for i in 0..full_rounds_over_2 {
+            self.apply_ark(&mut state, full_rounds_over_2 + self.partial_rounds + i);
             self.apply_s_box(&mut state, true);
             self.apply_mds(&mut state);
         }
@@ -120,23 +130,26 @@ where
     }
 }
 
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> Debug
+    for PoseidonSponge<NAME, F, R, N>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.state.fmt(f)
+    }
+}
+
 /// Initialization of constants.
 #[allow(unused)]
 macro_rules! poseidon_sponge {
-    ($name: ident, $path: tt) => {
-        pub type $name = nimue::hash::sponge::DuplexSponge<
-            crate::PoseidonSponge<$path::Field, { $path::R }, { $path::N }>,
-        >;
+    ($bits: expr, $name: ident, $path: tt) => {
+        pub type $name = crate::PoseidonSponge<$bits, $path::Field, { $path::R }, { $path::N }>;
 
-        impl Default for crate::PoseidonSponge<$path::Field, { $path::R }, { $path::N }> {
+        impl Default for $name {
             fn default() -> Self {
                 let alpha = $path::ALPHA;
-                let full_rounds = $path::FULL_ROUNDS;
-                let total_rounds = $path::TOTAL_ROUNDS;
-                let partial_rounds = total_rounds - full_rounds;
                 Self {
-                    full_rounds,
-                    partial_rounds,
+                    full_rounds: $path::R_F,
+                    partial_rounds: $path::R_P,
                     alpha,
                     ark: $path::ARK,
                     mds: $path::MDS,
@@ -147,7 +160,11 @@ macro_rules! poseidon_sponge {
     };
 }
 
+#[cfg(feature = "bls12-381")]
 pub mod bls12_381;
+
+#[cfg(feature = "bn254")]
+pub mod bn254;
 
 /// Unit-tests.
 #[cfg(test)]
