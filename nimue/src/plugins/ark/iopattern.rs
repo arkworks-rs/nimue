@@ -53,7 +53,7 @@ where
     }
 
     fn challenge_bytes(self, count: usize, label: &str) -> Self {
-        let n = bytes_uniform_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
+        let n = crate::plugins::random_bits_in_random_modp(Fp::<C, N>::MODULUS) / 8;
         self.squeeze((count + n - 1) / n, label)
     }
 }

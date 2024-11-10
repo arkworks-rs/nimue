@@ -1,5 +1,6 @@
 use nimue::hash::sponge::Sponge;
 
+#[allow(unused)]
 fn test_vector<H: Sponge>(input: &[H::U], output: &[H::U])
 where
     H::U: PartialEq + std::fmt::Debug,
@@ -8,6 +9,37 @@ where
     hash.as_mut().clone_from_slice(input);
     hash.permute();
     assert_eq!(hash.as_ref(), output);
+}
+
+#[cfg(feature = "bls12-381")]
+#[test]
+fn test_squeeze_bytes_from_algebraic_hash() {
+    use nimue::ByteChallenges;
+
+    type F = ark_bls12_381::Fr;
+    type H = crate::bls12_381::Poseidonx5_255_3;
+
+    let io = nimue::IOPattern::<H, F>::new("test").absorb(1, "in");
+    let io = <nimue::IOPattern<H, F> as nimue::plugins::ark::ByteIOPattern>::challenge_bytes(
+        io, 2048, "out",
+    );
+    let mut merlin = io.to_merlin();
+    merlin.add_units(&[F::from(0x42)]).unwrap();
+
+    let mut merlin_challenges = [0u8; 2048];
+    merlin.fill_challenge_bytes(&mut merlin_challenges).unwrap();
+
+    let mut arthur = io.to_arthur(merlin.transcript());
+    // write the unit to an throw-away array
+    arthur.fill_next_units(&mut [F::from(0)]).unwrap();
+    let arthur_challenges: [u8; 2048] = arthur.challenge_bytes().unwrap();
+
+    assert_eq!(merlin_challenges, arthur_challenges);
+    let frequencies = (0u8..=255)
+        .map(|i| merlin_challenges.iter().filter(|&&x| x == i).count())
+        .collect::<Vec<_>>();
+    // each element should appear roughly 8 times on average. Checking we're not too far from that.
+    assert!(frequencies.iter().all(|&x| x < 32 && x > 0), "This array should have random bytes but hasn't: {:?}", frequencies);
 }
 
 #[cfg(feature = "bls12-381")]

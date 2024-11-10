@@ -1,7 +1,7 @@
 use std::io;
 
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_ff::{Field, Fp, FpConfig, PrimeField};
+use ark_ff::{BigInteger, Field, Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use rand::{CryptoRng, RngCore};
 
@@ -234,12 +234,9 @@ where
                 crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
                 output.len(),
             );
-            let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
             let mut tmp = [Fp::from(0); 1];
-            let mut buf = vec![0u8; len];
             self.fill_challenge_units(&mut tmp)?;
-            tmp[0].serialize_compressed(&mut buf).unwrap();
-
+            let buf = tmp[0].into_bigint().to_bytes_le();
             output[..len_good].copy_from_slice(&buf[..len_good]);
 
             // recursively fill the rest of the buffer
@@ -255,17 +252,20 @@ where
     H: DuplexHash<Fp<C, N>>,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        let len_good = usize::min(
-            crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
-            output.len(),
-        );
-        let len = crate::plugins::bytes_modp(Fp::<C, N>::MODULUS_BIT_SIZE);
-        let mut tmp = [Fp::from(0); 1];
-        let mut buf = vec![0u8; len];
-        self.fill_challenge_units(&mut tmp)?;
-        tmp[0].serialize_compressed(&mut buf).unwrap();
+        if output == &[] {
+            Ok(())
+        } else {
+            let len_good = usize::min(
+                crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
+                output.len(),
+            );
+            let mut tmp = [Fp::from(0); 1];
+            self.fill_challenge_units(&mut tmp)?;
+            let buf = tmp[0].into_bigint().to_bytes_le();
+            output[..len_good].copy_from_slice(&buf[..len_good]);
 
-        output[..len_good].copy_from_slice(&buf[..len_good]);
-        Ok(())
+            // recursively fill the rest of the buffer
+            self.fill_challenge_bytes(&mut output[len_good..])
+        }
     }
 }
