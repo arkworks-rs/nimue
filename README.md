@@ -11,10 +11,11 @@ It facilitates the writing of multi-round public coin protocols.
 It provides a generic API for generating the verifier's random coins and the prover randomness.
 The project has the following crates:
 
-- `nimue`: the core library, with bindings for [`group`](https://github.com/zkcrypto/group) and [arkworks](https://arkworks.rs). This crate provides the basic traits for hashes bases on **compression functions** and **sponge-based hash functions**, both via Rust's generic [`Digest`](https://docs.rs/digest/latest/digest/) API and a (more fine-grained and efficient) permutation function API
+- `nimue`: the core library, with bindings for [`group`](https://github.com/zkcrypto/group) and [`ark-ff`](https://arkworks.rs). This crate provides the basic traits for hashes bases on **compression functions** and **sponge-based hash functions**, both via Rust's generic [`Digest`](https://docs.rs/digest/latest/digest/) API and a (more fine-grained and efficient) permutation function API
 - `nimue-pow`: an extension for challenges computed via grinding / proof-of-work;
-- `nimue-anemoi`: a **WORK IN PROGRESS** implementation of the [Anemoi](https://anemoi-hash.github.io/) hash function (in arkworks for now);
-- `nimue-poseidon`: a **WORK IN PROGRESS** implementation of the [Poseidon](https://anemoi-hash.github.io/) hash function (in arkworks for now).
+- `nimue-poseidon`: a **WORK IN PROGRESS** implementation of the [Poseidon](https://anemoi-hash.github.io/) hash function (in arkworks).
+- - `nimue-anemoi`: a **WORK IN PROGRESS** implementation of the [Anemoi](https://anemoi-hash.github.io/) hash function (in arkworks);
+
 
 # Features
 
