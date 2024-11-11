@@ -17,6 +17,7 @@ ark-bls12-381 = "0.5.0"
 [features]
 bls12-381 = ["ark-bls12-381"]
 bn254 = ["ark-bn254"]
+solinas = []
 
 [[example]]
 name = "schnorr_algebraic_hash"

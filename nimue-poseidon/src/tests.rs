@@ -5,7 +5,7 @@ fn test_vector<H: Sponge>(input: &[H::U], output: &[H::U])
 where
     H::U: PartialEq + std::fmt::Debug,
 {
-    let mut hash = H::new([0; 32]);
+    let mut hash = H::default();
     hash.as_mut().clone_from_slice(input);
     hash.permute();
     assert_eq!(hash.as_ref(), output);
@@ -39,7 +39,11 @@ fn test_squeeze_bytes_from_algebraic_hash() {
         .map(|i| merlin_challenges.iter().filter(|&&x| x == i).count())
         .collect::<Vec<_>>();
     // each element should appear roughly 8 times on average. Checking we're not too far from that.
-    assert!(frequencies.iter().all(|&x| x < 32 && x > 0), "This array should have random bytes but hasn't: {:?}", frequencies);
+    assert!(
+        frequencies.iter().all(|&x| x < 32 && x > 0),
+        "This array should have random bytes but hasn't: {:?}",
+        frequencies
+    );
 }
 
 #[cfg(feature = "bls12-381")]
@@ -131,4 +135,19 @@ fn test_poseidon_bn254() {
         MontFp!("0x07748bc6877c9b82c8b98666ee9d0626ec7f5be4205f79ee8528ef1c4a376fc7"),
     ];
     test_vector::<PoseidonPermx5_254_5>(&tv_x5_254_5_input, &tv_x5_254_5_output);
+}
+
+
+
+#[cfg(feature = "solinas")]
+#[test]
+fn test_poseidon_f64() {
+    use crate::f64;
+    use crate::f64::PoseidonPermx3_64_24;
+    use ark_ff::MontFp;
+    type F = f64::Field64;
+
+    let tv_x5_255_3_input: [F; 24] = [MontFp!("0x0000000000000000"), MontFp!("0x0000000000000001"), MontFp!("0x0000000000000002"), MontFp!("0x0000000000000003"), MontFp!("0x0000000000000004"), MontFp!("0x0000000000000005"), MontFp!("0x0000000000000006"), MontFp!("0x0000000000000007"), MontFp!("0x0000000000000008"), MontFp!("0x0000000000000009"), MontFp!("0x000000000000000a"), MontFp!("0x000000000000000b"), MontFp!("0x000000000000000c"), MontFp!("0x000000000000000d"), MontFp!("0x000000000000000e"), MontFp!("0x000000000000000f"), MontFp!("0x0000000000000010"), MontFp!("0x0000000000000011"), MontFp!("0x0000000000000012"), MontFp!("0x0000000000000013"), MontFp!("0x0000000000000014"), MontFp!("0x0000000000000015"), MontFp!("0x0000000000000016"), MontFp!("0x0000000000000017")];
+    let tv_x5_255_3_output: [F; 24] = [MontFp!("0x213efd2211b3973a"), MontFp!("0x166d183ef79550cf"), MontFp!("0x59baa9e4812f63da"), MontFp!("0xd1b0c6d5cc76a062"), MontFp!("0x00730338e6873644"), MontFp!("0x817e3a361c89952c"), MontFp!("0x1fadd87f0f791faa"), MontFp!("0x7ec7fc90801acbcb"), MontFp!("0xb3a5a02a68f6ab59"), MontFp!("0x636b2871ca76d626"), MontFp!("0x9bf8320b55f7d177"), MontFp!("0x4728f3af5ff11f87"), MontFp!("0x0987fd5995343d35"), MontFp!("0x8e4865041b151fe4"), MontFp!("0x38323c44cf193b8a"), MontFp!("0xa74010a13b9a76a1"), MontFp!("0x429ebd654194eec2"), MontFp!("0xf116892e365bb752"), MontFp!("0xca1713b0b8861a67"), MontFp!("0xef097aa5eed74e30"), MontFp!("0x575030a5ef0cac85"), MontFp!("0xcbe04288de12090a"), MontFp!("0xd5f0afa1f6978fd3"), MontFp!("0x48b80826a5d068e6")];
+    test_vector::<PoseidonPermx3_64_24>(&tv_x5_255_3_input, &tv_x5_255_3_output);
 }

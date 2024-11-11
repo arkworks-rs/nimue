@@ -112,6 +112,7 @@ where
         for i in 0..full_rounds_over_2 {
             self.apply_ark(&mut state, i);
             self.apply_s_box(&mut state, true);
+            println!("{:?}", state);
             self.apply_mds(&mut state);
         }
 
@@ -165,6 +166,9 @@ pub mod bls12_381;
 
 #[cfg(feature = "bn254")]
 pub mod bn254;
+
+#[cfg(feature = "solinas")]
+pub mod f64;
 
 /// Unit-tests.
 #[cfg(test)]
