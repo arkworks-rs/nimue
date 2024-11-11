@@ -107,9 +107,7 @@ fn test_statistics() {
         .map(|i| output.iter().filter(|&&x| x == i).count())
         .collect::<Vec<_>>();
     // each element should appear roughly 8 times on average. Checking we're not too far from that.
-    assert!(frequencies
-        .iter()
-        .all(|&x| x < 32 && x > 0));
+    assert!(frequencies.iter().all(|&x| x < 32 && x > 0));
 }
 
 #[test]

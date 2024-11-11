@@ -48,6 +48,7 @@ where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
 {
+    /// Add `count` bytes to the transcript, encoding each of them as an element of the field `Fp`.
     fn add_bytes(self, count: usize, label: &str) -> Self {
         self.absorb(count, label)
     }
