@@ -96,24 +96,26 @@ where
     }
 }
 
-impl<'a, H, C, const N: usize> FieldChallenges<Fp<C,N>> for Arthur<'a, H, Fp<C, N>>
-where
-C: FpConfig<N>,
-H: DuplexHash<Fp<C, N>>,
-{
-    fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
-        self.fill_challenge_units(output).map_err(ProofError::InvalidIO)
-    }
-}
-
-impl<H, C, R, const N: usize> FieldChallenges<Fp<C,N>> for Merlin<H, Fp<C, N>, R>
+impl<H, C, const N: usize> FieldChallenges<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
-    R: CryptoRng + RngCore
 {
     fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
-        self.fill_challenge_units(output).map_err(ProofError::InvalidIO)
+        self.fill_challenge_units(output)
+            .map_err(ProofError::InvalidIO)
+    }
+}
+
+impl<H, C, R, const N: usize> FieldChallenges<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+    R: CryptoRng + RngCore,
+{
+    fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
+        self.fill_challenge_units(output)
+            .map_err(ProofError::InvalidIO)
     }
 }
 
@@ -214,7 +216,7 @@ where
 
 // Field  <-> Bytes interactions:
 
-impl<'a, H, C, const N: usize> BytePublic for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> BytePublic for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -227,7 +229,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -241,7 +243,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -267,7 +269,7 @@ where
 }
 
 /// XXX. duplicate code
-impl<'a, H, C, const N: usize> ByteChallenges for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> ByteChallenges for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,

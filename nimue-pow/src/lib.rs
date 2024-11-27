@@ -1,7 +1,10 @@
 pub mod blake3;
 pub mod keccak;
 
-use nimue::{Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Unit};
+use nimue::{
+    Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash, Merlin, ProofError,
+    ProofResult, Unit,
+};
 
 /// [`IOPattern`] for proof-of-work challenges.
 pub trait PoWIOPattern {
@@ -33,7 +36,7 @@ pub trait PoWChallenge {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()>;
 }
 
-impl <H, U, R> PoWChallenge for Merlin<H, U, R>
+impl<H, U, R> PoWChallenge for Merlin<H, U, R>
 where
     U: Unit,
     H: DuplexHash<U>,

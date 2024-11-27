@@ -4,7 +4,10 @@ use ark_serialize::CanonicalSerialize;
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{Arthur, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPatternError, Merlin, ProofResult, Unit, UnitTranscript};
+use crate::{
+    Arthur, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPatternError, Merlin, ProofResult,
+    Unit, UnitTranscript,
+};
 
 impl<F: Field, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Merlin<H, u8, R> {
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
