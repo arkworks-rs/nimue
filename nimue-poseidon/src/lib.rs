@@ -69,6 +69,7 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonSpo
         });
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn apply_mds(&self, state: &mut [F]) {
         let mut new_state = [F::ZERO; N];
         for i in 0..N {
