@@ -2,8 +2,8 @@ pub mod blake3;
 pub mod keccak;
 
 use nimue::{
-    Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, IOPattern, Merlin, ProofError,
-    ProofResult,
+    Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash, Merlin, ProofError,
+    ProofResult, Unit,
 };
 
 /// [`IOPattern`] for proof-of-work challenges.
@@ -21,7 +21,10 @@ pub trait PoWIOPattern {
     fn challenge_pow(self, label: &str) -> Self;
 }
 
-impl PoWIOPattern for IOPattern {
+impl<IOPattern> PoWIOPattern for IOPattern
+where
+    IOPattern: ByteIOPattern,
+{
     fn challenge_pow(self, label: &str) -> Self {
         // 16 bytes challenge and 16 bytes nonce (that will be written)
         self.challenge_bytes(32, label).add_bytes(8, "pow-nonce")
@@ -33,9 +36,12 @@ pub trait PoWChallenge {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()>;
 }
 
-impl PoWChallenge for Merlin
+impl<H, U, R> PoWChallenge for Merlin<H, U, R>
 where
-    Merlin: ByteWriter,
+    U: Unit,
+    H: DuplexHash<U>,
+    R: rand::CryptoRng + rand::RngCore,
+    Merlin<H, U, R>: ByteWriter + ByteChallenges,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
@@ -47,9 +53,11 @@ where
     }
 }
 
-impl<'a> PoWChallenge for Arthur<'a>
+impl<'a, H, U> PoWChallenge for Arthur<'a, H, U>
 where
-    Arthur<'a>: ByteReader,
+    U: Unit,
+    H: DuplexHash<U>,
+    Arthur<'a, H, U>: ByteReader + ByteChallenges,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;

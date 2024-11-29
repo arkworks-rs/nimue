@@ -78,7 +78,7 @@ where
 impl<F, T> FieldChallenges<F> for T
 where
     F: Field,
-    T: ByteChallenges,
+    T: UnitTranscript<u8>,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let base_field_size = bytes_uniform_modp(F::BasePrimeField::MODULUS_BIT_SIZE);
@@ -93,6 +93,29 @@ where
             .expect("Could not convert");
         }
         Ok(())
+    }
+}
+
+impl<H, C, const N: usize> FieldChallenges<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+{
+    fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
+        self.fill_challenge_units(output)
+            .map_err(ProofError::InvalidIO)
+    }
+}
+
+impl<H, C, R, const N: usize> FieldChallenges<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+where
+    C: FpConfig<N>,
+    H: DuplexHash<Fp<C, N>>,
+    R: CryptoRng + RngCore,
+{
+    fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
+        self.fill_challenge_units(output)
+            .map_err(ProofError::InvalidIO)
     }
 }
 
@@ -191,7 +214,7 @@ where
 
 // Field  <-> Bytes interactions:
 
-impl<'a, H, C, const N: usize> BytePublic for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> BytePublic for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -222,7 +245,7 @@ impl<H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
-    R: CryptoRng + rand::RngCore,
+    R: CryptoRng + RngCore,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         if output.is_empty() {
@@ -244,7 +267,7 @@ where
 }
 
 /// XXX. duplicate code
-impl<'a, H, C, const N: usize> ByteChallenges for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> ByteChallenges for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,

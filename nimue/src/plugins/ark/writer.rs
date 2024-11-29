@@ -4,7 +4,10 @@ use ark_serialize::CanonicalSerialize;
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{DuplexHash, Merlin, ProofResult, UnitTranscript};
+use crate::{
+    Arthur, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPatternError, Merlin, ProofResult,
+    Unit, UnitTranscript,
+};
 
 impl<F: Field, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Merlin<H, u8, R> {
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
@@ -56,5 +59,29 @@ where
             i.serialize_compressed(&mut self.transcript)?;
         }
         Ok(())
+    }
+}
+
+impl<H, R, C, const N: usize> ByteWriter for Merlin<H, Fp<C, N>, R>
+where
+    H: DuplexHash<Fp<C, N>>,
+    C: FpConfig<N>,
+    R: RngCore + CryptoRng,
+{
+    fn add_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+        self.public_bytes(input)?;
+        self.transcript.extend(input);
+        Ok(())
+    }
+}
+
+impl<'a, H, C, const N: usize> ByteReader for Arthur<'a, H, Fp<C, N>>
+where
+    H: DuplexHash<Fp<C, N>>,
+    C: FpConfig<N>,
+{
+    fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {
+        u8::read(&mut self.transcript, input)?;
+        self.public_bytes(input)
     }
 }
