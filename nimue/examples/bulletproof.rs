@@ -107,8 +107,8 @@ where
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
-    let u = generators.2.clone();
-    let mut statement = statement.clone();
+    let u = *generators.2;
+    let mut statement = *statement;
 
     while n != 1 {
         let [left, right]: [G; 2] = arthur.next_points().unwrap();

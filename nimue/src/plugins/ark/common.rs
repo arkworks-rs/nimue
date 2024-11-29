@@ -109,9 +109,8 @@ where
 
     fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
         let flattened: Vec<_> = input
-            .into_iter()
-            .map(|f| f.to_base_prime_field_elements())
-            .flatten()
+            .iter()
+            .flat_map(|f| f.to_base_prime_field_elements())
             .collect();
         self.public_units(&flattened)?;
         Ok(())
@@ -147,9 +146,8 @@ where
 
     fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
         let flattened: Vec<_> = input
-            .into_iter()
-            .map(|f| f.to_base_prime_field_elements())
-            .flatten()
+            .iter()
+            .flat_map(|f| f.to_base_prime_field_elements())
             .collect();
         self.public_units(&flattened)?;
         Ok(())
@@ -206,7 +204,7 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -220,14 +218,14 @@ where
     }
 }
 
-impl<'a, H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
     R: CryptoRng + rand::RngCore,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        if output == &[] {
+        if output.is_empty() {
             Ok(())
         } else {
             let len_good = usize::min(
@@ -252,7 +250,7 @@ where
     H: DuplexHash<Fp<C, N>>,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
-        if output == &[] {
+        if output.is_empty() {
             Ok(())
         } else {
             let len_good = usize::min(

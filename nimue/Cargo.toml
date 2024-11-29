@@ -58,3 +58,7 @@ required-features = ["ark"]
 [[example]]
 name = "bulletproof"
 required-features = ["ark"]
+
+[lints.clippy]
+too_long_first_doc_paragraph = "allow"
+doc_lazy_continuation = "allow"
