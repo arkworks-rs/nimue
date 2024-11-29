@@ -37,7 +37,7 @@ pub(super) fn random_bits_in_random_modp<const N: usize>(b: ark_ff::BigInt<N>) -
         // compute the remainder of b by 2^n
         let r_bits = &b.to_bits_le()[..n as usize];
         let r = BigInt::<N>::from_bits_le(r_bits);
-        let log2_a_minus_r = r_bits.into_iter().rev().skip_while(|&&bit| bit).count() as u32;
+        let log2_a_minus_r = r_bits.iter().rev().skip_while(|&&bit| bit).count() as u32;
         if b.num_bits() + n - 1 - r.num_bits() - log2_a_minus_r >= 128 {
             return n as usize;
         }

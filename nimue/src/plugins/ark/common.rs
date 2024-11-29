@@ -109,9 +109,8 @@ where
 
     fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
         let flattened: Vec<_> = input
-            .into_iter()
-            .map(|f| f.to_base_prime_field_elements())
-            .flatten()
+            .iter()
+            .flat_map(|f| f.to_base_prime_field_elements())
             .collect();
         self.public_units(&flattened)?;
         Ok(())
@@ -147,9 +146,8 @@ where
 
     fn public_scalars(&mut self, input: &[F]) -> ProofResult<Self::Repr> {
         let flattened: Vec<_> = input
-            .into_iter()
-            .map(|f| f.to_base_prime_field_elements())
-            .flatten()
+            .iter()
+            .flat_map(|f| f.to_base_prime_field_elements())
             .collect();
         self.public_units(&flattened)?;
         Ok(())

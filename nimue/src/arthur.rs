@@ -6,6 +6,7 @@ use crate::traits::{ByteReader, UnitTranscript};
 use crate::DefaultHash;
 
 /// [`Arthur`] contains the verifier state.
+///
 /// Internally, it is a wrapper around a SAFE sponge.
 /// Given as input an [`IOPattern`] and a protocol transcript, it allows to
 /// de-serialize elements from the transcript and make them available to the zero-knowledge verifier.

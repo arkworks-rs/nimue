@@ -74,7 +74,7 @@ impl PowStrategy for Blake3PoW {
         // Use atomics to find the unique deterministic lowest satisfying nonce.
         let global_min = AtomicU64::new(u64::MAX);
         let _ = broadcast(|ctx| {
-            let mut worker = self.clone();
+            let mut worker = *self;
             let nonces = ((MAX_SIMD_DEGREE * ctx.index()) as u64..)
                 .step_by(MAX_SIMD_DEGREE * ctx.num_threads());
             for nonce in nonces {

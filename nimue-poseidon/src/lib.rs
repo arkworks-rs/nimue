@@ -53,12 +53,12 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonSpo
         // Full rounds apply the S Box (x^alpha) to every element of state
         if is_full_round {
             for elem in state {
-                *elem = elem.pow(&[self.alpha]);
+                *elem = elem.pow([self.alpha]);
             }
         }
         // Partial rounds apply the S Box (x^alpha) to just the first element of state
         else {
-            state[0] = state[0].pow(&[self.alpha]);
+            state[0] = state[0].pow([self.alpha]);
         }
     }
 
@@ -108,7 +108,7 @@ where
 
     fn permute(&mut self) {
         let full_rounds_over_2 = self.full_rounds / 2;
-        let mut state = self.state.clone();
+        let mut state = self.state;
         for i in 0..full_rounds_over_2 {
             self.apply_ark(&mut state, i);
             self.apply_s_box(&mut state, true);

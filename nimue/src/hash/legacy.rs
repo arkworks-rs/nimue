@@ -78,7 +78,7 @@ impl<D: BlockSizeUser + Digest + Clone + Reset> DigestBridge<D> {
             // and the current digest
             let byte_count = count * Self::DIGEST_SIZE - self.leftovers.len();
             let mut squeeze_hasher = D::new();
-            Digest::update(&mut squeeze_hasher, &Self::mask_squeeze_end());
+            Digest::update(&mut squeeze_hasher, Self::mask_squeeze_end());
             Digest::update(&mut squeeze_hasher, &self.cv);
             Digest::update(&mut squeeze_hasher, byte_count.to_be_bytes());
             self.cv = Digest::finalize(squeeze_hasher);
@@ -127,7 +127,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for Di
 
         if self.mode == Mode::Start {
             self.mode = Mode::Absorb;
-            Digest::update(&mut self.hasher, &Self::mask_absorb());
+            Digest::update(&mut self.hasher, Self::mask_absorb());
             Digest::update(&mut self.hasher, &self.cv);
         }
 
@@ -138,7 +138,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for Di
     fn ratchet_unchecked(&mut self) -> &mut Self {
         self.squeeze_end();
         // Double hash
-        self.cv = <D as Digest>::digest(&self.hasher.finalize_reset());
+        self.cv = <D as Digest>::digest(self.hasher.finalize_reset());
         // Restart the rest of the data
         self.leftovers.zeroize();
         self.leftovers.clear();
@@ -150,7 +150,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexHash<u8> for Di
         if self.mode == Mode::Start {
             self.mode = Mode::Squeeze(0);
             // create the prefix hash
-            Digest::update(&mut self.hasher, &Self::mask_squeeze());
+            Digest::update(&mut self.hasher, Self::mask_squeeze());
             Digest::update(&mut self.hasher, &self.cv);
             self.squeeze_unchecked(output)
         // If Absorbing, ratchet

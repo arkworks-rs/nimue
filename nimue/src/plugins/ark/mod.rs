@@ -146,7 +146,7 @@ pub fn swap_field<F1: ark_ff::PrimeField, F2: ark_ff::PrimeField>(a_f1: F1) -> P
     let a_f2 = F2::from_le_bytes_mod_order(&a_f1.into_bigint().to_bytes_le());
     let a_f1_control = F1::from_le_bytes_mod_order(&a_f2.into_bigint().to_bytes_le());
     (a_f1 == a_f1_control)
-        .then(|| a_f2)
+        .then_some(a_f2)
         .ok_or(ProofError::SerializationError)
 }
 
