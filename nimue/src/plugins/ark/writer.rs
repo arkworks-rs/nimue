@@ -75,7 +75,7 @@ where
     }
 }
 
-impl<'a, H, C, const N: usize> ByteReader for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> ByteReader for Arthur<'_, H, Fp<C, N>>
 where
     H: DuplexHash<Fp<C, N>>,
     C: FpConfig<N>,

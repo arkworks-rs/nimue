@@ -62,7 +62,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Arthur<'a, H, U> {
     }
 }
 
-impl<'a, H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Arthur<'a, H, U> {
+impl<H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Arthur<'_, H, U> {
     /// Add native elements to the sponge without writing them to the protocol transcript.
     #[inline]
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
@@ -76,13 +76,13 @@ impl<'a, H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Arthur<'a, H, U> {
     }
 }
 
-impl<'a, H: DuplexHash<U>, U: Unit> core::fmt::Debug for Arthur<'a, H, U> {
+impl<H: DuplexHash<U>, U: Unit> core::fmt::Debug for Arthur<'_, H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Arthur").field(&self.safe).finish()
     }
 }
 
-impl<'a, H: DuplexHash<u8>> ByteReader for Arthur<'a, H, u8> {
+impl<H: DuplexHash<u8>> ByteReader for Arthur<'_, H, u8> {
     /// Read the next `input.len()` bytes from the transcript and return them.
     #[inline]
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {

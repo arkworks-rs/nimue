@@ -9,7 +9,7 @@ use super::{FieldReader, GroupReader};
 use crate::traits::*;
 use crate::{Arthur, DuplexHash, ProofResult};
 
-impl<'a, F, H> FieldReader<F> for Arthur<'a, H>
+impl<F, H> FieldReader<F> for Arthur<'_, H>
 where
     F: Field,
     H: DuplexHash,
@@ -25,7 +25,7 @@ where
     }
 }
 
-impl<'a, G, H> GroupReader<G> for Arthur<'a, H>
+impl<G, H> GroupReader<G> for Arthur<'_, H>
 where
     G: CurveGroup,
     H: DuplexHash,
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<'a, H, C, const N: usize> FieldReader<Fp<C, N>> for Arthur<'a, H, Fp<C, N>>
+impl<H, C, const N: usize> FieldReader<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<'a, P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Arthur<'a, H, Fp<C, N>>
+impl<P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<'a, P, H, C, const N: usize> GroupReader<SWCurve<P>> for Arthur<'a, H, Fp<C, N>>
+impl<P, H, C, const N: usize> GroupReader<SWCurve<P>> for Arthur<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexHash<Fp<C, N>>,
