@@ -8,7 +8,7 @@
 //! C = \langle a, G \rangle + \langle b, H \rangle + \langle a, b \rangle U
 //! $$
 
-use ark_ec::PrimeGroup;
+use ark_ec::Group;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
@@ -163,7 +163,7 @@ fn main() {
     use ark_curve25519::EdwardsProjective as G;
     use ark_std::UniformRand;
 
-    type F = <G as PrimeGroup>::ScalarField;
+    type F = <G as Group>::ScalarField;
     type GAffine = <G as CurveGroup>::Affine;
 
     // the vector size

@@ -18,7 +18,7 @@
 /// 3. `nimue::Arthur`, describes the verifier state.
 /// It internally will read the transcript, and deserialize elements as requested making sure that they match with the IO Pattern.
 /// It can be used to verify a proof.
-use ark_ec::{CurveGroup, PrimeGroup};
+use ark_ec::{CurveGroup, Group};
 use ark_std::UniformRand;
 use nimue::plugins::ark::*;
 use rand::rngs::OsRng;

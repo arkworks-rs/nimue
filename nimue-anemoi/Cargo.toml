@@ -1,13 +1,13 @@
 [package]
 name = "nimue-anemoi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-ark-ff = "^0.5"
+ark-ff = "^0.4"
 nimue = { path = "../nimue", features = ["ark"] }
 zeroize = "1.8.1"
-anemoi = {git = "https://github.com/mmaker/anemoi", features=["bls12_381"]}
-ark-bls12-381 = "^0.5"
+anemoi = { git = "https://github.com/mmaker/anemoi", features=["bls12_381"], rev = "647c921c38f56ef7dbc0a3463f2cb1631873cebe"}
+ark-bls12-381 = "^0.4"
 arrayvec = "0.7.6"

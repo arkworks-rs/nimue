@@ -87,8 +87,9 @@ where
         for o in output.iter_mut() {
             self.fill_challenge_bytes(&mut buf)?;
             *o = F::from_base_prime_field_elems(
-                buf.chunks(base_field_size)
-                    .map(F::BasePrimeField::from_be_bytes_mod_order),
+                &buf.chunks(base_field_size)
+                    .map(F::BasePrimeField::from_be_bytes_mod_order)
+                    .collect::<Vec<_>>(),
             )
             .expect("Could not convert");
         }
@@ -188,8 +189,9 @@ where
 
     fn public_points(&mut self, input: &[G]) -> ProofResult<Self::Repr> {
         for point in input {
-            let (x, y) = point.into_affine().xy().unwrap();
-            self.public_units(&[x, y])?;
+            let affine = point.into_affine();
+            let (x, y) = affine.xy().unwrap();
+            self.public_units(&[x.to_owned(), y.to_owned()])?;
         }
         Ok(())
     }
@@ -205,8 +207,9 @@ where
 
     fn public_points(&mut self, input: &[G]) -> ProofResult<Self::Repr> {
         for point in input {
-            let (x, y) = point.into_affine().xy().unwrap();
-            self.public_units(&[x, y])?;
+            let affine = point.into_affine();
+            let (x, y) = affine.xy().unwrap();
+            self.public_units(&[x.to_owned(), y.to_owned()])?;
         }
         Ok(())
     }
