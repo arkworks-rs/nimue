@@ -6,19 +6,19 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 nimue = { path = "../nimue", features = ["ark"]}
-ark-ff = "0.5.0"
+ark-ff = "^0.5"
 zeroize = "1.8.1"
 ark-bls12-381 = {version = "^0.5", optional = true}
 ark-bn254 = {version = "^0.5", optional = true}
 
 [dev-dependencies]
-ark-bls12-381 = "0.5.0"
+ark-bls12-381 = "^0.5"
 
 [features]
-bls12-381 = ["ark-bls12-381"]
 bn254 = ["ark-bn254"]
 solinas = []
+bls12-381 = ["nimue/ark", "dep:ark-bls12-381"]
 
 [[example]]
 name = "schnorr_algebraic_hash"
-required-features = ["ark", "ark-bls112-381"]
+required-features = ["ark-bls12-381"]

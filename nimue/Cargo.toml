@@ -19,14 +19,12 @@ ark-ff = { version = "^0.5", optional = true }
 ark-ec = { version = "^0.5", optional = true }
 ark-serialize = { version = "^0.5", optional = true, features = ["std"] }
 group = { version = "0.13.0", optional = true }
-ark-bls12-381 = { version = "^0.5", optional = true }
 hex = "0.4.3"
 
 [features]
 default = []
 ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
 group = ["dep:group"]
-ark-bls12-381 = ["ark", "dep:ark-bls12-381"]
 asm = ["keccak/asm", "keccak/simd"]
 
 [dev-dependencies]
