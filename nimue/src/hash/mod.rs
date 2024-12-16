@@ -5,7 +5,7 @@
 //!
 //! Additionally, the module exports some utilities:
 //! - [`hash::sponge::DuplexSponge`] allows to implement a [`crate::DuplexHash`] using a secure permutation function, specifying the rate `R` and the width `N`.
-//! This is done using the standard duplex sponge cosntruction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
+//! This is done using the standard duplex sponge construction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
 //! - [`hash::legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
 
 /// A wrapper around the Keccak-f\[1600\] permutation.
