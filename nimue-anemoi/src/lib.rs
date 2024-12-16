@@ -2,6 +2,7 @@
 //!
 //! The main reason for this code not being deployed is that [anemoi](https://anemoi-hash.github.io/)'s Rust implementation
 //! is not published as a crate and thus `nimue` cannot publish it along with a new release.
+use anemoi;
 use ark_ff::{Field, PrimeField};
 use zeroize::Zeroize;
 

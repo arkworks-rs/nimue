@@ -74,7 +74,7 @@ impl PowStrategy for Blake3PoW {
         // Use atomics to find the unique deterministic lowest satisfying nonce.
         let global_min = AtomicU64::new(u64::MAX);
         let _ = broadcast(|ctx| {
-            let mut worker = *self;
+            let mut worker = self.clone();
             let nonces = ((MAX_SIMD_DEGREE * ctx.index()) as u64..)
                 .step_by(MAX_SIMD_DEGREE * ctx.num_threads());
             for nonce in nonces {
@@ -144,12 +144,11 @@ impl Blake3PoW {
 
 #[test]
 fn test_pow_blake3() {
-    use crate::{ByteIOPattern, ByteReader, ByteWriter, PoWChallenge, PoWIOPattern};
-    use nimue::{DefaultHash, IOPattern};
+    use crate::{ByteIOPattern, ByteReader, ByteWriter, IOPattern, PoWChallenge, PoWIOPattern};
 
     const BITS: f64 = 10.0;
 
-    let iopattern = IOPattern::<DefaultHash>::new("the proof of work lottery 🎰")
+    let iopattern = IOPattern::new("the proof of work lottery 🎰")
         .add_bytes(1, "something")
         .challenge_pow("rolling dices");
 
