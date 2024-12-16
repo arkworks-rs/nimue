@@ -75,24 +75,24 @@ fn test_arkworks_end_to_end<F: Field, H: DuplexHash>() -> ProofResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_squeeze_bytes_from_modp() {
-    use ark_bls12_381::{Fq, Fr};
-    use ark_ff::PrimeField;
+// #[test]
+// fn test_squeeze_bytes_from_modp() {
+//     use ark_bls12_381::{Fq, Fr};
+//     use ark_ff::PrimeField;
 
-    use crate::plugins::random_bytes_in_random_modp;
-    let useful_bytes = random_bytes_in_random_modp(Fr::MODULUS);
-    assert_eq!(useful_bytes, 127 / 8);
+//     use crate::plugins::random_bytes_in_random_modp;
+//     let useful_bytes = random_bytes_in_random_modp(Fr::MODULUS);
+//     assert_eq!(useful_bytes, 127 / 8);
 
-    let useful_bytes = random_bytes_in_random_modp(Fq::MODULUS);
-    assert_eq!(useful_bytes, 253 / 8);
-}
+//     let useful_bytes = random_bytes_in_random_modp(Fq::MODULUS);
+//     assert_eq!(useful_bytes, 253 / 8);
+// }
 
 #[test]
 fn test_arkworks() {
-    use ark_bls12_381::{Fq2, Fr};
+    use ark_curve25519::{Fq, Fr};
     type F = Fr;
-    type F2 = Fq2;
+    type F2 = Fq;
 
     test_arkworks_end_to_end::<F, DefaultHash>().unwrap();
     test_arkworks_end_to_end::<F2, DefaultHash>().unwrap();

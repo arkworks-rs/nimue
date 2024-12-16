@@ -45,12 +45,13 @@ fn test_compatible_curve25519() {
     compatible_groups::<ArkG, GroupG>();
 }
 
-#[test]
-fn test_compatible_bls12_381() {
-    type ArkG = ark_bls12_381::G1Projective;
-    type GroupG = bls12_381::G1Projective;
-    compatible_groups::<ArkG, GroupG>();
-}
+// Ignored: ark_bls12_381 does not compile.
+// #[test]
+// fn test_compatible_bls12_381() {
+//     type ArkG = ark_bls12_381::G1Projective;
+//     type GroupG = bls12_381::G1Projective;
+//     compatible_groups::<ArkG, GroupG>();
+// }
 
 #[ignore = "arkworks adds trailing 0-byte"]
 #[test]
