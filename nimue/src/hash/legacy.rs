@@ -17,14 +17,14 @@
 //! and finally `squeeze_end` will set the state `cv` to the current squeeze digest and length.
 //!
 use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
-use generic_array::GenericArray;
+use digest::crypto_common::generic_array::GenericArray;
 use zeroize::Zeroize;
 
 use super::DuplexHash;
 
 /// A Bridge to our sponge interface for legacy `Digest` implementations.
 #[derive(Clone)]
-pub struct DigestBridge<D: Digest + Clone + Reset> {
+pub struct DigestBridge<D: Digest + Clone + Reset + BlockSizeUser>  {
     /// The underlying hasher.
     hasher: D,
     /// Cached digest
@@ -90,14 +90,14 @@ impl<D: BlockSizeUser + Digest + Clone + Reset> DigestBridge<D> {
     }
 }
 
-impl<D: Clone + Digest + Reset> Zeroize for DigestBridge<D> {
+impl<D: Clone + Digest + Reset + BlockSizeUser> Zeroize for DigestBridge<D> {
     fn zeroize(&mut self) {
         self.cv.zeroize();
         Digest::reset(&mut self.hasher);
     }
 }
 
-impl<D: Clone + Digest + Reset> Drop for DigestBridge<D> {
+impl<D: Clone + Digest + Reset + BlockSizeUser> Drop for DigestBridge<D> {
     fn drop(&mut self) {
         self.zeroize();
     }

@@ -10,7 +10,6 @@ license = "BSD-3-Clause"
 zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
 rand = { version = "0.8", features = ["getrandom"] }
 digest = "^0.10.7"
-generic-array = "^0.14.4"
 # used as default hasher for the prover
 keccak = { version = "0.1.4"}
 log = "0.4.20"
