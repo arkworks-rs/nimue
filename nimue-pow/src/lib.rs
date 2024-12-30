@@ -1,5 +1,6 @@
 pub mod blake3;
 pub mod keccak;
+pub mod skyscraper;
 
 use nimue::{
     Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash, Merlin, ProofError,

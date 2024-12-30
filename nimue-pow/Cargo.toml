@@ -15,6 +15,10 @@ keccak = { version = "0.1.4"}
 bytemuck = "1.17.1"
 rayon = { version = "1.10.0", optional = true }
 rand = "0.8.5"
+ruint = "1.12.3"
+ruint-macro = "1.2.1"
+ark-ff = { version = "0.5", features = ["asm", "std"] }
+ark-ff-macros = { version = "0.5" }
 
 [features]
 default = ["parallel"]
