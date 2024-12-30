@@ -9,7 +9,7 @@ use ruint_macro::uint;
 
 #[derive(Clone, Copy)]
 pub struct SkyscraperPoW {
-    challenge: [u8; 32],
+    challenge: Field256,
     threshold: Field256,
 }
 
@@ -54,7 +54,7 @@ impl PowStrategy for SkyscraperPoW {
         let threshold = bits.ceil() as usize;
 
         Self {
-            challenge: bytemuck::cast(challenge),
+            challenge: Field256::new(Self::bigint_from_bytes_le(&challenge)),
             threshold: DIFFICULTY_ARRAY[threshold],
         }
     }
@@ -62,7 +62,7 @@ impl PowStrategy for SkyscraperPoW {
 
     fn check(&mut self, nonce: u64) -> bool {
         let res = Self::compress(
-            Field256::new(Self::bigint_from_bytes_le(&self.challenge)), 
+            self.challenge, 
             uint_to_field(U256::from(nonce)));
         res < self.threshold
     }
@@ -183,7 +183,7 @@ impl SkyscraperPoW {
    
     fn check_single(&mut self, nonce: u64) -> Option<u64> {
         let res = Self::compress(
-            Field256::new(Self::bigint_from_bytes_le(&self.challenge)), 
+            self.challenge,
             uint_to_field(U256::from(nonce)));
         if res < self.threshold {
            return Some(nonce)
