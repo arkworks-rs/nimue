@@ -77,7 +77,7 @@ impl Op {
 }
 
 impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
-    fn from_string(io: String) -> Self {
+    pub fn from_string(io: String) -> Self {
         Self {
             io,
             _hash: PhantomData,
