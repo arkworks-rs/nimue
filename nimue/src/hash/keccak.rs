@@ -16,7 +16,7 @@ fn transmute_state(st: &mut AlignedKeccakState) -> &mut [u64; 25] {
 /// This is a wrapper around 200-byte buffer that's always 8-byte aligned
 /// to make pointers to it safely convertible to pointers to [u64; 25]
 /// (since u64 words must be 8-byte aligned)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop, PartialEq, Eq)]
 #[repr(align(8))]
 pub struct AlignedKeccakState([u8; 200]);
 

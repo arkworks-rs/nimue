@@ -37,7 +37,7 @@ pub trait Sponge: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]
 }
 
 /// A cryptographic sponge.
-#[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Default, Zeroize, ZeroizeOnDrop, PartialEq, Eq)]
 pub struct DuplexSponge<C: Sponge> {
     sponge: C,
     absorb_pos: usize,

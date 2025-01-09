@@ -16,6 +16,8 @@ fn test_iopattern() {
     // test that the byte separator is always added
     let iop = IOPattern::<Keccak>::new("example.com");
     assert!(iop.as_bytes().starts_with(b"example.com"));
+
+    assert_eq!(IOPattern::from_bytes(iop.to_bytes()).unwrap(), iop);
 }
 
 /// Test Merlin's rng is not doing completely stupid things.

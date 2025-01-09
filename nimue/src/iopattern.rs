@@ -34,7 +34,7 @@ const SEP_BYTE: &str = "\0";
 /// The struct [`IOPattern`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
 /// This means that [`Merlin`][`crate::Merlin`] or [`Arthur`][`crate::Arthur`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct IOPattern<H = crate::DefaultHash, U = u8>
 where
     U: Unit,
@@ -137,6 +137,17 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
     /// Return the IO Pattern as bytes.
     pub fn as_bytes(&self) -> &[u8] {
         self.io.as_bytes()
+    }
+
+    /// Return the IO Pattern as owned bytes.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.io.clone().into_bytes()
+    }
+
+    /// Construct an IO Pattern from serialized bytes (usually output from `Self::to_bytes()`)
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, IOPatternError> {
+        let io = String::from_utf8(bytes)?;
+        Ok(Self::from_string(io))
     }
 
     /// Parse the givern IO Pattern into a sequence of [`Op`]'s.

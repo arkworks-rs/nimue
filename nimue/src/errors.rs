@@ -17,7 +17,7 @@
 ///   An error to signal that the verification equation has failed. Destined for end users.
 ///
 /// A [`core::Result::Result`] wrapper called [`ProofResult`] (having error fixed to [`ProofError`]) is also provided.
-use std::{borrow::Borrow, error::Error, fmt::Display};
+use std::{borrow::Borrow, error::Error, fmt::Display, string::FromUtf8Error};
 
 /// Signals an invalid IO pattern.
 ///
@@ -80,5 +80,11 @@ impl<B: Borrow<IOPatternError>> From<B> for ProofError {
 impl From<std::io::Error> for IOPatternError {
     fn from(value: std::io::Error) -> Self {
         IOPatternError(value.to_string())
+    }
+}
+
+impl From<FromUtf8Error> for IOPatternError {
+    fn from(value: FromUtf8Error) -> Self {
+        Self(value.to_string())
     }
 }
