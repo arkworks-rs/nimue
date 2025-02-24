@@ -7,18 +7,18 @@ edition = "2021"
 license = "BSD-3-Clause"
 
 [dependencies]
-zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
-rand = { version = "0.8", features = ["getrandom"] }
-digest = "^0.10.7"
+zeroize = { workspace = true, features = ["zeroize_derive"] }
+rand = { workspace = true, features = ["getrandom"] }
+digest = { workspace = true }
 # used as default hasher for the prover
-keccak = { version = "0.1.4"}
-log = "0.4.20"
+keccak = { workspace = true }
+log = { workspace = true }
 # optional dependencies
-ark-ff = { version = "^0.5", optional = true }
-ark-ec = { version = "^0.5", optional = true }
-ark-serialize = { version = "^0.5", optional = true, features = ["std"] }
-group = { version = "0.13.0", optional = true }
-hex = "0.4.3"
+ark-ff = { workspace = true, optional = true }
+ark-ec = { workspace = true, optional = true }
+ark-serialize = { workspace = true, features = ["std"], optional = true }
+group = { workspace = true, optional = true }
+hex = { workspace = true }
 
 [features]
 default = []
@@ -27,22 +27,22 @@ group = ["dep:group"]
 asm = ["keccak/asm", "keccak/simd"]
 
 [dev-dependencies]
-ark-std = "^0.5.0"
-sha2 = "0.10.7"
-blake2 = "0.10.6"
-hex = "0.4.3"
+ark-std = { workspace = true }
+sha2 = { workspace = true }
+blake2 = { workspace = true }
+hex = { workspace = true }
 # test curve25519 compatibility
-curve25519-dalek = { version = "4.0.0", features = ["group"] }
-ark-curve25519 = "0.5.0"
+curve25519-dalek = { workspace = true, features = ["group"] }
+ark-curve25519 = { workspace = true }
 # test algebraic hashers
-bls12_381 = "0.8.0"
-ark-bls12-381 = { version = "^0.5", features = ["std"] }
-anyhow = { version = "1.0.75", features = ["backtrace"] }
-ark-pallas = { version = "^0.5", features = ["std"] }
-pallas = "^0.31"
-pasta_curves = "0.5.1"
-ark-vesta = { version = "^0.5", features = ["std"] }
-sha3 = "0.10.8"
+bls12_381 = { workspace = true }
+ark-bls12-381 = { workspace = true, features = ["std"] }
+anyhow = { workspace = true, features = ["backtrace"] }
+ark-pallas = { workspace = true, features = ["std"] }
+pallas = { workspace = true }
+pasta_curves = { workspace = true }
+ark-vesta = { workspace = true, features = ["std"] }
+sha3 = { workspace = true }
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "../doc/katex-header.html", "--cfg", "docsrs"]
