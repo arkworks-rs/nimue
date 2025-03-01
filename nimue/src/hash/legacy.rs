@@ -16,15 +16,15 @@
 //! `squeeze_unchecked` will use the squeeze oracle to output `output.len()` bytes,
 //! and finally `squeeze_end` will set the state `cv` to the current squeeze digest and length.
 //!
-use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
 use digest::crypto_common::generic_array::GenericArray;
+use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
 use zeroize::Zeroize;
 
 use super::DuplexHash;
 
 /// A Bridge to our sponge interface for legacy `Digest` implementations.
 #[derive(Clone)]
-pub struct DigestBridge<D: Digest + Clone + Reset + BlockSizeUser>  {
+pub struct DigestBridge<D: Digest + Clone + Reset + BlockSizeUser> {
     /// The underlying hasher.
     hasher: D,
     /// Cached digest

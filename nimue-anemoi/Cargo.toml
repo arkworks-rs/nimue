@@ -5,9 +5,9 @@ edition = "2021"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-ark-ff = "^0.5"
-nimue = { path = "../nimue", features = ["ark"] }
-zeroize = "1.8.1"
-anemoi = {git = "https://github.com/mmaker/anemoi", features=["bls12_381"]}
-ark-bls12-381 = "^0.5"
-arrayvec = "0.7.6"
+ark-ff = { workspace = true }
+nimue = { workspace = true, features = ["ark"] }
+zeroize = { workspace = true }
+anemoi = { workspace = true, features = ["bls12_381"] }
+ark-bls12-381 = { workspace = true }
+arrayvec = { workspace = true }
