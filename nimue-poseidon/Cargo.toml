@@ -13,11 +13,16 @@ ark-bn254 = { workspace = true, optional = true }
 
 [dev-dependencies]
 ark-bls12-381 = { workspace = true }
+ark-ec = { workspace = true }
+ark-std = { workspace = true }
+hex = { workspace = true }
+blake2 = { workspace = true }
 
 [features]
 bn254 = ["ark-bn254"]
 solinas = []
 bls12-381 = ["nimue/ark", "dep:ark-bls12-381"]
+ark-bls12-381 = ["nimue/ark", "dep:ark-bls12-381"]
 
 [[example]]
 name = "schnorr_algebraic_hash"
