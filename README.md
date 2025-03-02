@@ -35,7 +35,7 @@ while maintaining security is crucial. We offer tools for preprocessing the Tran
 It is vital to avoid providing two different challenges for the same prover message. We do our best to avoid it by tying down the prover randomness to the protocol transcript, without making the proof deterministic.
 
 ## More information
-Check out the [documentation](https://arkworks.rs/nimue/) and some [`examples/`](https://github.com/arkworks-rs/nimue/tree/main/examples).
+Check out the [documentation](https://arkworks.rs/nimue/) and some [`examples/`](https://github.com/arkworks-rs/nimue/tree/main/nimue/examples).
 
 ## Funding
 
