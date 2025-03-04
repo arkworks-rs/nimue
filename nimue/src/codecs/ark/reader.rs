@@ -7,12 +7,12 @@ use ark_serialize::CanonicalDeserialize;
 
 use super::{FieldReader, GroupReader};
 use crate::traits::*;
-use crate::{Arthur, DuplexHash, ProofResult};
+use crate::{DuplexInterface, ProofResult, VerifierTranscript};
 
-impl<F, H> FieldReader<F> for Arthur<'_, H>
+impl<F, H> FieldReader<F> for VerifierTranscript<'_, H>
 where
     F: Field,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn fill_next_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let point_size = F::default().compressed_size();
@@ -25,10 +25,10 @@ where
     }
 }
 
-impl<G, H> GroupReader<G> for Arthur<'_, H>
+impl<G, H> GroupReader<G> for VerifierTranscript<'_, H>
 where
     G: CurveGroup,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn fill_next_points(&mut self, output: &mut [G]) -> ProofResult<()> {
         let point_size = G::default().compressed_size();
@@ -42,10 +42,10 @@ where
     }
 }
 
-impl<H, C, const N: usize> FieldReader<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> FieldReader<Fp<C, N>> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     fn fill_next_scalars(&mut self, output: &mut [Fp<C, N>]) -> crate::ProofResult<()> {
         self.fill_next_units(output)?;
@@ -53,10 +53,10 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for Arthur<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     P: TECurveConfig<BaseField = Fp<C, N>>,
 {
     fn fill_next_points(&mut self, output: &mut [EdwardsCurve<P>]) -> ProofResult<()> {
@@ -69,10 +69,10 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<SWCurve<P>> for Arthur<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> GroupReader<SWCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     P: SWCurveConfig<BaseField = Fp<C, N>>,
 {
     fn fill_next_points(&mut self, output: &mut [SWCurve<P>]) -> ProofResult<()> {

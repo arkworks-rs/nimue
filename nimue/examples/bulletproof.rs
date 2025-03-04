@@ -12,7 +12,7 @@ use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::plugins::ark::*;
+use nimue::codecs::ark::*;
 use rand::rngs::OsRng;
 
 /// The IO Pattern of a bulleproof.
@@ -46,13 +46,13 @@ where
 }
 
 fn prove<'a, G: CurveGroup>(
-    merlin: &'a mut Merlin,
+    merlin: &'a mut ProverTranscript,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> ProofResult<&'a [u8]>
 where
-    Merlin: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+    ProverTranscript: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -97,13 +97,13 @@ where
 }
 
 fn verify<G: CurveGroup>(
-    arthur: &mut Arthur,
+    arthur: &mut VerifierTranscript,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
 ) -> ProofResult<()>
 where
-    for<'a> Arthur<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
+    for<'a> VerifierTranscript<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();

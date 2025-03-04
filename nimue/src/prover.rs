@@ -1,9 +1,10 @@
 use rand::{CryptoRng, RngCore};
 
-use crate::hash::Unit;
-use crate::{ByteWriter, IOPattern, Safe, UnitTranscript};
+use crate::duplex_sponge::Unit;
+use crate::{ByteWriter, IOPattern, StatefulHashObject, UnitTranscript};
 
-use super::hash::{DuplexHash, Keccak};
+use super::duplex_sponge::DuplexInterface;
+use super::permutations::keccak::Keccak;
 use super::{DefaultHash, DefaultRng, IOPatternError};
 
 /// A cryptographically-secure random number generator that is bound to the protocol transcript.
@@ -50,14 +51,14 @@ impl<R: RngCore + CryptoRng> RngCore for ProverRng<R> {
     }
 }
 
-impl<H, U, R> Merlin<H, U, R>
+impl<H, U, R> ProverTranscript<H, U, R>
 where
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: RngCore + CryptoRng,
     U: Unit,
 {
     pub fn new(io_pattern: &IOPattern<H, U>, csrng: R) -> Self {
-        let safe = Safe::new(io_pattern);
+        let safe = StatefulHashObject::new(io_pattern);
 
         let mut sponge = Keccak::default();
         sponge.absorb_unchecked(io_pattern.as_bytes());
@@ -71,41 +72,41 @@ where
     }
 }
 
-impl<U, H> From<&IOPattern<H, U>> for Merlin<H, U, DefaultRng>
+impl<U, H> From<&IOPattern<H, U>> for ProverTranscript<H, U, DefaultRng>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
 {
     fn from(io_pattern: &IOPattern<H, U>) -> Self {
-        Merlin::new(io_pattern, DefaultRng::default())
+        ProverTranscript::new(io_pattern, DefaultRng::default())
     }
 }
 
-/// [`Merlin`] is the prover state in an interactive proof system.
+/// [`ProverTranscript`] is the prover state in an interactive proof system.
 /// It internally holds the secret coins of the prover for zero-knowledge, and
 /// has the hash function state for the verifier state.
 ///
 /// Unless otherwise specified,
-/// [`Merlin`] is set to work over bytes with [`DefaultHash`] and
+/// [`ProverTranscript`] is set to work over bytes with [`DefaultHash`] and
 /// rely on the default random number generator [`DefaultRng`].
-pub struct Merlin<H = DefaultHash, U = u8, R = DefaultRng>
+pub struct ProverTranscript<H = DefaultHash, U = u8, R = DefaultRng>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: RngCore + CryptoRng,
 {
     /// The randomness state of the prover.
     pub(crate) rng: ProverRng<R>,
     /// The public coins for the protocol
-    pub(crate) safe: Safe<H, U>,
+    pub(crate) safe: StatefulHashObject<H, U>,
     /// The encoded data.
     pub(crate) transcript: Vec<u8>,
 }
 
-impl<H, U, R> Merlin<H, U, R>
+impl<H, U, R> ProverTranscript<H, U, R>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: RngCore + CryptoRng,
 {
     /// Add a slice `[U]` to the protocol transcript.
@@ -180,10 +181,10 @@ where
     }
 }
 
-impl<H, U, R> UnitTranscript<U> for Merlin<H, U, R>
+impl<H, U, R> UnitTranscript<U> for ProverTranscript<H, U, R>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: RngCore + CryptoRng,
 {
     /// Add public messages to the protocol transcript.
@@ -213,10 +214,10 @@ where
 
 impl<R: RngCore + CryptoRng> CryptoRng for ProverRng<R> {}
 
-impl<H, U, R> core::fmt::Debug for Merlin<H, U, R>
+impl<H, U, R> core::fmt::Debug for ProverTranscript<H, U, R>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: RngCore + CryptoRng,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -224,9 +225,9 @@ where
     }
 }
 
-impl<H, R> ByteWriter for Merlin<H, u8, R>
+impl<H, R> ByteWriter for ProverTranscript<H, u8, R>
 where
-    H: DuplexHash<u8>,
+    H: DuplexInterface<u8>,
     R: RngCore + CryptoRng,
 {
     #[inline(always)]

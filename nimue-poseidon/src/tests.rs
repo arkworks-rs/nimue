@@ -1,7 +1,7 @@
-use nimue::hash::sponge::Sponge;
+use nimue::duplex_sponge::Permutation;
 
 #[allow(unused)]
-fn test_vector<H: Sponge>(input: &[H::U], output: &[H::U])
+fn test_vector<H: Permutation>(input: &[H::U], output: &[H::U])
 where
     H::U: PartialEq + std::fmt::Debug,
 {
@@ -20,7 +20,7 @@ fn test_squeeze_bytes_from_algebraic_hash() {
     type H = crate::bls12_381::Poseidonx5_255_3;
 
     let io = nimue::IOPattern::<H, F>::new("test").absorb(1, "in");
-    let io = <nimue::IOPattern<H, F> as nimue::plugins::ark::ByteIOPattern>::challenge_bytes(
+    let io = <nimue::IOPattern<H, F> as nimue::codecs::ark::ByteIOPattern>::challenge_bytes(
         io, 2048, "out",
     );
     let mut merlin = io.to_merlin();

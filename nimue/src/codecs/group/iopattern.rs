@@ -1,8 +1,8 @@
 use group::{ff::PrimeField, Group, GroupEncoding};
 
 use crate::{
-    plugins::{bytes_modp, bytes_uniform_modp},
-    ByteIOPattern, DuplexHash, IOPattern,
+    codecs::{bytes_modp, bytes_uniform_modp},
+    ByteIOPattern, DuplexInterface, IOPattern,
 };
 
 use super::{FieldIOPattern, GroupIOPattern};
@@ -10,7 +10,7 @@ use super::{FieldIOPattern, GroupIOPattern};
 impl<F, H> FieldIOPattern<F> for IOPattern<H>
 where
     F: PrimeField,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
         self.add_bytes(count * bytes_modp(F::NUM_BITS), label)
@@ -25,7 +25,7 @@ impl<G, H> GroupIOPattern<G> for IOPattern<H>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         let n = G::Repr::default().as_ref().len();

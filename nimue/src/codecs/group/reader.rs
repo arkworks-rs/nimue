@@ -1,10 +1,10 @@
 use super::FieldReader;
-use crate::{Arthur, ByteReader, DuplexHash, ProofError};
+use crate::{ByteReader, DuplexInterface, ProofError, VerifierTranscript};
 use group::ff::PrimeField;
 
-impl<'a, F, H, const N: usize> FieldReader<F> for Arthur<'a, H>
+impl<'a, F, H, const N: usize> FieldReader<F> for VerifierTranscript<'a, H>
 where
-    H: DuplexHash,
+    H: DuplexInterface,
     F: PrimeField<Repr = [u8; N]>,
 {
     fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()> {

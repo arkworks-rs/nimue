@@ -5,7 +5,7 @@
 use ark_ff::{Field, PrimeField};
 use zeroize::Zeroize;
 
-use nimue::hash::sponge::Sponge;
+use nimue::duplex_sponge::Permutation;
 
 #[derive(Clone, Zeroize)]
 pub struct AnemoiState<F: Field, const R: usize, const N: usize>([F; N]);
@@ -32,7 +32,7 @@ pub type AnemoiBls12_381_2_1 = AnemoiState<anemoi::bls12_381::Felt, 2, 1>;
 use anemoi::bls12_381::anemoi_2_1::AnemoiBls12_381_2_1 as _AnemoiBls12_381_2_1;
 use anemoi::Anemoi;
 
-impl Sponge
+impl Permutation
     for AnemoiState<
         anemoi::bls12_381::Felt,
         { _AnemoiBls12_381_2_1::RATE },

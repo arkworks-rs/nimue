@@ -1,4 +1,4 @@
-use nimue::hash::sponge::DuplexSponge;
+use nimue::duplex_sponge::DuplexSponge;
 
 poseidon_sponge!(255, PoseidonPermx5_255_3, x5_255_3);
 poseidon_sponge!(255, PoseidonPermx5_255_5, x5_255_5);

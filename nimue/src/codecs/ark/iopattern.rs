@@ -2,12 +2,12 @@ use ark_ec::CurveGroup;
 use ark_ff::{Field, Fp, FpConfig, PrimeField};
 
 use super::*;
-use crate::plugins::{bytes_modp, bytes_uniform_modp};
+use crate::codecs::{bytes_modp, bytes_uniform_modp};
 
 impl<F, H> FieldIOPattern<F> for IOPattern<H>
 where
     F: Field,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
         self.add_bytes(
@@ -32,7 +32,7 @@ impl<F, C, H, const N: usize> FieldIOPattern<F> for IOPattern<H, Fp<C, N>>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
         self.absorb(count * F::extension_degree() as usize, label)
@@ -46,7 +46,7 @@ where
 impl<C, H, const N: usize> ByteIOPattern for IOPattern<H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     /// Add `count` bytes to the transcript, encoding each of them as an element of the field `Fp`.
     fn add_bytes(self, count: usize, label: &str) -> Self {
@@ -54,7 +54,7 @@ where
     }
 
     fn challenge_bytes(self, count: usize, label: &str) -> Self {
-        let n = crate::plugins::random_bits_in_random_modp(Fp::<C, N>::MODULUS) / 8;
+        let n = crate::codecs::random_bits_in_random_modp(Fp::<C, N>::MODULUS) / 8;
         self.squeeze(count.div_ceil(n), label)
     }
 }
@@ -62,7 +62,7 @@ where
 impl<G, H> GroupIOPattern<G> for IOPattern<H>
 where
     G: CurveGroup,
-    H: DuplexHash,
+    H: DuplexInterface,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         self.add_bytes(count * G::default().compressed_size(), label)
@@ -72,7 +72,7 @@ where
 impl<G, H, C, const N: usize> GroupIOPattern<G> for IOPattern<H, Fp<C, N>>
 where
     G: CurveGroup<BaseField = Fp<C, N>>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     C: FpConfig<N>,
     IOPattern<H, Fp<C, N>>: FieldIOPattern<Fp<C, N>>,
 {
@@ -93,7 +93,7 @@ fn test_iopattern() {
     //     .absorb_scalars(1, "resp");
 
     // // OPTION 2
-    fn add_schnorr_iopattern<G: ark_ec::CurveGroup, H: DuplexHash<u8>>() -> IOPattern<H, u8>
+    fn add_schnorr_iopattern<G: ark_ec::CurveGroup, H: DuplexInterface<u8>>() -> IOPattern<H, u8>
     where
         IOPattern<H, u8>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
     {

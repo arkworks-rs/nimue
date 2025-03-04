@@ -11,8 +11,8 @@
 //!
 //! The library does two things:
 //!
-//! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([`Merlin`]),
-//! - Assist in the deserialization and verification of a public-coin protocol ([`Arthur`]).
+//! - Assist in the construction of a protocol transcript for a public-coin zero-knowledge proof ([`ProverTranscript`]),
+//! - Assist in the deserialization and verification of a public-coin protocol ([`VerifierTranscript`]).
 //!
 //! The basic idea behind Nimue is that prover and verifier "commit" to the protocol before running the actual protocol.
 //! They a string encoding the sequence of messages sent from the prover and the verifier (the [`IOPattern`]), which is used as an  "IV" to initialize the hash function for the Fiat-Shamir heuristic.
@@ -44,15 +44,15 @@
 //!
 //! # Batteries included
 //! The library comes with support for algebraic objects over arkworks and zkcrypto:
-//! - with feature flag `--feature=ark`, the module [`plugins::ark`] provides extension traits for arkworks fields and groups;
-//! - with feature flag `--feature=group`, the module [`plugins::group`] provides extension traits for zkcrypto's field and group traits.
-//! See the [`plugins`] module for more information.
+//! - with feature flag `--feature=ark`, the module [`codecs::ark`] provides extension traits for arkworks fields and groups;
+//! - with feature flag `--feature=group`, the module [`codecs::group`] provides extension traits for zkcrypto's field and group traits.
+//! See the [`codecs`] module for more information.
 //!
 //!
 //! # Protocol transcripts
 //!
-//! Prover and verifier proof transcripts are built respectively with [`Merlin`] and [`Arthur`].
-//! Given the IOPattern, it is possible to build a [`Merlin`] instance that can
+//! Prover and verifier proof transcripts are built respectively with [`ProverTranscript`] and [`VerifierTranscript`].
+//! Given the IOPattern, it is possible to build a [`ProverTranscript`] instance that can
 //! build the protocol transcript, and seed the private randomness for the prover.
 //!
 //! ```
@@ -76,14 +76,14 @@
 //! ```
 //!
 //! (Note: Nimue provides aliases [`DefaultHash`] and [`DefaultRng`] mapping to secure hash functions and random number generators).
-//! An [`Merlin`] instance can generate public coins (via a [`Safe`] instance) and private coins.
+//! An [`ProverTranscript`] instance can generate public coins (via a [`Safe`] instance) and private coins.
 //! Private coins are generated with a sponge that absorbs whatever the public sponge absorbs, and is seeded by a cryptographic random number generator throughout the protocol by the prover.
 //! This way, it is really hard to produce two different challenges for the same prover message.
 //!
-//! The verifier can use a [`Arthur`] instance to recover the protocol transcript and public coins:
+//! The verifier can use a [`VerifierTranscript`] instance to recover the protocol transcript and public coins:
 //! ```
-//! use nimue::{IOPattern, Arthur};
-//! use nimue::hash::Keccak;
+//! use nimue::{IOPattern, VerifierTranscript};
+//! use nimue::permutations::Keccak;
 //! use nimue::traits::*;
 //! use rand::{Rng, rngs::OsRng};
 //!
@@ -104,12 +104,12 @@
 //! This work is heavily inspired from:
 //! - Libsignal's [shosha256], by Trevor Perrin. It provides an absorb/squeeze interface over legacy hash functions.
 //! - the [SAFE] API, by Dmitry Khovratovich, JP Aumasson, Porçu Quine, Bart Mennink. To my knowledge they are the first to introduce this idea of using an IO Pattern to build a transcript and the SAFE API.
-//! - [Arthur], by Henry de Valence. To my knowledge it introduced this idea of a `Transcript` object carrying over the state of the hash function throughout the protocol.
+//! - [VerifierTranscript], by Henry de Valence. To my knowledge it introduced this idea of a `Transcript` object carrying over the state of the hash function throughout the protocol.
 //!
 //!
 //! [shosha256]: https://github.com/signalapp/libsignal/blob/main/rust/poksho/src/shosha256.rs
 //! [SAFE]: https://eprint.iacr.org/2023/522
-//! [Arthur]: https://github.com/dalek-cryptography/arthur
+//! [VerifierTranscript]: https://github.com/dalek-cryptography/arthur
 //! [`digest::Digest`]: https://docs.rs/digest/latest/digest/trait.Digest.html
 
 #[cfg(target_endian = "big")]
@@ -119,20 +119,24 @@ This crate doesn't support big-endian targets.
 "#
 );
 
-/// Verifier state and transcript deserialization.
-mod arthur;
+/// Hash functions traits and implementations.
+pub mod duplex_sponge;
 /// Built-in proof results.
 mod errors;
-/// Hash functions traits and implementations.
-pub mod hash;
+/// Verifier state and transcript deserialization.
+mod verifier;
+
+/// Built-in permutation functions.
+pub mod permutations;
+
+/// APIs for common zkp libraries.
+pub mod codecs;
 /// IO Pattern
 mod iopattern;
 /// Prover's internal state and transcript generation.
-mod merlin;
-/// APIs for common zkp libraries.
-pub mod plugins;
+mod prover;
 /// SAFE API.
-mod safe;
+mod sho;
 /// Unit-tests.
 #[cfg(test)]
 mod tests;
@@ -140,16 +144,16 @@ mod tests;
 /// Traits for byte support.
 pub mod traits;
 
-pub use arthur::Arthur;
+pub use duplex_sponge::{legacy::DigestBridge, DuplexInterface, Unit};
 pub use errors::{IOPatternError, ProofError, ProofResult};
-pub use hash::{legacy::DigestBridge, DuplexHash, Unit};
 pub use iopattern::IOPattern;
-pub use merlin::Merlin;
-pub use safe::Safe;
+pub use prover::ProverTranscript;
+pub use sho::StatefulHashObject;
 pub use traits::*;
+pub use verifier::VerifierTranscript;
 
 /// Default random number generator used ([`rand::rngs::OsRng`]).
 pub type DefaultRng = rand::rngs::OsRng;
 
 /// Default hash function used ([`hash::Keccak`]).
-pub type DefaultHash = hash::Keccak;
+pub type DefaultHash = permutations::keccak::Keccak;

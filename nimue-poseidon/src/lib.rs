@@ -3,9 +3,9 @@
 use std::fmt::Debug;
 
 use ark_ff::PrimeField;
-use nimue::hash::sponge::DuplexSponge;
-use nimue::hash::sponge::Sponge;
-use nimue::hash::Unit;
+use nimue::duplex_sponge::DuplexSponge;
+use nimue::duplex_sponge::Permutation;
+use nimue::duplex_sponge::Unit;
 
 /// Poseidon Sponge.
 ///
@@ -91,7 +91,8 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> zeroize::Ze
     }
 }
 
-impl<const NAME: u32, F, const R: usize, const N: usize> Sponge for PoseidonSponge<NAME, F, R, N>
+impl<const NAME: u32, F, const R: usize, const N: usize> Permutation
+    for PoseidonSponge<NAME, F, R, N>
 where
     PoseidonSponge<NAME, F, R, N>: Default,
     F: PrimeField + Unit,

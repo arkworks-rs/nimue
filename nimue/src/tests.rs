@@ -1,9 +1,10 @@
 use rand::RngCore;
 
-use crate::hash::keccak::Keccak;
-use crate::hash::legacy::DigestBridge;
+use crate::duplex_sponge::legacy::DigestBridge;
+use crate::permutations::keccak::Keccak;
 use crate::{
-    ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPattern, Merlin, Safe,
+    ByteChallenges, BytePublic, ByteReader, ByteWriter, DuplexInterface, IOPattern,
+    ProverTranscript, StatefulHashObject,
 };
 
 type Sha2 = DigestBridge<sha2::Sha256>;
@@ -18,7 +19,7 @@ fn test_iopattern() {
     assert!(iop.as_bytes().starts_with(b"example.com"));
 }
 
-/// Test Merlin's rng is not doing completely stupid things.
+/// Test ProverTranscript's rng is not doing completely stupid things.
 #[test]
 fn test_merlin_rng_basic() {
     let iop = IOPattern::<Keccak>::new("example.com");
@@ -57,7 +58,7 @@ fn test_merlin_bytewriter() {
 #[test]
 fn test_invalid_io_sequence() {
     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
-    let mut arthur = Safe::<Keccak>::new(&iop);
+    let mut arthur = StatefulHashObject::<Keccak>::new(&iop);
     assert!(arthur.squeeze(&mut [0u8; 16]).is_err());
 }
 
@@ -67,7 +68,7 @@ fn test_invalid_io_sequence() {
 // #[should_panic]
 // fn test_unfinished_io() {
 //     let iop = IOPattern::new("example.com").absorb(3, "").squeeze(1, "");
-//     let _arthur = Arthur::<Keccak>::new(&iop);
+//     let _arthur = VerifierTranscript::<Keccak>::new(&iop);
 // }
 
 /// Challenges from the same transcript should be equal.
@@ -76,8 +77,8 @@ fn test_deterministic() {
     let iop = IOPattern::new("example.com")
         .absorb(3, "elt")
         .squeeze(16, "another_elt");
-    let mut first_sponge = Safe::<Keccak>::new(&iop);
-    let mut second_sponge = Safe::<Keccak>::new(&iop);
+    let mut first_sponge = StatefulHashObject::<Keccak>::new(&iop);
+    let mut second_sponge = StatefulHashObject::<Keccak>::new(&iop);
 
     let mut first = [0u8; 16];
     let mut second = [0u8; 16];
@@ -97,7 +98,7 @@ fn test_statistics() {
         .absorb(4, "statement")
         .ratchet()
         .squeeze(2048, "gee");
-    let mut arthur = Safe::<Keccak>::new(&iop);
+    let mut arthur = StatefulHashObject::<Keccak>::new(&iop);
     arthur.absorb(b"seed").unwrap();
     arthur.ratchet().unwrap();
     let mut output = [0u8; 2048];
@@ -156,9 +157,9 @@ fn test_merlin_empty_absorb() {
 }
 
 /// Absorbs and squeeze over byte-Units should be streamable.
-fn test_streaming_absorb_and_squeeze<H: DuplexHash>()
+fn test_streaming_absorb_and_squeeze<H: DuplexInterface>()
 where
-    Merlin<H>: ByteWriter + ByteChallenges,
+    ProverTranscript<H>: ByteWriter + ByteChallenges,
 {
     let bytes = b"yellow submarine";
 

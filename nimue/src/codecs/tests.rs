@@ -2,17 +2,17 @@ use ark_ec::CurveGroup;
 use ark_serialize::CanonicalSerialize;
 use group::GroupEncoding;
 
-use crate::hash::Keccak;
-use crate::{plugins, ByteIOPattern};
-use crate::{ByteChallenges, DuplexHash, IOPattern};
+use crate::permutations::Keccak;
+use crate::{codecs, ByteIOPattern};
+use crate::{ByteChallenges, DuplexInterface, IOPattern};
 
 fn group_iopattern<G, H>() -> IOPattern<H>
 where
     G: group::Group,
-    H: DuplexHash,
+    H: DuplexInterface,
     IOPattern<H>: super::group::GroupIOPattern<G> + super::group::FieldIOPattern<G::Scalar>,
 {
-    use plugins::group::{FieldIOPattern, GroupIOPattern};
+    use codecs::group::{FieldIOPattern, GroupIOPattern};
 
     IOPattern::new("github.com/mmaker/nimue")
         .add_scalars(1, "com")
@@ -25,10 +25,10 @@ where
 fn ark_iopattern<G, H>() -> IOPattern<H>
 where
     G: ark_ec::CurveGroup,
-    H: DuplexHash,
+    H: DuplexInterface,
     IOPattern<H>: super::ark::GroupIOPattern<G> + super::ark::FieldIOPattern<G::Scalar>,
 {
-    use plugins::ark::{FieldIOPattern, GroupIOPattern};
+    use codecs::ark::{FieldIOPattern, GroupIOPattern};
 
     IOPattern::new("github.com/mmaker/nimue")
         .add_scalars(1, "com")
@@ -110,24 +110,24 @@ where
     assert_eq!(ark_io.as_bytes(), group_io.as_bytes());
 
     // Check that scalars absorption leads to the same transcript.
-    plugins::ark::FieldWriter::add_scalars(&mut ark_prover, &[ark_scalar]).unwrap();
+    codecs::ark::FieldWriter::add_scalars(&mut ark_prover, &[ark_scalar]).unwrap();
     ark_prover.fill_challenge_bytes(&mut ark_chal).unwrap();
-    plugins::group::FieldWriter::add_scalars(&mut group_prover, &[group_scalar]).unwrap();
+    codecs::group::FieldWriter::add_scalars(&mut group_prover, &[group_scalar]).unwrap();
     group_prover.fill_challenge_bytes(&mut group_chal).unwrap();
     assert_eq!(ark_chal, group_chal);
 
     // Check that points absorption leads to the same transcript.
-    plugins::ark::GroupWriter::add_points(&mut ark_prover, &[ark_point]).unwrap();
+    codecs::ark::GroupWriter::add_points(&mut ark_prover, &[ark_point]).unwrap();
     ark_prover.fill_challenge_bytes(&mut ark_chal).unwrap();
-    plugins::group::GroupWriter::add_points(&mut group_prover, &[group_point]).unwrap();
+    codecs::group::GroupWriter::add_points(&mut group_prover, &[group_point]).unwrap();
     group_prover.fill_challenge_bytes(&mut group_chal).unwrap();
     assert_eq!(ark_chal, group_chal);
 
     // Check that scalars challenges are interpreted in the same way from bytes.
     let [ark_chal_scalar]: [ArkG::ScalarField; 1] =
-        plugins::ark::FieldChallenges::challenge_scalars(&mut ark_prover).unwrap();
+        codecs::ark::FieldChallenges::challenge_scalars(&mut ark_prover).unwrap();
     let [group_chal_scalar]: [GroupG::Scalar; 1] =
-        plugins::group::FieldChallenges::challenge_scalars(&mut group_prover).unwrap();
+        codecs::group::FieldChallenges::challenge_scalars(&mut group_prover).unwrap();
     let mut ark_scalar_bytes = Vec::new();
     ark_chal_scalar
         .serialize_compressed(&mut ark_scalar_bytes)

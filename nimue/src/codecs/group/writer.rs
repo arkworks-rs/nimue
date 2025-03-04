@@ -2,12 +2,12 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
-use crate::{ByteWriter, DuplexHash, Merlin, ProofResult};
+use crate::{ByteWriter, DuplexInterface, ProofResult, ProverTranscript};
 
-impl<F, H, R> FieldWriter<F> for Merlin<H, u8, R>
+impl<F, H, R> FieldWriter<F> for ProverTranscript<H, u8, R>
 where
     F: PrimeField,
-    H: DuplexHash,
+    H: DuplexInterface,
     R: RngCore + CryptoRng,
 {
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
@@ -17,11 +17,11 @@ where
     }
 }
 
-impl<G, H, R> GroupPublic<G> for Merlin<H, u8, R>
+impl<G, H, R> GroupPublic<G> for ProverTranscript<H, u8, R>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,
-    H: DuplexHash,
+    H: DuplexInterface,
     R: RngCore + CryptoRng,
 {
     type Repr = Vec<u8>;
@@ -35,11 +35,11 @@ where
     }
 }
 
-impl<G, H, R> GroupWriter<G> for Merlin<H, u8, R>
+impl<G, H, R> GroupWriter<G> for ProverTranscript<H, u8, R>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,
-    H: DuplexHash,
+    H: DuplexInterface,
     R: RngCore + CryptoRng,
 {
     fn add_points(&mut self, input: &[G]) -> crate::ProofResult<()> {

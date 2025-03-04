@@ -2,26 +2,25 @@ use core::fmt;
 use core::marker::PhantomData;
 use std::collections::vec_deque::VecDeque;
 
+use super::duplex_sponge::DuplexInterface;
+use super::duplex_sponge::Unit;
 use super::errors::IOPatternError;
-use super::hash::Unit;
-use super::hash::{DuplexHash, Keccak};
 use super::iopattern::{IOPattern, Op};
+use super::permutations::keccak::Keccak;
 
-/// A (slightly modified) SAFE API for sponge functions.
-///
-/// Operations in the SAFE API provide a secure interface for using sponges.
+/// A stateful hash object that interfaces with duplex interfaces.
 #[derive(Clone)]
-pub struct Safe<H, U = u8>
+pub struct StatefulHashObject<H, U = u8>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
 {
     sponge: H,
     stack: VecDeque<Op>,
     _unit: PhantomData<U>,
 }
 
-impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
+impl<U: Unit, H: DuplexInterface<U>> StatefulHashObject<H, U> {
     /// Initialise a SAFE sponge,
     /// setting up the state of the sponge function and parsing the tag string.
     pub fn new(io_pattern: &IOPattern<H, U>) -> Self {
@@ -131,7 +130,7 @@ impl<U: Unit, H: DuplexHash<U>> Safe<H, U> {
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>> Drop for Safe<H, U> {
+impl<U: Unit, H: DuplexInterface<U>> Drop for StatefulHashObject<H, U> {
     /// Destroy the sponge state.
     fn drop(&mut self) {
         // it's a bit violent to panic here,
@@ -146,7 +145,7 @@ impl<U: Unit, H: DuplexHash<U>> Drop for Safe<H, U> {
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>> fmt::Debug for Safe<H, U> {
+impl<U: Unit, H: DuplexInterface<U>> fmt::Debug for StatefulHashObject<H, U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
@@ -154,7 +153,9 @@ impl<U: Unit, H: DuplexHash<U>> fmt::Debug for Safe<H, U> {
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B> for Safe<H, U> {
+impl<U: Unit, H: DuplexInterface<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B>
+    for StatefulHashObject<H, U>
+{
     fn from(value: B) -> Self {
         Self::new(value.borrow())
     }

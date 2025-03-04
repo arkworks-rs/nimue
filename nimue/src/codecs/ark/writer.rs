@@ -5,11 +5,13 @@ use rand::{CryptoRng, RngCore};
 
 use super::{FieldPublic, FieldWriter, GroupPublic, GroupWriter};
 use crate::{
-    Arthur, BytePublic, ByteReader, ByteWriter, DuplexHash, IOPatternError, Merlin, ProofResult,
-    Unit, UnitTranscript,
+    BytePublic, ByteReader, ByteWriter, DuplexInterface, IOPatternError, ProofResult,
+    ProverTranscript, Unit, UnitTranscript, VerifierTranscript,
 };
 
-impl<F: Field, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Merlin<H, u8, R> {
+impl<F: Field, H: DuplexInterface, R: RngCore + CryptoRng> FieldWriter<F>
+    for ProverTranscript<H, u8, R>
+{
     fn add_scalars(&mut self, input: &[F]) -> ProofResult<()> {
         let serialized = self.public_scalars(input);
         self.transcript.extend(serialized?);
@@ -17,8 +19,8 @@ impl<F: Field, H: DuplexHash, R: RngCore + CryptoRng> FieldWriter<F> for Merlin<
     }
 }
 
-impl<C: FpConfig<N>, H: DuplexHash<Fp<C, N>>, R: RngCore + CryptoRng, const N: usize>
-    FieldWriter<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+impl<C: FpConfig<N>, H: DuplexInterface<Fp<C, N>>, R: RngCore + CryptoRng, const N: usize>
+    FieldWriter<Fp<C, N>> for ProverTranscript<H, Fp<C, N>, R>
 {
     fn add_scalars(&mut self, input: &[Fp<C, N>]) -> ProofResult<()> {
         self.public_units(input)?;
@@ -29,12 +31,12 @@ impl<C: FpConfig<N>, H: DuplexHash<Fp<C, N>>, R: RngCore + CryptoRng, const N: u
     }
 }
 
-impl<G, H, R> GroupWriter<G> for Merlin<H, u8, R>
+impl<G, H, R> GroupWriter<G> for ProverTranscript<H, u8, R>
 where
     G: CurveGroup,
-    H: DuplexHash,
+    H: DuplexInterface,
     R: RngCore + CryptoRng,
-    Merlin<H, u8, R>: GroupPublic<G, Repr = Vec<u8>>,
+    ProverTranscript<H, u8, R>: GroupPublic<G, Repr = Vec<u8>>,
 {
     #[inline(always)]
     fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
@@ -45,12 +47,12 @@ where
 }
 
 impl<G, H, R, C: FpConfig<N>, C2: FpConfig<N>, const N: usize> GroupWriter<G>
-    for Merlin<H, Fp<C, N>, R>
+    for ProverTranscript<H, Fp<C, N>, R>
 where
     G: CurveGroup<BaseField = Fp<C2, N>>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     R: RngCore + CryptoRng,
-    Merlin<H, Fp<C, N>, R>: GroupPublic<G> + FieldWriter<G::BaseField>,
+    ProverTranscript<H, Fp<C, N>, R>: GroupPublic<G> + FieldWriter<G::BaseField>,
 {
     #[inline(always)]
     fn add_points(&mut self, input: &[G]) -> ProofResult<()> {
@@ -62,9 +64,9 @@ where
     }
 }
 
-impl<H, R, C, const N: usize> ByteWriter for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> ByteWriter for ProverTranscript<H, Fp<C, N>, R>
 where
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     C: FpConfig<N>,
     R: RngCore + CryptoRng,
 {
@@ -75,9 +77,9 @@ where
     }
 }
 
-impl<H, C, const N: usize> ByteReader for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> ByteReader for VerifierTranscript<'_, H, Fp<C, N>>
 where
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     C: FpConfig<N>,
 {
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {

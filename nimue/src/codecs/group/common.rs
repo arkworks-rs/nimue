@@ -2,7 +2,7 @@ use crate::{ByteChallenges, BytePublic, ProofResult};
 use group::ff::PrimeField;
 
 use super::{FieldChallenges, FieldPublic};
-use crate::plugins::bytes_uniform_modp;
+use crate::codecs::bytes_uniform_modp;
 
 /// Convert a byte array to a field element.
 ///

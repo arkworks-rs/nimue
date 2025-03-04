@@ -10,11 +10,11 @@
 //! ```rust
 //! use ark_ec::CurveGroup;
 //! use ark_std::UniformRand;
-//! use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
-//! use nimue::plugins::ark::*;
+//! use nimue::{IOPattern, ProverTranscript, DuplexInterface, ProofResult};
+//! use nimue::codecs::ark::*;
 //!
 //! fn prove<G: CurveGroup>(
-//!     merlin: &mut Merlin,
+//!     merlin: &mut ProverTranscript,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! {
@@ -25,21 +25,21 @@
 //!     Ok(merlin.transcript())
 //! }
 //! ```
-//! The type constraint on [`Merlin`][`crate::Merlin`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
+//! The type constraint on [`ProverTranscript`][`crate::ProverTranscript`] hints the compiler that we are going to be absorbing elements from the group `G` and squeezing challenges in the scalar field `G::ScalarField`. Similarly, we could have been squeezing out bytes.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::PrimeField;
-//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
-//! # use nimue::plugins::ark::*;
+//! # use nimue::{IOPattern, ProverTranscript, DuplexInterface, ProofResult};
+//! # use nimue::codecs::ark::*;
 //!
 //! fn prove<G: CurveGroup>(
-//!     merlin: &mut Merlin,
+//!     merlin: &mut ProverTranscript,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
-//!     Merlin: GroupWriter<G> + ByteChallenges,
+//!     ProverTranscript: GroupWriter<G> + ByteChallenges,
 //! {
 //!     let k = G::ScalarField::rand(merlin.rng());
 //!     merlin.add_points(&[G::generator() * k])?;
@@ -50,18 +50,18 @@
 //! }
 //! ```
 //!
-//! [`Merlin`][`crate::Merlin`] is actually more general than this, and can be used with any hash function, over any field.
+//! [`ProverTranscript`][`crate::ProverTranscript`] is actually more general than this, and can be used with any hash function, over any field.
 //! Let's for instance use [`sha2`](https://crates.io/crates/sha2) on the above transcript instead of Keccak.
 //!
 //! ```rust
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::PrimeField;
-//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
-//! # use nimue::plugins::ark::*;
+//! # use nimue::{IOPattern, ProverTranscript, DuplexInterface, ProofResult};
+//! # use nimue::codecs::ark::*;
 //!
-//! fn prove<G: CurveGroup, H: DuplexHash>(
-//!     merlin: &mut Merlin<H>,
+//! fn prove<G: CurveGroup, H: DuplexInterface>(
+//!     merlin: &mut ProverTranscript<H>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! # {
@@ -85,11 +85,11 @@
 //! # use ark_ec::CurveGroup;
 //! # use ark_std::UniformRand;
 //! # use ark_ff::{PrimeField, BigInteger};
-//! # use nimue::{IOPattern, Merlin, DuplexHash, ProofResult};
-//! # use nimue::plugins::ark::*;
+//! # use nimue::{IOPattern, ProverTranscript, DuplexInterface, ProofResult};
+//! # use nimue::codecs::ark::*;
 //!
 //! fn prove<G, H, U>(
-//!     merlin: &mut Merlin<H, U>,
+//!     merlin: &mut ProverTranscript<H, U>,
 //!     x: G::ScalarField,
 //! ) -> ProofResult<&[u8]>
 //! where
@@ -98,10 +98,10 @@
 //!     // Declares the type the hash function works on
 //!     U: Unit,
 //!     // Constrains the hash function to work over U, ...
-//!     H: DuplexHash<U>,
+//!     H: DuplexInterface<U>,
 //!     // ... and the prover to be able to absorb and squeeze elements from the group and the base field.
 //!     // (normally would be the ScalarField but this is to make it work nicely with algebraic hashes)
-//!     Merlin<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
+//!     ProverTranscript<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 //! {
 //!     let k = G::ScalarField::rand(merlin.rng());
 //!     merlin.add_points(&[G::generator() * k])?;
@@ -115,7 +115,7 @@
 //!     Ok(merlin.transcript())
 //! }
 //! ```
-//! Now the above code should work with algebraic hashes such as `PoseidonHash` just as well as [`Keccak`][`crate::hash::Keccak`].
+//! Now the above code should work with algebraic hashes such as `PoseidonHash` just as well as [`Keccak`][`crate::permutations::Keccak`].
 //!
 /// Add public elements (field or group elements) to the protocol transcript.
 mod common;
@@ -132,7 +132,10 @@ mod writer;
 mod tests;
 
 pub use crate::traits::*;
-pub use crate::{hash::Unit, Arthur, DuplexHash, IOPattern, Merlin, ProofError, ProofResult, Safe};
+pub use crate::{
+    duplex_sponge::Unit, DuplexInterface, IOPattern, ProofError, ProofResult, ProverTranscript,
+    StatefulHashObject, VerifierTranscript,
+};
 
 super::traits::field_traits!(ark_ff::Field);
 super::traits::group_traits!(ark_ec::CurveGroup, Scalar: ark_ff::PrimeField);
@@ -169,6 +172,6 @@ pub fn swap_field<F1: ark_ff::PrimeField, F2: ark_ff::PrimeField>(a_f1: F1) -> P
 //     }
 // }
 
-// impl<'a, P: ark_ec::pairing::Pairing, H, U> PairingWriter<P> for Arthur<'a, H, U> where
-// U: Unit, H: DuplexHash<U>,
-// Arthur<'a, H, U>:  GroupWriter<P::G1> + GroupWriter<P::G2>  {}
+// impl<'a, P: ark_ec::pairing::Pairing, H, U> PairingWriter<P> for VerifierTranscript<'a, H, U> where
+// U: Unit, H: DuplexInterface<U>,
+// VerifierTranscript<'a, H, U>:  GroupWriter<P::G1> + GroupWriter<P::G2>  {}

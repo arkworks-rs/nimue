@@ -7,8 +7,8 @@ use crate::ByteIOPattern;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
+use super::duplex_sponge::{DuplexInterface, Unit};
 use super::errors::IOPatternError;
-use super::hash::{DuplexHash, Unit};
 
 /// This is the separator between operations in the IO Pattern
 /// and as such is the only forbidden character in labels.
@@ -32,13 +32,13 @@ const SEP_BYTE: &str = "\0";
 /// ## Guarantees
 ///
 /// The struct [`IOPattern`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
-/// This means that [`Merlin`][`crate::Merlin`] or [`Arthur`][`crate::Arthur`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
+/// This means that [`ProverTranscript`][`crate::ProverTranscript`] or [`VerifierTranscript`][`crate::VerifierTranscript`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
 
 #[derive(Clone)]
 pub struct IOPattern<H = crate::DefaultHash, U = u8>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
 {
     io: String,
     _hash: PhantomData<(H, U)>,
@@ -76,7 +76,7 @@ impl Op {
     }
 }
 
-impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
+impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
     pub fn from_string(io: String) -> Self {
         Self {
             io,
@@ -201,25 +201,25 @@ impl<H: DuplexHash<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
-    /// Create an [`crate::Merlin`] instance from the IO Pattern.
-    pub fn to_merlin(&self) -> crate::Merlin<H, U, crate::DefaultRng> {
+    /// Create an [`crate::ProverTranscript`] instance from the IO Pattern.
+    pub fn to_merlin(&self) -> crate::ProverTranscript<H, U, crate::DefaultRng> {
         self.into()
     }
 
-    /// Create a [`crate::Arthur`] instance from the IO Pattern and the protocol transcript (bytes).
-    pub fn to_arthur<'a>(&self, transcript: &'a [u8]) -> crate::Arthur<'a, H, U> {
-        crate::Arthur::<H, U>::new(self, transcript)
+    /// Create a [`crate::VerifierTranscript`] instance from the IO Pattern and the protocol transcript (bytes).
+    pub fn to_arthur<'a>(&self, transcript: &'a [u8]) -> crate::VerifierTranscript<'a, H, U> {
+        crate::VerifierTranscript::<H, U>::new(self, transcript)
     }
 }
 
-impl<U: Unit, H: DuplexHash<U>> core::fmt::Debug for IOPattern<H, U> {
+impl<U: Unit, H: DuplexInterface<U>> core::fmt::Debug for IOPattern<H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Ensure that the state isn't accidentally logged
         write!(f, "IOPattern({:?})", self.io)
     }
 }
 
-impl<H: DuplexHash> ByteIOPattern for IOPattern<H> {
+impl<H: DuplexInterface> ByteIOPattern for IOPattern<H> {
     #[inline]
     fn add_bytes(self, count: usize, label: &str) -> Self {
         self.absorb(count, label)

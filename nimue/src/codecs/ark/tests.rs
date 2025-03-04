@@ -1,12 +1,12 @@
 use crate::{
-    ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DefaultHash, DuplexHash, IOPattern,
+    ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DefaultHash, DuplexInterface, IOPattern,
     ProofResult, Unit, UnitTranscript,
 };
 
 use ark_ff::Field;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
-fn check_iv_is_used<H: DuplexHash<F>, F: Unit + Copy + Default + Eq + core::fmt::Debug>() {
+fn check_iv_is_used<H: DuplexInterface<F>, F: Unit + Copy + Default + Eq + core::fmt::Debug>() {
     let io1 = IOPattern::<H, F>::new("test").squeeze(1, "out");
     let io2 = IOPattern::<H, F>::new("another_test").squeeze(1, "out");
 
@@ -25,7 +25,7 @@ fn test_iv_is_used() {
 fn ark_iopattern<F, H>() -> IOPattern<H>
 where
     F: Field,
-    H: DuplexHash,
+    H: DuplexInterface,
     IOPattern<H>: super::FieldIOPattern<F> + ByteIOPattern,
 {
     use super::{ByteIOPattern, FieldIOPattern};
@@ -37,8 +37,8 @@ where
         .challenge_scalars(2, "chal")
 }
 
-fn test_arkworks_end_to_end<F: Field, H: DuplexHash>() -> ProofResult<()> {
-    use crate::plugins::ark::{FieldChallenges, FieldReader, FieldWriter};
+fn test_arkworks_end_to_end<F: Field, H: DuplexInterface>() -> ProofResult<()> {
+    use crate::codecs::ark::{FieldChallenges, FieldReader, FieldWriter};
     use rand::Rng;
 
     let mut rng = ark_std::test_rng();
@@ -80,7 +80,7 @@ fn test_squeeze_bytes_from_modp() {
     use ark_bls12_381::{Fq, Fr};
     use ark_ff::PrimeField;
 
-    use crate::plugins::random_bytes_in_random_modp;
+    use crate::codecs::random_bytes_in_random_modp;
     let useful_bytes = random_bytes_in_random_modp(Fr::MODULUS);
     assert_eq!(useful_bytes, 127 / 8);
 

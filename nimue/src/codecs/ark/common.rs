@@ -6,10 +6,10 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError
 use rand::{CryptoRng, RngCore};
 
 use super::{FieldChallenges, FieldPublic, GroupPublic};
-use crate::plugins::bytes_uniform_modp;
+use crate::codecs::bytes_uniform_modp;
 use crate::{
-    Arthur, ByteChallenges, BytePublic, DuplexHash, IOPatternError, Merlin, ProofError,
-    ProofResult, Unit, UnitTranscript,
+    ByteChallenges, BytePublic, DuplexInterface, IOPatternError, ProofError, ProofResult,
+    ProverTranscript, Unit, UnitTranscript, VerifierTranscript,
 };
 
 // Implementation of basic traits for bridging arkworks and nimue
@@ -96,10 +96,10 @@ where
     }
 }
 
-impl<H, C, const N: usize> FieldChallenges<Fp<C, N>> for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> FieldChallenges<Fp<C, N>> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
         self.fill_challenge_units(output)
@@ -107,10 +107,10 @@ where
     }
 }
 
-impl<H, C, R, const N: usize> FieldChallenges<Fp<C, N>> for Merlin<H, Fp<C, N>, R>
+impl<H, C, R, const N: usize> FieldChallenges<Fp<C, N>> for ProverTranscript<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     R: CryptoRng + RngCore,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
@@ -121,10 +121,10 @@ where
 
 // Field <-> Field interactions:
 
-impl<F, H, R, C, const N: usize> FieldPublic<F> for Merlin<H, Fp<C, N>, R>
+impl<F, H, R, C, const N: usize> FieldPublic<F> for ProverTranscript<H, Fp<C, N>, R>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     R: RngCore + CryptoRng,
     C: FpConfig<N>,
 {
@@ -159,10 +159,10 @@ where
 //
 //
 
-impl<F, H, C, const N: usize> FieldPublic<F> for Arthur<'_, H, Fp<C, N>>
+impl<F, H, C, const N: usize> FieldPublic<F> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     C: FpConfig<N>,
 {
     type Repr = ();
@@ -177,11 +177,11 @@ where
     }
 }
 
-impl<H, R, C, const N: usize, G> GroupPublic<G> for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize, G> GroupPublic<G> for ProverTranscript<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     R: RngCore + CryptoRng,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     G: CurveGroup<BaseField = Fp<C, N>>,
 {
     type Repr = ();
@@ -195,10 +195,10 @@ where
     }
 }
 
-impl<H, C, const N: usize, G> GroupPublic<G> for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize, G> GroupPublic<G> for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     G: CurveGroup<BaseField = Fp<C, N>>,
 {
     type Repr = ();
@@ -214,10 +214,10 @@ where
 
 // Field  <-> Bytes interactions:
 
-impl<H, C, const N: usize> BytePublic for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> BytePublic for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
         for &byte in input {
@@ -227,10 +227,10 @@ where
     }
 }
 
-impl<H, R, C, const N: usize> BytePublic for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> BytePublic for ProverTranscript<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     R: CryptoRng + rand::RngCore,
 {
     fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
@@ -241,10 +241,10 @@ where
     }
 }
 
-impl<H, R, C, const N: usize> ByteChallenges for Merlin<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> ByteChallenges for ProverTranscript<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
     R: CryptoRng + RngCore,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
@@ -252,7 +252,7 @@ where
             Ok(())
         } else {
             let len_good = usize::min(
-                crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
+                crate::codecs::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
                 output.len(),
             );
             let mut tmp = [Fp::from(0); 1];
@@ -267,17 +267,17 @@ where
 }
 
 /// XXX. duplicate code
-impl<H, C, const N: usize> ByteChallenges for Arthur<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> ByteChallenges for VerifierTranscript<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexHash<Fp<C, N>>,
+    H: DuplexInterface<Fp<C, N>>,
 {
     fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
         if output.is_empty() {
             Ok(())
         } else {
             let len_good = usize::min(
-                crate::plugins::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
+                crate::codecs::random_bytes_in_random_modp(Fp::<C, N>::MODULUS),
                 output.len(),
             );
             let mut tmp = [Fp::from(0); 1];

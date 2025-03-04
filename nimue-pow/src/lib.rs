@@ -2,8 +2,8 @@ pub mod blake3;
 pub mod keccak;
 
 use nimue::{
-    Arthur, ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexHash, Merlin, ProofError,
-    ProofResult, Unit,
+    ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexInterface, ProofError,
+    ProofResult, ProverTranscript, Unit, VerifierTranscript,
 };
 
 /// [`IOPattern`] for proof-of-work challenges.
@@ -36,12 +36,12 @@ pub trait PoWChallenge {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()>;
 }
 
-impl<H, U, R> PoWChallenge for Merlin<H, U, R>
+impl<H, U, R> PoWChallenge for ProverTranscript<H, U, R>
 where
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     R: rand::CryptoRng + rand::RngCore,
-    Merlin<H, U, R>: ByteWriter + ByteChallenges,
+    ProverTranscript<H, U, R>: ByteWriter + ByteChallenges,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
@@ -53,11 +53,11 @@ where
     }
 }
 
-impl<'a, H, U> PoWChallenge for Arthur<'a, H, U>
+impl<'a, H, U> PoWChallenge for VerifierTranscript<'a, H, U>
 where
     U: Unit,
-    H: DuplexHash<U>,
-    Arthur<'a, H, U>: ByteReader + ByteChallenges,
+    H: DuplexInterface<U>,
+    VerifierTranscript<'a, H, U>: ByteReader + ByteChallenges,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;

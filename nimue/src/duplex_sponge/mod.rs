@@ -1,29 +1,53 @@
-use super::{DuplexHash, Unit};
+//! This module defines
+//! [`DuplexHash`], the basic interface for hash function that can absorb and squeeze data.
+//! Hashes in nimue operate over some native elements satisfying the trait [`Unit`] which, roughly speaking, requires
+//! the basic type to support cloning, size, read/write procedures, and secure deletion.
+//!
+//! Additionally, the module exports some utilities:
+//! - [`hash::sponge::DuplexSponge`] allows to implement a [`crate::DuplexHash`] using a secure permutation function, specifying the rate `R` and the width `N`.
+//! This is done using the standard duplex sponge cosntruction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
+//! - [`hash::legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
 
+/// Sponge functions.
+mod interface;
+/// Legacy hash functions support (e.g. [`sha2`](https://crates.io/crates/sha2), [`blake2`](https://crates.io/crates/blake2)).
+pub mod legacy;
+
+pub use interface::DuplexInterface;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+/// Basic units over which a sponge operates.
+///
+/// We require the units to have a precise size in memory, to be cloneable,
+/// and that we can zeroize them.
+pub trait Unit: Clone + Sized + zeroize::Zeroize {
+    /// Write a bunch of units in the wire.
+    fn write(bunch: &[Self], w: &mut impl std::io::Write) -> Result<(), std::io::Error>;
+    /// Read a bunch of units from the wire
+    fn read(r: &mut impl std::io::Read, bunch: &mut [Self]) -> Result<(), std::io::Error>;
+}
 
 /// The basic state of a cryptographic sponge.
 ///
-/// A cryptographic sponge operates over some domain [`Sponge::U`] units.
-/// It has a width [`Sponge::N`] and can process elements at rate [`Sponge::R`],
-/// using the permutation function [`Sponge::permute`].
+/// A cryptographic sponge operates over some domain [`Permutation::U`] units.
+/// It has a width [`Permutation::N`] and can process elements at rate [`Permutation::R`],
+/// using the permutation function [`Permutation::permute`].
 ///
 /// For implementors:
 ///
-/// - State is written in *the first* [`Sponge::R`] (rate) bytes of the state.
-/// The last [`Sponge::N`]-[`Sponge::R`] bytes are never touched directly except during initialization.
+/// - State is written in *the first* [`Permutation::R`] (rate) bytes of the state.
+/// The last [`Permutation::N`]-[`Permutation::R`] bytes are never touched directly except during initialization.
 /// - The duplex sponge is in *overwrite mode*.
-/// This mode is not known to affect the security levels and removes assumptions on [`Sponge::U`]
+/// This mode is not known to affect the security levels and removes assumptions on [`Permutation::U`]
 /// as well as constraints in the final zero-knowledge proof implementing the hash function.
 /// - The [`std::default::Default`] implementation *MUST* initialize the state to zero.
-/// - The [`Sponge::new`] method should initialize the sponge writing the entropy provided in the `iv` in the last
-///     [`Sponge::N`]-[`Sponge::R`] elements of the state.
-pub trait Sponge: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]> {
+/// - The [`Permutation::new`] method should initialize the sponge writing the entropy provided in the `iv` in the last [`Permutation::N`]-[`Permutation::R`] elements of the state.
+pub trait Permutation: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]> {
     /// The basic unit over which the sponge operates.
     type U: Unit;
 
-    /// The width of the sponge, equal to rate [`Sponge::R`] plus capacity.
-    /// Cannot be less than 1. Cannot be less than [`Sponge::R`].
+    /// The width of the sponge, equal to rate [`Permutation::R`] plus capacity.
+    /// Cannot be less than 1. Cannot be less than [`Permutation::R`].
     const N: usize;
 
     /// The rate of the sponge.
@@ -38,13 +62,13 @@ pub trait Sponge: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Self::U]
 
 /// A cryptographic sponge.
 #[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
-pub struct DuplexSponge<C: Sponge> {
+pub struct DuplexSponge<C: Permutation> {
     sponge: C,
     absorb_pos: usize,
     squeeze_pos: usize,
 }
 
-impl<U: Unit, C: Sponge<U = U>> DuplexHash<U> for DuplexSponge<C> {
+impl<U: Unit, C: Permutation<U = U>> DuplexInterface<U> for DuplexSponge<C> {
     fn new(iv: [u8; 32]) -> Self {
         assert!(C::N > C::R, "Capacity of the sponge should be > 0.");
         Self {

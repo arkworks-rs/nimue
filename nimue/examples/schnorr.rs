@@ -11,16 +11,16 @@
 /// - V -> P: c, a challenge (scalar)
 /// - P -> V: r, a response (scalar)
 ///
-/// 2. `nimue::Merlin`, describes the prover state. It contains the transcript, but not only:
+/// 2. `nimue::ProverTranscript`, describes the prover state. It contains the transcript, but not only:
 /// it also provides a CSPRNG and a reliable way of serializing elements into a proof, so that the prover does not have to worry about them.
 /// It can be instantiated via `IOPattern::to_merlin()`.
 ///
-/// 3. `nimue::Arthur`, describes the verifier state.
+/// 3. `nimue::VerifierTranscript`, describes the verifier state.
 /// It internally will read the transcript, and deserialize elements as requested making sure that they match with the IO Pattern.
 /// It can be used to verify a proof.
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_std::UniformRand;
-use nimue::plugins::ark::*;
+use nimue::codecs::ark::*;
 use rand::rngs::OsRng;
 
 /// Extend the IO pattern with the Schnorr protocol.
@@ -37,7 +37,7 @@ trait SchnorrIOPattern<G: CurveGroup> {
 impl<G, H> SchnorrIOPattern<G> for IOPattern<H>
 where
     G: CurveGroup,
-    H: DuplexHash,
+    H: DuplexInterface,
     IOPattern<H>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
 {
     fn new_schnorr_proof(domsep: &str) -> Self {
@@ -69,7 +69,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 }
 
 /// The prove algorithm takes as input
-/// - the prover state `Merlin`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
+/// - the prover state `ProverTranscript`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
 /// - The generator `P` in the group.
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
@@ -77,18 +77,18 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<H, G>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    merlin: &mut Merlin<H>,
+    merlin: &mut ProverTranscript<H>,
     // the generator
     P: G,
     // the secret key
     x: G::ScalarField,
 ) -> ProofResult<&[u8]>
 where
-    H: DuplexHash,
+    H: DuplexInterface,
     G: CurveGroup,
-    Merlin<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+    ProverTranscript<H>: GroupWriter<G> + FieldChallenges<G::ScalarField>,
 {
-    // `Merlin` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
+    // `ProverTranscript` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` function.
     let k = G::ScalarField::rand(merlin.rng());
     let K = P * k;
@@ -109,14 +109,14 @@ where
 }
 
 /// The verify algorithm takes as input
-/// - the verifier state `Arthur`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
+/// - the verifier state `VerifierTranscript`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn verify<G, H>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    arthur: &mut Arthur<H>,
+    arthur: &mut VerifierTranscript<H>,
     // The group generator `P``
     P: G,
     // The public key `X`
@@ -124,8 +124,8 @@ fn verify<G, H>(
 ) -> ProofResult<()>
 where
     G: CurveGroup,
-    H: DuplexHash,
-    for<'a> Arthur<'a, H>:
+    H: DuplexInterface,
+    for<'a> VerifierTranscript<'a, H>:
         GroupReader<G> + FieldReader<G::ScalarField> + FieldChallenges<G::ScalarField>,
 {
     // Read the protocol from the transcript.
@@ -160,7 +160,7 @@ fn main() {
     type G = ark_curve25519::EdwardsProjective;
     // Set the hash function (commented out other valid choices):
     // type H = nimue::hash::Keccak;
-    type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
+    type H = nimue::duplex_sponge::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"

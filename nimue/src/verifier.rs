@@ -1,26 +1,26 @@
+use crate::duplex_sponge::{DuplexInterface, Unit};
 use crate::errors::IOPatternError;
-use crate::hash::{DuplexHash, Unit};
 use crate::iopattern::IOPattern;
-use crate::safe::Safe;
+use crate::sho::StatefulHashObject;
 use crate::traits::{ByteReader, UnitTranscript};
 use crate::DefaultHash;
 
-/// [`Arthur`] contains the verifier state.
+/// [`VerifierTranscript`] contains the verifier state.
 ///
 /// Internally, it is a wrapper around a SAFE sponge.
 /// Given as input an [`IOPattern`] and a protocol transcript, it allows to
 /// de-serialize elements from the transcript and make them available to the zero-knowledge verifier.
-pub struct Arthur<'a, H = DefaultHash, U = u8>
+pub struct VerifierTranscript<'a, H = DefaultHash, U = u8>
 where
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     U: Unit,
 {
-    pub(crate) safe: Safe<H, U>,
+    pub(crate) safe: StatefulHashObject<H, U>,
     pub(crate) transcript: &'a [u8],
 }
 
-impl<'a, U: Unit, H: DuplexHash<U>> Arthur<'a, H, U> {
-    /// Creates a new [`Arthur`] instance with the given sponge and IO Pattern.
+impl<'a, U: Unit, H: DuplexInterface<U>> VerifierTranscript<'a, H, U> {
+    /// Creates a new [`VerifierTranscript`] instance with the given sponge and IO Pattern.
     ///
     /// The resulting object will act as the verifier in a zero-knowledge protocol.
     ///
@@ -37,7 +37,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Arthur<'a, H, U> {
     /// assert_ne!(challenge.unwrap(), [0; 32]);
     /// ```
     pub fn new(io_pattern: &IOPattern<H, U>, transcript: &'a [u8]) -> Self {
-        let safe = Safe::new(io_pattern);
+        let safe = StatefulHashObject::new(io_pattern);
         Self { safe, transcript }
     }
 
@@ -62,7 +62,7 @@ impl<'a, U: Unit, H: DuplexHash<U>> Arthur<'a, H, U> {
     }
 }
 
-impl<H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Arthur<'_, H, U> {
+impl<H: DuplexInterface<U>, U: Unit> UnitTranscript<U> for VerifierTranscript<'_, H, U> {
     /// Add native elements to the sponge without writing them to the protocol transcript.
     #[inline]
     fn public_units(&mut self, input: &[U]) -> Result<(), IOPatternError> {
@@ -76,13 +76,15 @@ impl<H: DuplexHash<U>, U: Unit> UnitTranscript<U> for Arthur<'_, H, U> {
     }
 }
 
-impl<H: DuplexHash<U>, U: Unit> core::fmt::Debug for Arthur<'_, H, U> {
+impl<H: DuplexInterface<U>, U: Unit> core::fmt::Debug for VerifierTranscript<'_, H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple("Arthur").field(&self.safe).finish()
+        f.debug_tuple("VerifierTranscript")
+            .field(&self.safe)
+            .finish()
     }
 }
 
-impl<H: DuplexHash<u8>> ByteReader for Arthur<'_, H, u8> {
+impl<H: DuplexInterface<u8>> ByteReader for VerifierTranscript<'_, H, u8> {
     /// Read the next `input.len()` bytes from the transcript and return them.
     #[inline]
     fn fill_next_bytes(&mut self, input: &mut [u8]) -> Result<(), IOPatternError> {

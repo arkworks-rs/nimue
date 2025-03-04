@@ -4,7 +4,7 @@
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
-use nimue::plugins::ark::*;
+use nimue::codecs::ark::*;
 
 /// Extend the IO pattern with the Schnorr protocol.
 trait SchnorrIOPattern<G: CurveGroup> {
@@ -16,7 +16,7 @@ impl<G, H, U> SchnorrIOPattern<G> for IOPattern<H, U>
 where
     G: CurveGroup,
     U: Unit,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     IOPattern<H, U>: GroupIOPattern<G> + ByteIOPattern,
 {
     fn add_schnorr_io(self) -> Self {
@@ -39,7 +39,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 }
 
 /// The prove algorithm takes as input
-/// - the prover state `Merlin`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
+/// - the prover state `ProverTranscript`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
 /// - The generator `P` in the group.
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
@@ -47,7 +47,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<G, H, U>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    merlin: &mut Merlin<H, U>,
+    merlin: &mut ProverTranscript<H, U>,
     // the generator
     P: G,
     // the secret key
@@ -56,11 +56,11 @@ fn prove<G, H, U>(
 where
     U: Unit,
     G::BaseField: PrimeField,
-    H: DuplexHash<U>,
+    H: DuplexInterface<U>,
     G: CurveGroup,
-    Merlin<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
+    ProverTranscript<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
 {
-    // `Merlin` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
+    // `ProverTranscript` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` function.
     let k = G::ScalarField::rand(merlin.rng());
     let K = P * k;
@@ -83,14 +83,14 @@ where
 }
 
 /// The verify algorithm takes as input
-/// - the verifier state `Arthur`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
+/// - the verifier state `VerifierTranscript`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn verify<'a, G, H, U>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    arthur: &mut Arthur<'a, H, U>,
+    arthur: &mut VerifierTranscript<'a, H, U>,
     // The group generator `P``
     P: G,
     // The public key `X`
@@ -100,8 +100,8 @@ where
     U: Unit,
     G::BaseField: PrimeField,
     G: CurveGroup,
-    H: DuplexHash<U>,
-    Arthur<'a, H, U>: GroupReader<G> + FieldReader<G::BaseField> + ByteChallenges,
+    H: DuplexInterface<U>,
+    VerifierTranscript<'a, H, U>: GroupReader<G> + FieldReader<G::BaseField> + ByteChallenges,
 {
     // Read the protocol from the transcript:
     let [K] = arthur.next_points()?;
@@ -128,7 +128,7 @@ fn main() {
 
     // Set the hash function (commented out other valid choices):
     // type H = nimue::hash::Keccak;
-    type H = nimue::hash::legacy::DigestBridge<blake2::Blake2s256>;
+    type H = nimue::duplex_sponge::legacy::DigestBridge<blake2::Blake2s256>;
     // type H = nimue::hash::legacy::DigestBridge<sha2::Sha256>;
     // type H = nimue_poseidon::PoseidonHash;
 
@@ -154,7 +154,7 @@ fn main() {
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
     // Verify the proof: create the verifier transcript, add the statement to it, and invoke the verifier.
-    let mut arthur = Arthur::<H, U>::new(&io, &proof);
+    let mut arthur = VerifierTranscript::<H, U>::new(&io, &proof);
     arthur.public_points(&[P, X]).unwrap();
     arthur.ratchet().unwrap();
     verify(&mut arthur, P, X).expect("Invalid proof");
