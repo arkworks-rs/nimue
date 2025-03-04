@@ -20,7 +20,7 @@ use digest::crypto_common::generic_array::GenericArray;
 use digest::{core_api::BlockSizeUser, typenum::Unsigned, Digest, FixedOutputReset, Reset};
 use zeroize::Zeroize;
 
-use super::DuplexInterface;
+use super::DuplexSpongeInterface;
 
 /// A Bridge to our sponge interface for legacy `Digest` implementations.
 #[derive(Clone)]
@@ -114,7 +114,7 @@ impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> Default for DigestBri
     }
 }
 
-impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexInterface<u8> for DigestBridge<D> {
+impl<D: BlockSizeUser + Digest + Clone + FixedOutputReset> DuplexSpongeInterface<u8> for DigestBridge<D> {
     fn new(tag: [u8; 32]) -> Self {
         // debug_assert!(size_of::<D::OutputSize>() >= 32);
         let mut bridge = Self::default();

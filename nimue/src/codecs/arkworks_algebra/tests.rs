@@ -1,14 +1,14 @@
 use crate::{
-    ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DefaultHash, DuplexInterface, IOPattern,
+    VerifierMessageBytes, ByteDomainSeparator, ByteReader, ByteWriter, DefaultHash, DuplexSpongeInterface, DomainSeparator,
     ProofResult, Unit, UnitTranscript,
 };
 
 use ark_ff::Field;
 
 /// Test that the algebraic hashes do use the IV generated from the IO Pattern.
-fn check_iv_is_used<H: DuplexInterface<F>, F: Unit + Copy + Default + Eq + core::fmt::Debug>() {
-    let io1 = IOPattern::<H, F>::new("test").squeeze(1, "out");
-    let io2 = IOPattern::<H, F>::new("another_test").squeeze(1, "out");
+fn check_iv_is_used<H: DuplexSpongeInterface<F>, F: Unit + Copy + Default + Eq + core::fmt::Debug>() {
+    let io1 = DomainSeparator::<H, F>::new("test").squeeze(1, "out");
+    let io2 = DomainSeparator::<H, F>::new("another_test").squeeze(1, "out");
 
     let [mut merlin1, mut merlin2] = [io1.to_merlin(), io2.to_merlin()];
     let mut c = [F::default(); 2];
@@ -22,23 +22,23 @@ fn test_iv_is_used() {
     check_iv_is_used::<DefaultHash, u8>();
 }
 
-fn ark_iopattern<F, H>() -> IOPattern<H>
+fn ark_iopattern<F, H>() -> DomainSeparator<H>
 where
     F: Field,
-    H: DuplexInterface,
-    IOPattern<H>: super::FieldIOPattern<F> + ByteIOPattern,
+    H: DuplexSpongeInterface,
+    DomainSeparator<H>: super::FieldDomainSeparator<F> + ByteDomainSeparator,
 {
-    use super::{ByteIOPattern, FieldIOPattern};
+    use super::{ByteDomainSeparator, FieldDomainSeparator};
 
-    IOPattern::new("github.com/mmaker/nimue")
+    DomainSeparator::new("github.com/mmaker/nimue")
         .add_scalars(3, "com")
         .challenge_bytes(16, "chal")
         .add_bytes(16, "resp")
         .challenge_scalars(2, "chal")
 }
 
-fn test_arkworks_end_to_end<F: Field, H: DuplexInterface>() -> ProofResult<()> {
-    use crate::codecs::ark::{FieldChallenges, FieldReader, FieldWriter};
+fn test_arkworks_end_to_end<F: Field, H: DuplexSpongeInterface>() -> ProofResult<()> {
+    use crate::codecs::arkworks_algebra::{VerifierMessageField, DeserializeField, ProverMessageField};
     use rand::Rng;
 
     let mut rng = ark_std::test_rng();
@@ -50,16 +50,16 @@ fn test_arkworks_end_to_end<F: Field, H: DuplexInterface>() -> ProofResult<()> {
     let mut f3 = [F::ZERO; 2];
     let mut g3 = [F::ZERO; 2];
 
-    let io_pattern = ark_iopattern::<F, H>();
+    let domain_separator = ark_iopattern::<F, H>();
 
-    let mut merlin = io_pattern.to_merlin();
+    let mut merlin = domain_separator.to_merlin();
 
     merlin.add_scalars(&[f0, f1, f2])?;
     merlin.fill_challenge_bytes(&mut b0)?;
     merlin.add_bytes(&b1)?;
     merlin.fill_challenge_scalars(&mut f3)?;
 
-    let mut arthur = io_pattern.to_arthur(merlin.transcript());
+    let mut arthur = domain_separator.to_verifier_state(merlin.narg_string());
     let [g0, g1, g2]: [F; 3] = arthur.next_scalars()?;
     arthur.fill_challenge_bytes(&mut c0)?;
     let c1: [u8; 16] = arthur.next_bytes()?;

@@ -2,28 +2,28 @@ pub mod blake3;
 pub mod keccak;
 
 use nimue::{
-    ByteChallenges, ByteIOPattern, ByteReader, ByteWriter, DuplexInterface, ProofError,
-    ProofResult, ProverTranscript, Unit, VerifierTranscript,
+    VerifierMessageBytes, ByteDomainSeparator, ByteReader, ByteWriter, DuplexSpongeInterface, ProofError,
+    ProofResult, ProverPrivateState, Unit, VerifierState,
 };
 
-/// [`IOPattern`] for proof-of-work challenges.
-pub trait PoWIOPattern {
-    /// Adds a [`PoWChallenge`] to the [`IOPattern`].
+/// [`nimue::DomainSeparator`] for proof-of-work challenges.
+pub trait PoWDomainSeparator {
+    /// Adds a [`PoWChallenge`] to the [`nimue::DomainSeparator`].
     ///
     /// In order to squeeze a proof-of-work challenge, we extract a 32-byte challenge using
     /// the byte interface, and then we find a 16-byte nonce that satisfies the proof-of-work.
     /// The nonce a 64-bit integer encoded as an unsigned integer and written in big-endian and added
     /// to the protocol transcript as the nonce for the proof-of-work.
     ///
-    /// The number of bits used for the proof of work are **not** encoded within the [`IOPattern`].
+    /// The number of bits used for the proof of work are **not** encoded within the [`nimue::DomainSeparator`].
     /// It is up to the implementor to change the domain separator or the label in order to reflect changes in the proof
     /// in order to preserve simulation extractability.
     fn challenge_pow(self, label: &str) -> Self;
 }
 
-impl<IOPattern> PoWIOPattern for IOPattern
+impl<DomainSeparator> PoWDomainSeparator for DomainSeparator
 where
-    IOPattern: ByteIOPattern,
+    DomainSeparator: ByteDomainSeparator,
 {
     fn challenge_pow(self, label: &str) -> Self {
         // 16 bytes challenge and 16 bytes nonce (that will be written)
@@ -36,12 +36,12 @@ pub trait PoWChallenge {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()>;
 }
 
-impl<H, U, R> PoWChallenge for ProverTranscript<H, U, R>
+impl<H, U, R> PoWChallenge for ProverPrivateState<H, U, R>
 where
     U: Unit,
-    H: DuplexInterface<U>,
+    H: DuplexSpongeInterface<U>,
     R: rand::CryptoRng + rand::RngCore,
-    ProverTranscript<H, U, R>: ByteWriter + ByteChallenges,
+    ProverPrivateState<H, U, R>: ByteWriter + VerifierMessageBytes,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;
@@ -53,11 +53,11 @@ where
     }
 }
 
-impl<'a, H, U> PoWChallenge for VerifierTranscript<'a, H, U>
+impl<'a, H, U> PoWChallenge for VerifierState<'a, H, U>
 where
     U: Unit,
-    H: DuplexInterface<U>,
-    VerifierTranscript<'a, H, U>: ByteReader + ByteChallenges,
+    H: DuplexSpongeInterface<U>,
+    VerifierState<'a, H, U>: ByteReader + VerifierMessageBytes,
 {
     fn challenge_pow<S: PowStrategy>(&mut self, bits: f64) -> ProofResult<()> {
         let challenge = self.challenge_bytes()?;

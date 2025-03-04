@@ -12,7 +12,7 @@ use nimue::duplex_sponge::Unit;
 /// The `NAME` const is to distinbuish between different bitsizes of the same Field.
 /// For instance Bls12_381 and Bn254 both have field type Fp<MontBackend<FrConfig, 4>, 4> but are different fields.
 #[derive(Clone)]
-pub struct PoseidonSponge<const NAME: u32, F: PrimeField, const R: usize, const N: usize> {
+pub struct PoseidonPermutation<const NAME: u32, F: PrimeField, const R: usize, const N: usize> {
     /// Number of rounds in a full-round operation.
     pub full_rounds: usize,
     /// Number of rounds in a partial-round operation.
@@ -25,15 +25,15 @@ pub struct PoseidonSponge<const NAME: u32, F: PrimeField, const R: usize, const 
     /// Maximally Distance Separating (MDS) Matrix.
     pub mds: &'static [[F; N]],
 
-    /// Sponge state
+    /// Permutation state
     pub state: [F; N],
 }
 
 pub type PoseidonHash<const NAME: u32, F, const R: usize, const N: usize> =
-    DuplexSponge<PoseidonSponge<NAME, F, R, N>>;
+    DuplexSponge<PoseidonPermutation<NAME, F, R, N>>;
 
 impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> AsRef<[F]>
-    for PoseidonSponge<NAME, F, R, N>
+    for PoseidonPermutation<NAME, F, R, N>
 {
     fn as_ref(&self) -> &[F] {
         &self.state
@@ -41,14 +41,14 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> AsRef<[F]>
 }
 
 impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> AsMut<[F]>
-    for PoseidonSponge<NAME, F, R, N>
+    for PoseidonPermutation<NAME, F, R, N>
 {
     fn as_mut(&mut self) -> &mut [F] {
         &mut self.state
     }
 }
 
-impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonSponge<NAME, F, R, N> {
+impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonPermutation<NAME, F, R, N> {
     fn apply_s_box(&self, state: &mut [F], is_full_round: bool) {
         // Full rounds apply the S Box (x^alpha) to every element of state
         if is_full_round {
@@ -84,7 +84,7 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> PoseidonSpo
 }
 
 impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> zeroize::Zeroize
-    for PoseidonSponge<NAME, F, R, N>
+    for PoseidonPermutation<NAME, F, R, N>
 {
     fn zeroize(&mut self) {
         self.state.zeroize();
@@ -92,9 +92,9 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> zeroize::Ze
 }
 
 impl<const NAME: u32, F, const R: usize, const N: usize> Permutation
-    for PoseidonSponge<NAME, F, R, N>
+    for PoseidonPermutation<NAME, F, R, N>
 where
-    PoseidonSponge<NAME, F, R, N>: Default,
+    PoseidonPermutation<NAME, F, R, N>: Default,
     F: PrimeField + Unit,
 {
     type U = F;
@@ -134,7 +134,7 @@ where
 }
 
 impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> Debug
-    for PoseidonSponge<NAME, F, R, N>
+    for PoseidonPermutation<NAME, F, R, N>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.state.fmt(f)
@@ -143,9 +143,9 @@ impl<const NAME: u32, F: PrimeField, const R: usize, const N: usize> Debug
 
 /// Initialization of constants.
 #[allow(unused)]
-macro_rules! poseidon_sponge {
+macro_rules! poseidon_permutation {
     ($bits: expr, $name: ident, $path: tt) => {
-        pub type $name = crate::PoseidonSponge<$bits, $path::Field, { $path::R }, { $path::N }>;
+        pub type $name = crate::PoseidonPermutation<$bits, $path::Field, { $path::R }, { $path::N }>;
 
         impl Default for $name {
             fn default() -> Self {

@@ -4,20 +4,20 @@
 use ark_ec::{CurveGroup, PrimeGroup};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
-use nimue::codecs::ark::*;
+use nimue::codecs::arkworks_algebra::*;
 
 /// Extend the IO pattern with the Schnorr protocol.
-trait SchnorrIOPattern<G: CurveGroup> {
+trait SchnorrDomainSeparator<G: CurveGroup> {
     /// Adds the entire Schnorr protocol to the IO pattern (statement and proof).
     fn add_schnorr_io(self) -> Self;
 }
 
-impl<G, H, U> SchnorrIOPattern<G> for IOPattern<H, U>
+impl<G, H, U> SchnorrDomainSeparator<G> for DomainSeparator<H, U>
 where
     G: CurveGroup,
     U: Unit,
-    H: DuplexInterface<U>,
-    IOPattern<H, U>: GroupIOPattern<G> + ByteIOPattern,
+    H: DuplexSpongeInterface<U>,
+    DomainSeparator<H, U>: GroupDomainSeparator<G> + ByteDomainSeparator,
 {
     fn add_schnorr_io(self) -> Self {
         self.add_points(1, "generator (P)")
@@ -39,7 +39,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 }
 
 /// The prove algorithm takes as input
-/// - the prover state `ProverTranscript`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
+/// - the prover state `ProverState`, that has access to a random oracle `H` and can absorb/squeeze elements from the group `G`.
 /// - The generator `P` in the group.
 /// - the secret key $x \in \mathbb{Z}_p$
 /// It returns a zero-knowledge proof of knowledge of `x` as a sequence of bytes.
@@ -47,7 +47,7 @@ fn keygen<G: CurveGroup>() -> (G::ScalarField, G) {
 fn prove<G, H, U>(
     // the hash function `H` works over bytes.
     // Algebraic hashes over a particular domain can be denoted with an additional type argument implementing `nimue::Unit`.
-    merlin: &mut ProverTranscript<H, U>,
+    merlin: &mut ProverPrivateState<H, U>,
     // the generator
     P: G,
     // the secret key
@@ -56,11 +56,11 @@ fn prove<G, H, U>(
 where
     U: Unit,
     G::BaseField: PrimeField,
-    H: DuplexInterface<U>,
+    H: DuplexSpongeInterface<U>,
     G: CurveGroup,
-    ProverTranscript<H, U>: GroupWriter<G> + FieldWriter<G::BaseField> + ByteChallenges,
+    ProverPrivateState<H, U>: ProverMessageGroup<G> + ProverMessageField<G::BaseField> + VerifierMessageBytes,
 {
-    // `ProverTranscript` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
+    // `ProverState` types implement a cryptographically-secure random number generator that is tied to the protocol transcript
     // and that can be accessed via the `rng()` function.
     let k = G::ScalarField::rand(merlin.rng());
     let K = P * k;
@@ -79,18 +79,18 @@ where
     merlin.add_scalars(&[r_q])?;
 
     // Output the current protocol transcript as a sequence of bytes.
-    Ok(merlin.transcript())
+    Ok(merlin.narg_string())
 }
 
 /// The verify algorithm takes as input
-/// - the verifier state `VerifierTranscript`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
+/// - the verifier state `VerifierState`, that has access to a random oracle `H` and can deserialize/squeeze elements from the group `G`.
 /// - the secret key `witness`
 /// It returns a zero-knowledge proof of knowledge of `witness` as a sequence of bytes.
 #[allow(non_snake_case)]
 fn verify<'a, G, H, U>(
     // `ArkGroupMelin` contains the veirifier state, including the messages currently read. In addition, it is aware of the group `G`
     // from which it can serialize/deserialize elements.
-    arthur: &mut VerifierTranscript<'a, H, U>,
+    arthur: &mut VerifierState<'a, H, U>,
     // The group generator `P``
     P: G,
     // The public key `X`
@@ -100,8 +100,8 @@ where
     U: Unit,
     G::BaseField: PrimeField,
     G: CurveGroup,
-    H: DuplexInterface<U>,
-    VerifierTranscript<'a, H, U>: GroupReader<G> + FieldReader<G::BaseField> + ByteChallenges,
+    H: DuplexSpongeInterface<U>,
+    VerifierState<'a, H, U>: DeserializeGroup<G> + DeserializeField<G::BaseField> + VerifierMessageBytes,
 {
     // Read the protocol from the transcript:
     let [K] = arthur.next_points()?;
@@ -137,15 +137,15 @@ fn main() {
     // type U = ark_bls12_381::Fq;
 
     // Set up the IO for the protocol transcript with domain separator "nimue::examples::schnorr"
-    let io = IOPattern::<H, U>::new("nimue::examples::schnorr");
-    let io = SchnorrIOPattern::<G>::add_schnorr_io(io);
+    let domain_separator = DomainSeparator::<H, U>::new("nimue::examples::schnorr");
+    let domain_separator = SchnorrDomainSeparator::<G>::add_schnorr_io(domain_separator);
 
     // Set up the elements to prove
     let P = G::generator();
     let (x, X) = keygen();
 
     // Create the prover transcript, add the statement to it, and then invoke the prover.
-    let mut merlin = io.to_merlin();
+    let mut merlin = domain_separator.to_merlin();
     merlin.public_points(&[P, X]).unwrap();
     merlin.ratchet().unwrap();
     let proof = prove(&mut merlin, P, x).expect("Invalid proof");
@@ -154,7 +154,7 @@ fn main() {
     println!("Here's a Schnorr signature:\n{}", hex::encode(proof));
 
     // Verify the proof: create the verifier transcript, add the statement to it, and invoke the verifier.
-    let mut arthur = VerifierTranscript::<H, U>::new(&io, &proof);
+    let mut arthur = VerifierState::<H, U>::new(&domain_separator, &proof);
     arthur.public_points(&[P, X]).unwrap();
     arthur.ratchet().unwrap();
     verify(&mut arthur, P, X).expect("Invalid proof");

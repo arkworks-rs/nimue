@@ -14,22 +14,22 @@ where
 #[cfg(feature = "bls12-381")]
 #[test]
 fn test_squeeze_bytes_from_algebraic_hash() {
-    use nimue::ByteChallenges;
+    use nimue::VerifierMessageBytes;
 
     type F = ark_bls12_381::Fr;
     type H = crate::bls12_381::Poseidonx5_255_3;
 
-    let io = nimue::IOPattern::<H, F>::new("test").absorb(1, "in");
-    let io = <nimue::IOPattern<H, F> as nimue::codecs::ark::ByteIOPattern>::challenge_bytes(
-        io, 2048, "out",
+    let domain_separator = nimue::DomainSeparator::<H, F>::new("test").absorb(1, "in");
+    let domain_separator = <nimue::DomainSeparator<H, F> as nimue::codecs::arkworks_algebra::ByteDomainSeparator>::challenge_bytes(
+        domain_separator, 2048, "out",
     );
-    let mut merlin = io.to_merlin();
+    let mut merlin = domain_separator.to_merlin();
     merlin.add_units(&[F::from(0x42)]).unwrap();
 
     let mut merlin_challenges = [0u8; 2048];
     merlin.fill_challenge_bytes(&mut merlin_challenges).unwrap();
 
-    let mut arthur = io.to_arthur(merlin.transcript());
+    let mut arthur = domain_separator.to_verifier_state(merlin.narg_string());
     // write the unit to an throw-away array
     arthur.fill_next_units(&mut [F::from(0)]).unwrap();
     let arthur_challenges: [u8; 2048] = arthur.challenge_bytes().unwrap();
@@ -51,7 +51,7 @@ fn test_squeeze_bytes_from_algebraic_hash() {
 fn test_poseidon_bls12_381() {
     use crate::bls12_381::{PoseidonPermx5_255_3, PoseidonPermx5_255_5};
     use ark_ff::MontFp;
-    use nimue::IOPattern;
+    use nimue::DomainSeparator;
     use nimue::UnitTranscript;
 
     type F = ark_bls12_381::Fr;
@@ -86,10 +86,10 @@ fn test_poseidon_bls12_381() {
 
     // Check that poseidon can indeed be instantiated and doesn't do terribly stupid things like give 0 challenges.
     use crate::bls12_381::Poseidonx5_255_3;
-    let io = IOPattern::<Poseidonx5_255_3, F>::new("test")
+    let domain_separator = DomainSeparator::<Poseidonx5_255_3, F>::new("test")
         .absorb(1, "in")
         .squeeze(10, "out");
-    let mut merlin = io.to_merlin();
+    let mut merlin = domain_separator.to_merlin();
     merlin.add_units(&[F::from(0x42)]).unwrap();
 
     let mut challenges = [F::from(0); 10];

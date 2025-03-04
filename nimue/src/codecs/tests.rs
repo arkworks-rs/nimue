@@ -2,19 +2,19 @@ use ark_ec::CurveGroup;
 use ark_serialize::CanonicalSerialize;
 use group::GroupEncoding;
 
-use crate::permutations::Keccak;
-use crate::{codecs, ByteIOPattern};
-use crate::{ByteChallenges, DuplexInterface, IOPattern};
+use crate::keccak::Keccak;
+use crate::{codecs, ByteDomainSeparator};
+use crate::{VerifierMessageBytes, DuplexSpongeInterface, DomainSeparator};
 
-fn group_iopattern<G, H>() -> IOPattern<H>
+fn group_domain_separator<G, H>() -> DomainSeparator<H>
 where
     G: group::Group,
-    H: DuplexInterface,
-    IOPattern<H>: super::group::GroupIOPattern<G> + super::group::FieldIOPattern<G::Scalar>,
+    H: DuplexSpongeInterface,
+    DomainSeparator<H>: super::zkcrypto_group::GroupDomainSeparator<G> + super::zkcrypto_group::FieldDomainSeparator<G::Scalar>,
 {
-    use codecs::group::{FieldIOPattern, GroupIOPattern};
+    use codecs::zkcrypto_group::{FieldDomainSeparator, GroupDomainSeparator};
 
-    IOPattern::new("github.com/mmaker/nimue")
+    DomainSeparator::new("github.com/mmaker/nimue")
         .add_scalars(1, "com")
         .challenge_bytes(16, "chal")
         .add_points(1, "com")
@@ -22,15 +22,15 @@ where
         .challenge_scalars(1, "chal")
 }
 
-fn ark_iopattern<G, H>() -> IOPattern<H>
+fn ark_domain_separator<G, H>() -> DomainSeparator<H>
 where
     G: ark_ec::CurveGroup,
-    H: DuplexInterface,
-    IOPattern<H>: super::ark::GroupIOPattern<G> + super::ark::FieldIOPattern<G::Scalar>,
+    H: DuplexSpongeInterface,
+    DomainSeparator<H>: super::arkworks_algebra::GroupDomainSeparator<G> + super::arkworks_algebra::FieldDomainSeparator<G::Scalar>,
 {
-    use codecs::ark::{FieldIOPattern, GroupIOPattern};
+    use codecs::arkworks_algebra::{FieldDomainSeparator, GroupDomainSeparator};
 
-    IOPattern::new("github.com/mmaker/nimue")
+    DomainSeparator::new("github.com/mmaker/nimue")
         .add_scalars(1, "com")
         .challenge_bytes(16, "chal")
         .add_points(1, "com")
@@ -99,8 +99,8 @@ where
     let ark_point = ark_generator * ark_scalar;
     let group_point = group_generator * group_scalar;
 
-    let ark_io = ark_iopattern::<ArkG, Keccak>();
-    let group_io = group_iopattern::<GroupG, Keccak>();
+    let ark_io = ark_domain_separator::<ArkG, Keccak>();
+    let group_io = group_domain_separator::<GroupG, Keccak>();
     let mut ark_chal = [0u8; 16];
     let mut group_chal = [0u8; 16];
 
@@ -110,24 +110,24 @@ where
     assert_eq!(ark_io.as_bytes(), group_io.as_bytes());
 
     // Check that scalars absorption leads to the same transcript.
-    codecs::ark::FieldWriter::add_scalars(&mut ark_prover, &[ark_scalar]).unwrap();
+    codecs::arkworks_algebra::ProverMessageField::add_scalars(&mut ark_prover, &[ark_scalar]).unwrap();
     ark_prover.fill_challenge_bytes(&mut ark_chal).unwrap();
-    codecs::group::FieldWriter::add_scalars(&mut group_prover, &[group_scalar]).unwrap();
+    codecs::zkcrypto_group::ProverMessageField::add_scalars(&mut group_prover, &[group_scalar]).unwrap();
     group_prover.fill_challenge_bytes(&mut group_chal).unwrap();
     assert_eq!(ark_chal, group_chal);
 
     // Check that points absorption leads to the same transcript.
-    codecs::ark::GroupWriter::add_points(&mut ark_prover, &[ark_point]).unwrap();
+    codecs::arkworks_algebra::ProverMessageGroup::add_points(&mut ark_prover, &[ark_point]).unwrap();
     ark_prover.fill_challenge_bytes(&mut ark_chal).unwrap();
-    codecs::group::GroupWriter::add_points(&mut group_prover, &[group_point]).unwrap();
+    codecs::zkcrypto_group::ProverMessageGroup::add_points(&mut group_prover, &[group_point]).unwrap();
     group_prover.fill_challenge_bytes(&mut group_chal).unwrap();
     assert_eq!(ark_chal, group_chal);
 
     // Check that scalars challenges are interpreted in the same way from bytes.
     let [ark_chal_scalar]: [ArkG::ScalarField; 1] =
-        codecs::ark::FieldChallenges::challenge_scalars(&mut ark_prover).unwrap();
+        codecs::arkworks_algebra::VerifierMessageField::challenge_scalars(&mut ark_prover).unwrap();
     let [group_chal_scalar]: [GroupG::Scalar; 1] =
-        codecs::group::FieldChallenges::challenge_scalars(&mut group_prover).unwrap();
+        codecs::zkcrypto_group::VerifierMessageField::challenge_scalars(&mut group_prover).unwrap();
     let mut ark_scalar_bytes = Vec::new();
     ark_chal_scalar
         .serialize_compressed(&mut ark_scalar_bytes)

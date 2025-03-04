@@ -1,10 +1,10 @@
-use super::FieldReader;
-use crate::{ByteReader, DuplexInterface, ProofError, VerifierTranscript};
+use super::DeserializeField;
+use crate::{ByteReader, DuplexSpongeInterface, ProofError, VerifierState};
 use group::ff::PrimeField;
 
-impl<'a, F, H, const N: usize> FieldReader<F> for VerifierTranscript<'a, H>
+impl<'a, F, H, const N: usize> DeserializeField<F> for VerifierState<'a, H>
 where
-    H: DuplexInterface,
+    H: DuplexSpongeInterface,
     F: PrimeField<Repr = [u8; N]>,
 {
     fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()> {

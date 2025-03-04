@@ -6,7 +6,7 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 ark-ff = { workspace = true }
-nimue = { workspace = true, features = ["ark"] }
+nimue = { workspace = true, features = ["arkworks-algebra"] }
 zeroize = { workspace = true }
 anemoi = { workspace = true, features = ["bls12_381"] }
 ark-bls12-381 = { workspace = true }

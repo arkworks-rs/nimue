@@ -8,7 +8,7 @@ use super::Unit;
 ///
 /// **HAZARD**: Don't implement this trait unless you know what you are doing.
 /// Consider using the sponges already provided by this library.
-pub trait DuplexInterface<U = u8>: Default + Clone + zeroize::Zeroize
+pub trait DuplexSpongeInterface<U = u8>: Default + Clone + zeroize::Zeroize
 where
     U: Unit,
 {

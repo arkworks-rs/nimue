@@ -2,15 +2,15 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 
 use crate::{
     codecs::{bytes_modp, bytes_uniform_modp},
-    ByteIOPattern, DuplexInterface, IOPattern,
+    ByteDomainSeparator, DuplexSpongeInterface, DomainSeparator,
 };
 
-use super::{FieldIOPattern, GroupIOPattern};
+use super::{FieldDomainSeparator, GroupDomainSeparator};
 
-impl<F, H> FieldIOPattern<F> for IOPattern<H>
+impl<F, H> FieldDomainSeparator<F> for DomainSeparator<H>
 where
     F: PrimeField,
-    H: DuplexInterface,
+    H: DuplexSpongeInterface,
 {
     fn add_scalars(self, count: usize, label: &str) -> Self {
         self.add_bytes(count * bytes_modp(F::NUM_BITS), label)
@@ -21,11 +21,11 @@ where
     }
 }
 
-impl<G, H> GroupIOPattern<G> for IOPattern<H>
+impl<G, H> GroupDomainSeparator<G> for DomainSeparator<H>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,
-    H: DuplexInterface,
+    H: DuplexSpongeInterface,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         let n = G::Repr::default().as_ref().len();

@@ -12,22 +12,22 @@ use ark_ec::PrimeGroup;
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::Field;
 use ark_std::log2;
-use nimue::codecs::ark::*;
+use nimue::codecs::arkworks_algebra::*;
 use rand::rngs::OsRng;
 
 /// The IO Pattern of a bulleproof.
 ///
 /// Defining this as a trait allows us to "attach" the bulletproof IO to
-/// the base class [`nimue::IOPattern`] and have other protocol compose the IO pattern.
-trait BulletproofIOPattern<G: CurveGroup> {
+/// the base class [`nimue::DomainSeparator`] and have other protocol compose the IO pattern.
+trait BulletproofDomainSeparator<G: CurveGroup> {
     fn bulletproof_statement(self) -> Self;
     fn add_bulletproof(self, len: usize) -> Self;
 }
 
-impl<G> BulletproofIOPattern<G> for IOPattern
+impl<G> BulletproofDomainSeparator<G> for DomainSeparator
 where
     G: CurveGroup,
-    IOPattern: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
+    DomainSeparator: GroupDomainSeparator<G> + FieldDomainSeparator<G::ScalarField>,
 {
     /// The IO of the bulletproof statement
     fn bulletproof_statement(self) -> Self {
@@ -46,13 +46,13 @@ where
 }
 
 fn prove<'a, G: CurveGroup>(
-    merlin: &'a mut ProverTranscript,
+    merlin: &'a mut ProverPrivateState,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     statement: &G, // the actual inner-roduct of the witness is not really needed
     witness: (&[G::ScalarField], &[G::ScalarField]),
 ) -> ProofResult<&'a [u8]>
 where
-    ProverTranscript: GroupWriter<G> + FieldChallenges<G::ScalarField>,
+    ProverPrivateState: ProverMessageGroup<G> + VerifierMessageField<G::ScalarField>,
 {
     assert_eq!(witness.0.len(), witness.1.len());
 
@@ -60,7 +60,7 @@ where
         assert_eq!(generators.0.len(), 1);
 
         merlin.add_scalars(&[witness.0[0], witness.1[0]])?;
-        return Ok(merlin.transcript());
+        return Ok(merlin.narg_string());
     }
 
     let n = witness.0.len() / 2;
@@ -97,13 +97,13 @@ where
 }
 
 fn verify<G: CurveGroup>(
-    arthur: &mut VerifierTranscript,
+    arthur: &mut VerifierState,
     generators: (&[G::Affine], &[G::Affine], &G::Affine),
     mut n: usize,
     statement: &G,
 ) -> ProofResult<()>
 where
-    for<'a> VerifierTranscript<'a>: GroupReader<G> + FieldChallenges<G::ScalarField>,
+    for<'a> VerifierState<'a>: DeserializeGroup<G> + VerifierMessageField<G::ScalarField>,
 {
     let mut g = generators.0.to_vec();
     let mut h = generators.1.to_vec();
@@ -170,11 +170,11 @@ fn main() {
     let size = 8;
 
     // initialize the IO Pattern putting the domain separator ("example.com")
-    let iopattern = IOPattern::new("example.com");
+    let domain_separator = DomainSeparator::new("example.com");
     // add the IO of the bulletproof statement
-    let iopattern = BulletproofIOPattern::<G>::bulletproof_statement(iopattern).ratchet();
+    let domain_separator = BulletproofDomainSeparator::<G>::bulletproof_statement(domain_separator).ratchet();
     // add the IO of the bulletproof protocol (the transcript)
-    let iopattern = BulletproofIOPattern::<G>::add_bulletproof(iopattern, size);
+    let domain_separator = BulletproofDomainSeparator::<G>::add_bulletproof(domain_separator, size);
 
     // the test vectors
     let a = (0..size).map(|x| F::from(x as u32)).collect::<Vec<_>>();
@@ -195,7 +195,7 @@ fn main() {
     let statement = G::msm_unchecked(&g, &a) + G::msm_unchecked(&h, &b) + u * ab;
     let witness = (&a[..], &b[..]);
 
-    let mut merlin = iopattern.to_merlin();
+    let mut merlin = domain_separator.to_merlin();
     merlin.public_points(&[statement]).unwrap();
     merlin.ratchet().unwrap();
     let proof = prove(&mut merlin, generators, &statement, witness).expect("Error proving");
@@ -205,7 +205,7 @@ fn main() {
         hex::encode(proof)
     );
 
-    let mut arthur = iopattern.to_arthur(proof);
+    let mut arthur = domain_separator.to_verifier_state(proof);
     arthur.public_points(&[statement]).unwrap();
     arthur.ratchet().unwrap();
     verify(&mut arthur, generators, size, &statement).expect("Invalid proof");

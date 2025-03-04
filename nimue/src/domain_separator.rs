@@ -3,12 +3,12 @@
 // which was a pain to use
 // (plain integers don't cast to NonZeroUsize automatically)
 
-use crate::ByteIOPattern;
+use crate::ByteDomainSeparator;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
-use super::duplex_sponge::{DuplexInterface, Unit};
-use super::errors::IOPatternError;
+use super::duplex_sponge::{DuplexSpongeInterface, Unit};
+use super::errors::DomainSeparatorMismatch;
 
 /// This is the separator between operations in the IO Pattern
 /// and as such is the only forbidden character in labels.
@@ -31,14 +31,14 @@ const SEP_BYTE: &str = "\0";
 ///
 /// ## Guarantees
 ///
-/// The struct [`IOPattern`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
-/// This means that [`ProverTranscript`][`crate::ProverTranscript`] or [`VerifierTranscript`][`crate::VerifierTranscript`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
+/// The struct [`DomainSeparator`] guarantees the creation of a valid IO Pattern string, whose lengths are coherent with the types described in the protocol. No information about the types themselves is stored in an IO Pattern.
+/// This means that [`ProverState`][`crate::ProverState`] or [`VerifierState`][`crate::VerifierState`] instances can generate successfully a protocol transcript respecting the length constraint but not the types. See [issue #6](https://github.com/arkworks-rs/nimue/issues/6) for a discussion on the topic.
 
 #[derive(Clone)]
-pub struct IOPattern<H = crate::DefaultHash, U = u8>
+pub struct DomainSeparator<H = crate::DefaultHash, U = u8>
 where
     U: Unit,
-    H: DuplexInterface<U>,
+    H: DuplexSpongeInterface<U>,
 {
     io: String,
     _hash: PhantomData<(H, U)>,
@@ -66,7 +66,7 @@ pub(crate) enum Op {
 
 impl Op {
     /// Create a new OP from the portion of a tag.
-    fn new(id: char, count: Option<usize>) -> Result<Self, IOPatternError> {
+    fn new(id: char, count: Option<usize>) -> Result<Self, DomainSeparatorMismatch> {
         match (id, count) {
             ('A', Some(c)) if c > 0 => Ok(Op::Absorb(c)),
             ('R', None) | ('R', Some(0)) => Ok(Op::Ratchet),
@@ -76,7 +76,7 @@ impl Op {
     }
 }
 
-impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
+impl<H: DuplexSpongeInterface<U>, U: Unit> DomainSeparator<H, U> {
     pub fn from_string(io: String) -> Self {
         Self {
             io,
@@ -84,13 +84,13 @@ impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
-    /// Create a new IOPattern with the domain separator.
-    pub fn new(domsep: &str) -> Self {
+    /// Create a new DomainSeparator with the domain separator.
+    pub fn new(session_identifier: &str) -> Self {
         assert!(
-            !domsep.contains(SEP_BYTE),
+            !session_identifier.contains(SEP_BYTE),
             "Domain separator cannot contain the separator BYTE."
         );
-        Self::from_string(domsep.to_string())
+        Self::from_string(session_identifier.to_string())
     }
 
     /// Absorb `count` native elements.
@@ -141,16 +141,16 @@ impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
 
     /// Parse the givern IO Pattern into a sequence of [`Op`]'s.
     pub(crate) fn finalize(&self) -> VecDeque<Op> {
-        // Guaranteed to succeed as instances are all valid iopatterns
+        // Guaranteed to succeed as instances are all valid domain_separators
         Self::parse_io(self.io.as_bytes())
             .expect("Internal error. Please submit issue to m@orru.net")
     }
 
-    fn parse_io(io_pattern: &[u8]) -> Result<VecDeque<Op>, IOPatternError> {
+    fn parse_io(domain_separator: &[u8]) -> Result<VecDeque<Op>, DomainSeparatorMismatch> {
         let mut stack = VecDeque::new();
 
         // skip the domain separator
-        for part in io_pattern.split(|&b| b == SEP_BYTE.as_bytes()[0]).skip(1) {
+        for part in domain_separator.split(|&b| b == SEP_BYTE.as_bytes()[0]).skip(1) {
             let next_id = part[0] as char;
             let next_length = part[1..]
                 .iter()
@@ -172,7 +172,7 @@ impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
     fn simplify_stack(
         mut dst: VecDeque<Op>,
         mut stack: VecDeque<Op>,
-    ) -> Result<VecDeque<Op>, IOPatternError> {
+    ) -> Result<VecDeque<Op>, DomainSeparatorMismatch> {
         if stack.is_empty() {
             Ok(dst)
         } else {
@@ -201,25 +201,25 @@ impl<H: DuplexInterface<U>, U: Unit> IOPattern<H, U> {
         }
     }
 
-    /// Create an [`crate::ProverTranscript`] instance from the IO Pattern.
-    pub fn to_merlin(&self) -> crate::ProverTranscript<H, U, crate::DefaultRng> {
+    /// Create an [`crate::ProverState`] instance from the IO Pattern.
+    pub fn to_merlin(&self) -> crate::ProverPrivateState<H, U, crate::DefaultRng> {
         self.into()
     }
 
-    /// Create a [`crate::VerifierTranscript`] instance from the IO Pattern and the protocol transcript (bytes).
-    pub fn to_arthur<'a>(&self, transcript: &'a [u8]) -> crate::VerifierTranscript<'a, H, U> {
-        crate::VerifierTranscript::<H, U>::new(self, transcript)
+    /// Create a [`crate::VerifierState`] instance from the IO Pattern and the protocol transcript (bytes).
+    pub fn to_verifier_state<'a>(&self, transcript: &'a [u8]) -> crate::VerifierState<'a, H, U> {
+        crate::VerifierState::<H, U>::new(self, transcript)
     }
 }
 
-impl<U: Unit, H: DuplexInterface<U>> core::fmt::Debug for IOPattern<H, U> {
+impl<U: Unit, H: DuplexSpongeInterface<U>> core::fmt::Debug for DomainSeparator<H, U> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Ensure that the state isn't accidentally logged
-        write!(f, "IOPattern({:?})", self.io)
+        write!(f, "DomainSeparator({:?})", self.io)
     }
 }
 
-impl<H: DuplexInterface> ByteIOPattern for IOPattern<H> {
+impl<H: DuplexSpongeInterface> ByteDomainSeparator for DomainSeparator<H> {
     #[inline]
     fn add_bytes(self, count: usize, label: &str) -> Self {
         self.absorb(count, label)

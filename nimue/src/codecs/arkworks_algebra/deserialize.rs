@@ -5,14 +5,14 @@ use ark_ff::Field;
 use ark_ff::{Fp, FpConfig};
 use ark_serialize::CanonicalDeserialize;
 
-use super::{FieldReader, GroupReader};
+use super::{DeserializeField, DeserializeGroup};
 use crate::traits::*;
-use crate::{DuplexInterface, ProofResult, VerifierTranscript};
+use crate::{DuplexSpongeInterface, ProofResult, VerifierState};
 
-impl<F, H> FieldReader<F> for VerifierTranscript<'_, H>
+impl<F, H> DeserializeField<F> for VerifierState<'_, H>
 where
     F: Field,
-    H: DuplexInterface,
+    H: DuplexSpongeInterface,
 {
     fn fill_next_scalars(&mut self, output: &mut [F]) -> ProofResult<()> {
         let point_size = F::default().compressed_size();
@@ -25,10 +25,10 @@ where
     }
 }
 
-impl<G, H> GroupReader<G> for VerifierTranscript<'_, H>
+impl<G, H> DeserializeGroup<G> for VerifierState<'_, H>
 where
     G: CurveGroup,
-    H: DuplexInterface,
+    H: DuplexSpongeInterface,
 {
     fn fill_next_points(&mut self, output: &mut [G]) -> ProofResult<()> {
         let point_size = G::default().compressed_size();
@@ -42,10 +42,10 @@ where
     }
 }
 
-impl<H, C, const N: usize> FieldReader<Fp<C, N>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> DeserializeField<Fp<C, N>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexInterface<Fp<C, N>>,
+    H: DuplexSpongeInterface<Fp<C, N>>,
 {
     fn fill_next_scalars(&mut self, output: &mut [Fp<C, N>]) -> crate::ProofResult<()> {
         self.fill_next_units(output)?;
@@ -53,15 +53,15 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> DeserializeGroup<EdwardsCurve<P>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexInterface<Fp<C, N>>,
+    H: DuplexSpongeInterface<Fp<C, N>>,
     P: TECurveConfig<BaseField = Fp<C, N>>,
 {
     fn fill_next_points(&mut self, output: &mut [EdwardsCurve<P>]) -> ProofResult<()> {
         for o in output.iter_mut() {
-            let o_affine = EdwardsAffine::deserialize_compressed(&mut self.transcript)?;
+            let o_affine = EdwardsAffine::deserialize_compressed(&mut self.narg_string)?;
             *o = o_affine.into();
             self.public_units(&[o.x, o.y])?;
         }
@@ -69,15 +69,15 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<SWCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> DeserializeGroup<SWCurve<P>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
-    H: DuplexInterface<Fp<C, N>>,
+    H: DuplexSpongeInterface<Fp<C, N>>,
     P: SWCurveConfig<BaseField = Fp<C, N>>,
 {
     fn fill_next_points(&mut self, output: &mut [SWCurve<P>]) -> ProofResult<()> {
         for o in output.iter_mut() {
-            let o_affine = SWAffine::deserialize_compressed(&mut self.transcript)?;
+            let o_affine = SWAffine::deserialize_compressed(&mut self.narg_string)?;
             *o = o_affine.into();
             self.public_units(&[o.x, o.y])?;
         }

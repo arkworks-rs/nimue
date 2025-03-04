@@ -30,20 +30,20 @@ impl PowStrategy for KeccakPoW {
 
 #[test]
 fn test_pow_keccak() {
-    use crate::{ByteIOPattern, ByteReader, ByteWriter, PoWChallenge, PoWIOPattern};
-    use nimue::{DefaultHash, IOPattern};
+    use crate::{ByteDomainSeparator, ByteReader, ByteWriter, PoWChallenge, PoWDomainSeparator};
+    use nimue::{DefaultHash, DomainSeparator};
 
     const BITS: f64 = 10.0;
 
-    let iopattern = IOPattern::<DefaultHash>::new("the proof of work lottery 🎰")
+    let domain_separator = DomainSeparator::<DefaultHash>::new("the proof of work lottery 🎰")
         .add_bytes(1, "something")
         .challenge_pow("rolling dices");
 
-    let mut prover = iopattern.to_merlin();
-    prover.add_bytes(b"\0").expect("Invalid IOPattern");
+    let mut prover = domain_separator.to_merlin();
+    prover.add_bytes(b"\0").expect("Invalid DomainSeparator");
     prover.challenge_pow::<KeccakPoW>(BITS).unwrap();
 
-    let mut verifier = iopattern.to_arthur(prover.transcript());
+    let mut verifier = domain_separator.to_verifier_state(prover.narg_string());
     let byte = verifier.next_bytes::<1>().unwrap();
     assert_eq!(&byte, b"\0");
     verifier.challenge_pow::<KeccakPoW>(BITS).unwrap();
