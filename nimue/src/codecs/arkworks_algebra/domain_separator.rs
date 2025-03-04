@@ -4,7 +4,7 @@ use ark_ff::{Field, Fp, FpConfig, PrimeField};
 use super::*;
 use crate::codecs::{bytes_modp, bytes_uniform_modp};
 
-impl<F, H> FieldIOPattern<F> for IOPattern<H>
+impl<F, H> FieldDomainSeparator<F> for DomainSeparator<H>
 where
     F: Field,
     H: DuplexInterface,
@@ -28,7 +28,7 @@ where
     }
 }
 
-impl<F, C, H, const N: usize> FieldIOPattern<F> for IOPattern<H, Fp<C, N>>
+impl<F, C, H, const N: usize> FieldDomainSeparator<F> for DomainSeparator<H, Fp<C, N>>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
     C: FpConfig<N>,
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<C, H, const N: usize> ByteIOPattern for IOPattern<H, Fp<C, N>>
+impl<C, H, const N: usize> ByteDomainSeparator for DomainSeparator<H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
@@ -59,7 +59,7 @@ where
     }
 }
 
-impl<G, H> GroupIOPattern<G> for IOPattern<H>
+impl<G, H> GroupDomainSeparator<G> for DomainSeparator<H>
 where
     G: CurveGroup,
     H: DuplexInterface,
@@ -69,12 +69,12 @@ where
     }
 }
 
-impl<G, H, C, const N: usize> GroupIOPattern<G> for IOPattern<H, Fp<C, N>>
+impl<G, H, C, const N: usize> GroupDomainSeparator<G> for DomainSeparator<H, Fp<C, N>>
 where
     G: CurveGroup<BaseField = Fp<C, N>>,
     H: DuplexInterface<Fp<C, N>>,
     C: FpConfig<N>,
-    IOPattern<H, Fp<C, N>>: FieldIOPattern<Fp<C, N>>,
+    DomainSeparator<H, Fp<C, N>>: FieldDomainSeparator<Fp<C, N>>,
 {
     fn add_points(self, count: usize, label: &str) -> Self {
         self.absorb(count * 2, label)
@@ -82,9 +82,9 @@ where
 }
 
 #[test]
-fn test_iopattern() {
+fn test_domain_separator() {
     // OPTION 1 (fails)
-    // let io_pattern = IOPattern::new("github.com/mmaker/nimue")
+    // let domain_separator = DomainSeparator::new("github.com/mmaker/nimue")
     //     .absorb_points(1, "g")
     //     .absorb_points(1, "pk")
     //     .ratchet()
@@ -93,11 +93,11 @@ fn test_iopattern() {
     //     .absorb_scalars(1, "resp");
 
     // // OPTION 2
-    fn add_schnorr_iopattern<G: ark_ec::CurveGroup, H: DuplexInterface<u8>>() -> IOPattern<H, u8>
+    fn add_schnorr_domain_separator<G: ark_ec::CurveGroup, H: DuplexInterface<u8>>() -> DomainSeparator<H, u8>
     where
-        IOPattern<H, u8>: GroupIOPattern<G> + FieldIOPattern<G::ScalarField>,
+        DomainSeparator<H, u8>: GroupDomainSeparator<G> + FieldDomainSeparator<G::ScalarField>,
     {
-        IOPattern::new("github.com/mmaker/nimue")
+        DomainSeparator::new("github.com/mmaker/nimue")
             .add_points(1, "g")
             .add_points(1, "pk")
             .ratchet()
@@ -105,12 +105,12 @@ fn test_iopattern() {
             .challenge_scalars(1, "chal")
             .add_scalars(1, "resp")
     }
-    let io_pattern =
-        add_schnorr_iopattern::<ark_curve25519::EdwardsProjective, crate::DefaultHash>();
+    let domain_separator =
+        add_schnorr_domain_separator::<ark_curve25519::EdwardsProjective, crate::DefaultHash>();
 
-    // OPTION 3 (extra type, trait extensions should be on IOPattern or AlgebraicIOPattern?)
-    // let io_pattern =
-    //     ArkGroupIOPattern::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
+    // OPTION 3 (extra type, trait extensions should be on DomainSeparator or AlgebraicDomainSeparator?)
+    // let domain_separator =
+    //     ArkGroupDomainSeparator::<ark_curve25519::EdwardsProjective>::new("github.com/mmaker/nimue")
     //         .add_points(1, "g")
     //         .add_points(1, "pk")
     //         .ratchet()
@@ -119,7 +119,7 @@ fn test_iopattern() {
     //         .add_scalars(1, "resp");
 
     assert_eq!(
-        io_pattern.as_bytes(),
+        domain_separator.as_bytes(),
         b"github.com/mmaker/nimue\0A32g\0A32pk\0R\0A32com\0S47chal\0A32resp"
     )
 }

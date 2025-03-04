@@ -1,7 +1,7 @@
 use nimue::duplex_sponge::DuplexSponge;
 
-poseidon_sponge!(255, PoseidonPermx5_255_3, x5_255_3);
-poseidon_sponge!(255, PoseidonPermx5_255_5, x5_255_5);
+poseidon_permutation!(255, PoseidonPermx5_255_3, x5_255_3);
+poseidon_permutation!(255, PoseidonPermx5_255_5, x5_255_5);
 
 pub type Poseidonx5_255_3 = DuplexSponge<PoseidonPermx5_255_3>;
 pub type Poseidonx5_255_5 = DuplexSponge<PoseidonPermx5_255_5>;

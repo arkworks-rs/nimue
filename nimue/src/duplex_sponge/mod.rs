@@ -1,12 +1,11 @@
-//! This module defines
-//! [`DuplexHash`], the basic interface for hash function that can absorb and squeeze data.
-//! Hashes in nimue operate over some native elements satisfying the trait [`Unit`] which, roughly speaking, requires
+//! This module defines the duplex sponge construction that can absorb and squeeze data.
+//! Hashes in `nimue` operate over some native elements satisfying the trait [`Unit`] which, roughly speaking, requires
 //! the basic type to support cloning, size, read/write procedures, and secure deletion.
 //!
 //! Additionally, the module exports some utilities:
-//! - [`hash::sponge::DuplexSponge`] allows to implement a [`crate::DuplexHash`] using a secure permutation function, specifying the rate `R` and the width `N`.
-//! This is done using the standard duplex sponge cosntruction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
-//! - [`hash::legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
+//! - [`DuplexSponge`] allows to implement a [`DuplexInterface`] using a secure permutation function, specifying the rate `R` and the width `N`.
+//! This is done using the standard duplex sponge construction in overwrite mode (cf. [Wikipedia](https://en.wikipedia.org/wiki/Sponge_function#Duplex_construction)).
+//! - [`legacy::DigestBridge`] takes as input any hash function implementing the NIST API via the standard [`digest::Digest`] trait and makes it suitable for usage in duplex mode for continuous absorb/squeeze.
 
 /// Sponge functions.
 mod interface;
@@ -63,7 +62,7 @@ pub trait Permutation: Zeroize + Default + Clone + AsRef<[Self::U]> + AsMut<[Sel
 /// A cryptographic sponge.
 #[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
 pub struct DuplexSponge<C: Permutation> {
-    sponge: C,
+    permutation: C,
     absorb_pos: usize,
     squeeze_pos: usize,
 }
@@ -72,7 +71,7 @@ impl<U: Unit, C: Permutation<U = U>> DuplexInterface<U> for DuplexSponge<C> {
     fn new(iv: [u8; 32]) -> Self {
         assert!(C::N > C::R, "Capacity of the sponge should be > 0.");
         Self {
-            sponge: C::new(iv),
+            permutation: C::new(iv),
             absorb_pos: 0,
             squeeze_pos: C::R,
         }
@@ -81,14 +80,14 @@ impl<U: Unit, C: Permutation<U = U>> DuplexInterface<U> for DuplexSponge<C> {
     fn absorb_unchecked(&mut self, mut input: &[U]) -> &mut Self {
         while !input.is_empty() {
             if self.absorb_pos == C::R {
-                self.sponge.permute();
+                self.permutation.permute();
                 self.absorb_pos = 0;
             } else {
                 assert!(!input.is_empty() && self.absorb_pos < C::R);
                 let chunk_len = usize::min(input.len(), C::R - self.absorb_pos);
                 let (chunk, rest) = input.split_at(chunk_len);
 
-                self.sponge.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
+                self.permutation.as_mut()[self.absorb_pos..self.absorb_pos + chunk_len]
                     .clone_from_slice(chunk);
                 self.absorb_pos += chunk_len;
                 input = rest;
@@ -106,14 +105,14 @@ impl<U: Unit, C: Permutation<U = U>> DuplexInterface<U> for DuplexSponge<C> {
         if self.squeeze_pos == C::R {
             self.squeeze_pos = 0;
             self.absorb_pos = 0;
-            self.sponge.permute();
+            self.permutation.permute();
         }
 
         assert!(self.squeeze_pos < C::R && !output.is_empty());
         let chunk_len = usize::min(output.len(), C::R - self.squeeze_pos);
         let (output, rest) = output.split_at_mut(chunk_len);
         output.clone_from_slice(
-            &self.sponge.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len],
+            &self.permutation.as_ref()[self.squeeze_pos..self.squeeze_pos + chunk_len],
         );
         self.squeeze_pos += chunk_len;
         self.squeeze_unchecked(rest)
@@ -124,10 +123,10 @@ impl<U: Unit, C: Permutation<U = U>> DuplexInterface<U> for DuplexSponge<C> {
     // }
 
     fn ratchet_unchecked(&mut self) -> &mut Self {
-        self.sponge.permute();
+        self.permutation.permute();
         // set to zero the state up to rate
         // XXX. is the compiler really going to do this?
-        self.sponge.as_mut()[0..C::R]
+        self.permutation.as_mut()[0..C::R]
             .iter_mut()
             .for_each(|x| x.zeroize());
         self.squeeze_pos = C::R;

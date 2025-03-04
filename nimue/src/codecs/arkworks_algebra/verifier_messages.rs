@@ -5,11 +5,11 @@ use ark_ff::{BigInteger, Field, Fp, FpConfig, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use rand::{CryptoRng, RngCore};
 
-use super::{FieldChallenges, FieldPublic, GroupPublic};
+use super::{VerifierMessageField, CommonProverMessageField, CommonProverMessageGroup};
 use crate::codecs::bytes_uniform_modp;
 use crate::{
-    ByteChallenges, BytePublic, DuplexInterface, IOPatternError, ProofError, ProofResult,
-    ProverTranscript, Unit, UnitTranscript, VerifierTranscript,
+    VerifierMessageBytes, CommonProverMessageBytes, DuplexInterface, DomainSeparatorMismatch, ProofError, ProofResult,
+    ProverState, Unit, UnitTranscript, VerifierState,
 };
 
 // Implementation of basic traits for bridging arkworks and nimue
@@ -42,7 +42,7 @@ impl From<SerializationError> for ProofError {
 
 // Bytes <-> Field elements interactions:
 
-impl<T, G> GroupPublic<G> for T
+impl<T, G> CommonProverMessageGroup<G> for T
 where
     G: CurveGroup,
     T: UnitTranscript<u8>,
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<T, F> FieldPublic<F> for T
+impl<T, F> CommonProverMessageField<F> for T
 where
     F: Field,
     T: UnitTranscript<u8>,
@@ -75,7 +75,7 @@ where
     }
 }
 
-impl<F, T> FieldChallenges<F> for T
+impl<F, T> VerifierMessageField<F> for T
 where
     F: Field,
     T: UnitTranscript<u8>,
@@ -96,18 +96,18 @@ where
     }
 }
 
-impl<H, C, const N: usize> FieldChallenges<Fp<C, N>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> VerifierMessageField<Fp<C, N>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
 {
     fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
         self.fill_challenge_units(output)
-            .map_err(ProofError::InvalidIO)
+            .map_err(ProofError::InvalidDomainSeparator)
     }
 }
 
-impl<H, C, R, const N: usize> FieldChallenges<Fp<C, N>> for ProverTranscript<H, Fp<C, N>, R>
+impl<H, C, R, const N: usize> VerifierMessageField<Fp<C, N>> for ProverState<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
@@ -115,13 +115,13 @@ where
 {
     fn fill_challenge_scalars(&mut self, output: &mut [Fp<C, N>]) -> ProofResult<()> {
         self.fill_challenge_units(output)
-            .map_err(ProofError::InvalidIO)
+            .map_err(ProofError::InvalidDomainSeparator)
     }
 }
 
 // Field <-> Field interactions:
 
-impl<F, H, R, C, const N: usize> FieldPublic<F> for ProverTranscript<H, Fp<C, N>, R>
+impl<F, H, R, C, const N: usize> CommonProverMessageField<F> for ProverState<H, Fp<C, N>, R>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexInterface<Fp<C, N>>,
@@ -141,16 +141,16 @@ where
 }
 
 // In a glorious future, we will have this generic implementation working without this error:
-// error[E0119]: conflicting implementations of trait `ark::GroupPublic<_>`
+// error[E0119]: conflicting implementations of trait `ark::CommonProverMessageGroup<_>`
 //    --> src/plugins/ark/common.rs:121:1
 //     |
-// 43  | / impl<T, G> GroupPublic<G> for T
+// 43  | / impl<T, G> CommonProverMessageGroup<G> for T
 // 44  | | where
 // 45  | |     G: CurveGroup,
 // 46  | |     T: UnitTranscript<u8>,
 //     | |__________________________- first implementation here
 // ...
-// 121 | / impl< C, const N: usize, G, T> GroupPublic<G> for T
+// 121 | / impl< C, const N: usize, G, T> CommonProverMessageGroup<G> for T
 // 122 | | where
 // 123 | |     T: UnitTranscript<Fp<C, N>>,
 // 124 | |     C: FpConfig<N>,
@@ -159,7 +159,7 @@ where
 //
 //
 
-impl<F, H, C, const N: usize> FieldPublic<F> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<F, H, C, const N: usize> CommonProverMessageField<F> for VerifierState<'_, H, Fp<C, N>>
 where
     F: Field<BasePrimeField = Fp<C, N>>,
     H: DuplexInterface<Fp<C, N>>,
@@ -177,7 +177,7 @@ where
     }
 }
 
-impl<H, R, C, const N: usize, G> GroupPublic<G> for ProverTranscript<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize, G> CommonProverMessageGroup<G> for ProverState<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     R: RngCore + CryptoRng,
@@ -195,7 +195,7 @@ where
     }
 }
 
-impl<H, C, const N: usize, G> GroupPublic<G> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize, G> CommonProverMessageGroup<G> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
@@ -214,12 +214,12 @@ where
 
 // Field  <-> Bytes interactions:
 
-impl<H, C, const N: usize> BytePublic for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> CommonProverMessageBytes for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
 {
-    fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+    fn public_bytes(&mut self, input: &[u8]) -> Result<(), DomainSeparatorMismatch> {
         for &byte in input {
             self.public_units(&[Fp::from(byte)])?;
         }
@@ -227,13 +227,13 @@ where
     }
 }
 
-impl<H, R, C, const N: usize> BytePublic for ProverTranscript<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> CommonProverMessageBytes for ProverState<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
     R: CryptoRng + rand::RngCore,
 {
-    fn public_bytes(&mut self, input: &[u8]) -> Result<(), IOPatternError> {
+    fn public_bytes(&mut self, input: &[u8]) -> Result<(), DomainSeparatorMismatch> {
         for &byte in input {
             self.public_units(&[Fp::from(byte)])?;
         }
@@ -241,13 +241,13 @@ where
     }
 }
 
-impl<H, R, C, const N: usize> ByteChallenges for ProverTranscript<H, Fp<C, N>, R>
+impl<H, R, C, const N: usize> VerifierMessageBytes for ProverState<H, Fp<C, N>, R>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
     R: CryptoRng + RngCore,
 {
-    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
+    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), DomainSeparatorMismatch> {
         if output.is_empty() {
             Ok(())
         } else {
@@ -267,12 +267,12 @@ where
 }
 
 /// XXX. duplicate code
-impl<H, C, const N: usize> ByteChallenges for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> VerifierMessageBytes for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
 {
-    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), IOPatternError> {
+    fn fill_challenge_bytes(&mut self, output: &mut [u8]) -> Result<(), DomainSeparatorMismatch> {
         if output.is_empty() {
             Ok(())
         } else {

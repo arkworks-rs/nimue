@@ -2,12 +2,12 @@ use group::{ff::PrimeField, Group, GroupEncoding};
 
 use crate::{
     codecs::{bytes_modp, bytes_uniform_modp},
-    ByteIOPattern, DuplexInterface, IOPattern,
+    ByteDomainSeparator, DuplexInterface, DomainSeparator,
 };
 
-use super::{FieldIOPattern, GroupIOPattern};
+use super::{FieldDomainSeparator, GroupDomainSeparator};
 
-impl<F, H> FieldIOPattern<F> for IOPattern<H>
+impl<F, H> FieldDomainSeparator<F> for DomainSeparator<H>
 where
     F: PrimeField,
     H: DuplexInterface,
@@ -21,7 +21,7 @@ where
     }
 }
 
-impl<G, H> GroupIOPattern<G> for IOPattern<H>
+impl<G, H> GroupDomainSeparator<G> for DomainSeparator<H>
 where
     G: Group + GroupEncoding,
     G::Repr: AsRef<[u8]>,

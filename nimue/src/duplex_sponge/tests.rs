@@ -1,7 +1,7 @@
 use rand::RngCore;
 
 use crate::duplex_sponge::legacy::DigestBridge;
-use crate::keccak::Keccak;
+use crate::permutations::keccak::Keccak;
 use crate::{
     VerifierMessageBytes, CommonProverMessageBytes, ByteReader, ByteWriter, DuplexInterface, DomainSeparator,
     ProverState, StatefulHashObject,
@@ -57,8 +57,8 @@ fn test_merlin_bytewriter() {
 /// A protocol flow that does not match the DomainSeparator should fail.
 #[test]
 fn test_invalid_io_sequence() {
-    let domain_separator = DomainSeparator::new("example.com").absorb(3, "").squeeze(1, "");
-    let mut arthur = StatefulHashObject::<Keccak>::new(&domain_separator);
+    let duplexinterface = DomainSeparator::new("example.com").absorb(3, "").squeeze(1, "");
+    let mut arthur = StatefulHashObject::<Keccak>::new(&iop);
     assert!(arthur.squeeze(&mut [0u8; 16]).is_err());
 }
 
@@ -67,7 +67,7 @@ fn test_invalid_io_sequence() {
 // #[test]
 // #[should_panic]
 // fn test_unfinished_io() {
-//     let iop = DomainSeparator::new("example.com").absorb(3, "").squeeze(1, "");
+//     let domain_separator = DomainSeparator::new("example.com").absorb(3, "").squeeze(1, "");
 //     let _arthur = VerifierState::<Keccak>::new(&iop);
 // }
 
@@ -77,8 +77,8 @@ fn test_deterministic() {
     let domain_separator = DomainSeparator::new("example.com")
         .absorb(3, "elt")
         .squeeze(16, "another_elt");
-    let mut first_sponge = StatefulHashObject::<Keccak>::new(&domain_separator);
-    let mut second_sponge = StatefulHashObject::<Keccak>::new(&domain_separator);
+    let mut first_sponge = StatefulHashObject::<Keccak>::new(&iop);
+    let mut second_sponge = StatefulHashObject::<Keccak>::new(&iop);
 
     let mut first = [0u8; 16];
     let mut second = [0u8; 16];
@@ -91,14 +91,14 @@ fn test_deterministic() {
     assert_eq!(first, second);
 }
 
-/// Basic scatistical test to check that the squeezed output looks random.
+/// Basic statistical test to check that the squeezed output looks random.
 #[test]
 fn test_statistics() {
     let domain_separator = DomainSeparator::new("example.com")
         .absorb(4, "statement")
         .ratchet()
         .squeeze(2048, "gee");
-    let mut arthur = StatefulHashObject::<Keccak>::new(&domain_separator);
+    let mut arthur = StatefulHashObject::<Keccak>::new(&iop);
     arthur.absorb(b"seed").unwrap();
     arthur.ratchet().unwrap();
     let mut output = [0u8; 2048];

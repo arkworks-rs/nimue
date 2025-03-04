@@ -1,7 +1,7 @@
 macro_rules! field_traits {
     ($Field:path) => {
         /// Absorb and squeeze field elements to the IO pattern.
-        pub trait FieldIOPattern<F: $Field> {
+        pub trait FieldDomainSeparator<F: $Field> {
             fn add_scalars(self, count: usize, label: &str) -> Self;
             fn challenge_scalars(self, count: usize, label: &str) -> Self;
         }
@@ -10,7 +10,7 @@ macro_rules! field_traits {
         ///
         /// The implementation of this trait **MUST** ensure that the field elements
         /// are uniformly distributed and valid.
-        pub trait FieldChallenges<F: $Field> {
+        pub trait VerifierMessageField<F: $Field> {
             fn fill_challenge_scalars(&mut self, output: &mut [F]) -> $crate::ProofResult<()>;
 
             fn challenge_scalars<const N: usize>(&mut self) -> crate::ProofResult<[F; N]> {
@@ -20,21 +20,21 @@ macro_rules! field_traits {
         }
 
         /// Add field elements as shared public information.
-        pub trait FieldPublic<F: $Field> {
+        pub trait CommonProverMessageField<F: $Field> {
             type Repr;
             fn public_scalars(&mut self, input: &[F]) -> crate::ProofResult<Self::Repr>;
         }
 
         /// Add field elements to the protocol transcript.
-        pub trait FieldWriter<F: $Field>: FieldPublic<F> {
+        pub trait ProverMessageField<F: $Field>: CommonProverMessageField<F> {
             fn add_scalars(&mut self, input: &[F]) -> crate::ProofResult<()>;
         }
 
-        /// Retrieve field elements from the protocol trainscript.
+        /// Retrieve field elements from the protocol transcript.
         ///
         /// The implementation of this trait **MUST** ensure that the field elements
         /// are correct encodings.
-        pub trait FieldReader<F: $Field>: FieldPublic<F> {
+        pub trait DeserializeField<F: $Field>: CommonProverMessageField<F> {
             fn fill_next_scalars(&mut self, output: &mut [F]) -> crate::ProofResult<()>;
 
             fn next_scalars<const N: usize>(&mut self) -> crate::ProofResult<[F; N]> {
@@ -49,12 +49,12 @@ macro_rules! field_traits {
 macro_rules! group_traits {
     ($Group:path, Scalar: $Field:path) => {
         /// Send group elements in the IO pattern.
-        pub trait GroupIOPattern<G: $Group> {
+        pub trait GroupDomainSeparator<G: $Group> {
             fn add_points(self, count: usize, label: &str) -> Self;
         }
 
-        /// Add points to the protocol transcript.
-        pub trait GroupWriter<G: $Group>: GroupPublic<G> {
+        /// Adds a new prover message consisting of an EC element.
+        pub trait ProverMessageGroup<G: $Group>: CommonProverMessageGroup<G> {
             fn add_points(&mut self, input: &[G]) -> $crate::ProofResult<()>;
         }
 
@@ -62,7 +62,7 @@ macro_rules! group_traits {
         ///
         /// The implementation of this trait **MUST** ensure that the points decoded are
         /// valid group elements.
-        pub trait GroupReader<G: $Group + Default> {
+        pub trait DeserializeGroup<G: $Group + Default> {
             /// Deserialize group elements from the protocol transcript into `output`.
             fn fill_next_points(&mut self, output: &mut [G]) -> $crate::ProofResult<()>;
 
@@ -74,7 +74,7 @@ macro_rules! group_traits {
         }
 
         /// Add group elements to the protocol transcript.
-        pub trait GroupPublic<G: $Group> {
+        pub trait CommonProverMessageGroup<G: $Group> {
             /// In order to be added to the sponge, elements may be serialize into another format.
             /// This associated type represents the format used, so that other implementation can potentially
             /// re-use the serialized element.
@@ -86,5 +86,5 @@ macro_rules! group_traits {
     };
 }
 
-#[cfg(any(feature = "group", feature = "ark"))]
+#[cfg(any(feature = "zkcrypto-group", feature = "arkworks-algebra"))]
 pub(super) use {field_traits, group_traits};

@@ -1,8 +1,8 @@
-use super::FieldReader;
-use crate::{ByteReader, DuplexInterface, ProofError, VerifierTranscript};
+use super::DeserializeField;
+use crate::{ByteReader, DuplexInterface, ProofError, VerifierState};
 use group::ff::PrimeField;
 
-impl<'a, F, H, const N: usize> FieldReader<F> for VerifierTranscript<'a, H>
+impl<'a, F, H, const N: usize> DeserializeField<F> for VerifierState<'a, H>
 where
     H: DuplexInterface,
     F: PrimeField<Repr = [u8; N]>,

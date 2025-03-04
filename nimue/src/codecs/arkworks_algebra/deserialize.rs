@@ -5,11 +5,11 @@ use ark_ff::Field;
 use ark_ff::{Fp, FpConfig};
 use ark_serialize::CanonicalDeserialize;
 
-use super::{FieldReader, GroupReader};
+use super::{DeserializeField, DeserializeGroup};
 use crate::traits::*;
-use crate::{DuplexInterface, ProofResult, VerifierTranscript};
+use crate::{DuplexInterface, ProofResult, VerifierState};
 
-impl<F, H> FieldReader<F> for VerifierTranscript<'_, H>
+impl<F, H> DeserializeField<F> for VerifierState<'_, H>
 where
     F: Field,
     H: DuplexInterface,
@@ -25,7 +25,7 @@ where
     }
 }
 
-impl<G, H> GroupReader<G> for VerifierTranscript<'_, H>
+impl<G, H> DeserializeGroup<G> for VerifierState<'_, H>
 where
     G: CurveGroup,
     H: DuplexInterface,
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<H, C, const N: usize> FieldReader<Fp<C, N>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<H, C, const N: usize> DeserializeField<Fp<C, N>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<EdwardsCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> DeserializeGroup<EdwardsCurve<P>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<P, H, C, const N: usize> GroupReader<SWCurve<P>> for VerifierTranscript<'_, H, Fp<C, N>>
+impl<P, H, C, const N: usize> DeserializeGroup<SWCurve<P>> for VerifierState<'_, H, Fp<C, N>>
 where
     C: FpConfig<N>,
     H: DuplexInterface<Fp<C, N>>,

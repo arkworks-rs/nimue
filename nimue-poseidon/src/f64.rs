@@ -7,7 +7,7 @@ pub struct FConfig64;
 
 pub type Field64 = Fp64<MontBackend<FConfig64, 1>>;
 
-poseidon_sponge!(64, PoseidonPermx3_64_24, x3_64_24);
+poseidon_permutation!(64, PoseidonPermx3_64_24, x3_64_24);
 
 mod x3_64_24 {
 

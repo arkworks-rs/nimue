@@ -22,8 +22,8 @@ hex = { workspace = true }
 
 [features]
 default = []
-ark = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
-group = ["dep:group"]
+arkworks-algebra = ["dep:ark-ff", "dep:ark-ec", "dep:ark-serialize"]
+zkcrypto-group = ["dep:group"]
 asm = ["keccak/asm", "keccak/simd"]
 
 [dev-dependencies]
@@ -50,11 +50,11 @@ features = ["ark", "group"]
 
 [[example]]
 name = "schnorr"
-required-features = ["ark"]
+required-features = ["arkworks-algebra"]
 
 [[example]]
 name = "bulletproof"
-required-features = ["ark"]
+required-features = ["arkworks-algebra"]
 
 [lints.clippy]
 too_long_first_doc_paragraph = "allow"

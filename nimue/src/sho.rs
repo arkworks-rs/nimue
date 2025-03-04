@@ -4,9 +4,9 @@ use std::collections::vec_deque::VecDeque;
 
 use super::duplex_sponge::DuplexInterface;
 use super::duplex_sponge::Unit;
-use super::errors::IOPatternError;
-use super::iopattern::{IOPattern, Op};
-use super::permutations::keccak::Keccak;
+use super::errors::DomainSeparatorMismatch;
+use super::domain_separator::{DomainSeparator, Op};
+use super::keccak::Keccak;
 
 /// A stateful hash object that interfaces with duplex interfaces.
 #[derive(Clone)]
@@ -15,32 +15,32 @@ where
     U: Unit,
     H: DuplexInterface<U>,
 {
-    sponge: H,
+    ds: H,
     stack: VecDeque<Op>,
     _unit: PhantomData<U>,
 }
 
 impl<U: Unit, H: DuplexInterface<U>> StatefulHashObject<H, U> {
-    /// Initialise a SAFE sponge,
+    /// Initialise a stateful hash object,
     /// setting up the state of the sponge function and parsing the tag string.
-    pub fn new(io_pattern: &IOPattern<H, U>) -> Self {
-        let stack = io_pattern.finalize();
-        let tag = Self::generate_tag(io_pattern.as_bytes());
+    pub fn new(domain_separator: &DomainSeparator<H, U>) -> Self {
+        let stack = domain_separator.finalize();
+        let tag = Self::generate_tag(domain_separator.as_bytes());
         Self::unchecked_load_with_stack(tag, stack)
     }
 
     /// Finish the block and compress the state.
-    pub fn ratchet(&mut self) -> Result<(), IOPatternError> {
+    pub fn ratchet(&mut self) -> Result<(), DomainSeparatorMismatch> {
         if self.stack.pop_front().unwrap() != Op::Ratchet {
             Err("Invalid tag".into())
         } else {
-            self.sponge.ratchet_unchecked();
+            self.ds.ratchet_unchecked();
             Ok(())
         }
     }
 
     /// Ratchet and return the sponge state.
-    pub fn preprocess(self) -> Result<&'static [U], IOPatternError> {
+    pub fn preprocess(self) -> Result<&'static [U], DomainSeparatorMismatch> {
         unimplemented!()
         // self.ratchet()?;
         // Ok(self.sponge.tag().clone())
@@ -49,13 +49,13 @@ impl<U: Unit, H: DuplexInterface<U>> StatefulHashObject<H, U> {
     /// Perform secure absorption of the elements in `input`.
     ///
     /// Absorb calls can be batched together, or provided separately for streaming-friendly protocols.
-    pub fn absorb(&mut self, input: &[U]) -> Result<(), IOPatternError> {
+    pub fn absorb(&mut self, input: &[U]) -> Result<(), DomainSeparatorMismatch> {
         match self.stack.pop_front() {
             Some(Op::Absorb(length)) if length >= input.len() => {
                 if length > input.len() {
                     self.stack.push_front(Op::Absorb(length - input.len()));
                 }
-                self.sponge.absorb_unchecked(input);
+                self.ds.absorb_unchecked(input);
                 Ok(())
             }
             None => {
@@ -83,10 +83,10 @@ impl<U: Unit, H: DuplexInterface<U>> StatefulHashObject<H, U> {
     /// For byte-oriented sponges, this operation is equivalent to the squeeze operation.
     /// However, for algebraic hashes, this operation is non-trivial.
     /// This function provides no guarantee of streaming-friendliness.
-    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), IOPatternError> {
+    pub fn squeeze(&mut self, output: &mut [U]) -> Result<(), DomainSeparatorMismatch> {
         match self.stack.pop_front() {
             Some(Op::Squeeze(length)) if output.len() <= length => {
-                self.sponge.squeeze_unchecked(output);
+                self.ds.squeeze_unchecked(output);
                 if length != output.len() {
                     self.stack.push_front(Op::Squeeze(length - output.len()));
                 }
@@ -123,7 +123,7 @@ impl<U: Unit, H: DuplexInterface<U>> StatefulHashObject<H, U> {
 
     fn unchecked_load_with_stack(tag: [u8; 32], stack: VecDeque<Op>) -> Self {
         Self {
-            sponge: H::new(tag),
+            ds: H::new(tag),
             stack,
             _unit: PhantomData,
         }
@@ -141,7 +141,7 @@ impl<U: Unit, H: DuplexInterface<U>> Drop for StatefulHashObject<H, U> {
             log::error!("Unfinished operations:\n {:?}", self.stack)
         }
         // XXX. is the compiler going to optimize this out?
-        self.sponge.zeroize();
+        self.ds.zeroize();
     }
 }
 
@@ -149,11 +149,11 @@ impl<U: Unit, H: DuplexInterface<U>> fmt::Debug for StatefulHashObject<H, U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Ensure that the state isn't accidentally logged,
         // but provide the remaining IO Pattern for debugging.
-        write!(f, "SAFE sponge with IO: {:?}", self.stack)
+        write!(f, "Sponge in duplex mode with committed verifier operations: {:?}", self.stack)
     }
 }
 
-impl<U: Unit, H: DuplexInterface<U>, B: core::borrow::Borrow<IOPattern<H, U>>> From<B>
+impl<U: Unit, H: DuplexInterface<U>, B: core::borrow::Borrow<DomainSeparator<H, U>>> From<B>
     for StatefulHashObject<H, U>
 {
     fn from(value: B) -> Self {
