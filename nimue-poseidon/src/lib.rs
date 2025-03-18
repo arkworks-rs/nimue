@@ -113,7 +113,6 @@ where
         for i in 0..full_rounds_over_2 {
             self.apply_ark(&mut state, i);
             self.apply_s_box(&mut state, true);
-            println!("{:?}", state);
             self.apply_mds(&mut state);
         }
 
